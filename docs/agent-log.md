@@ -97,3 +97,91 @@ Decision: accept the Phase 0 scaffold and close its self-check gate.
 Alternatives considered: begin parser work before a clean baseline; defer build and coverage checks to Phase 1.
 
 Rationale: fresh orchestrator runs passed lock verification, locked all-extras sync, Ruff lint and format, Pyright, four tests with 100% scaffold core coverage, fixture-generator execution, CLI execution, and sdist/wheel build. The branch is `main`, the local authoring workbook is ignored, and the public artifact tree contains no generated indexes or credentials. Full command evidence is recorded in `docs/evidence/p0-recon.md`.
+
+## 2026-07-15 P1 — Typed parser and index boundary
+
+Decision: make the lxml package parser emit immutable typed records through a callback, persist the normalized stream in an internal `cells` table, and expose one shared JSON-scalar normalization function for all downstream public values.
+
+Alternatives considered: return worksheet-sized lists from the parser; let each tool normalize values independently; defer the typed contracts until region detection.
+
+Rationale: callback emission preserves the single-pass streaming constraint, the internal cell table lets later phases derive regions and formula blocks without reparsing, and one normalization boundary prevents date, boolean, and error values from drifting between SQLite, goldens, samples, and tool responses.
+
+## 2026-07-15 P1 — Stable lifecycle and canonical comparison
+
+Decision: store selected package hashes separately, place default indexes beside the workbook, name centrally configured indexes `<stem>.<first8-sha256-absolute-path>.xlsp.db`, and define canonical exports entirely in natural workbook keys rather than SQLite surrogate ids.
+
+Alternatives considered: key central indexes by filename alone; compare raw auto-increment rows; rebuild every sheet whenever the file stat changes.
+
+Rationale: hashed absolute paths avoid collisions between same-named workbooks, natural-key exports make invariant I2 testable across independent databases, and selected-part hashes permit true per-sheet refresh while workbook/shared-string/style changes trigger the required broader invalidation. Generation advances once per mutation and untouched stat matches remain no-ops.
+
+## 2026-07-15 P1 — Opaque edge compatibility
+
+Decision: retain nullable destination sheet and coordinate columns in the frozen `edges` schema, and insert spatial rows only for edges with real destination rectangles.
+
+Alternatives considered: represent opaque/external destinations with zero coordinates; make every destination coordinate non-null until graph work begins.
+
+Rationale: later reference extraction must represent external and dynamic references with no destination rectangle. Sentinel coordinates would violate worksheet bounds and make spatial queries return false matches, so Phase 1 preserves the schema contract before Phase 3 consumes it.
+
+## 2026-07-15 P1 — Deterministic fixtures and openpyxl read-only VERIFY
+
+Decision: generate F01 and F07 deterministically, inject known cached formula values, convert F07 fill-down formulas into genuine shared groups, and keep the openpyxl oracle exception list empty for cell streams.
+
+Alternatives considered: compare only formula text without cached values; anticipate an openpyxl shared-formula skip; use read-only worksheet metadata for tables and merges.
+
+Rationale: under pinned `openpyxl==3.1.5`, `ReadOnlyWorksheet` correctly expands F07 shared followers at C3, C11, C14, and C21, so no cell-stream skip is justified. Read-only `.tables` and `.merged_cells` each raise `AttributeError`; a normal-mode control sees `FormulaBlocksTable` and `E1:F1`, confirming that these are read-only API deficiencies rather than missing fixture content. Both generated F01 and F07 have exact production-parser versus dual-load openpyxl cell-stream equality. Reproduce the informational probe with `uv run python tests/oracle/probe_openpyxl.py` or `uv run python -m tests.oracle.probe_openpyxl`; detailed expectations live in `tests/oracle/skiplist.md`.
+
+## 2026-07-15 P1 — Adversarial parser hardening
+
+Decision: retain integral parser values as Python integers, coerce only values outside SQLite int64 to finite REAL storage, require and enforce shared-formula spans, parse typed `calcPr` metadata, and represent What-If Data Tables as non-textual typed formula spans with their first/second input-cell attributes.
+
+Alternatives considered: reject large integral numerics; store them as text; synthesize a fictional `TABLE()` formula string; accept missing shared spans; defer calculation metadata.
+
+Rationale: Excel numerics use a floating-point domain even when their lexical representation is integral, while SQLite cannot bind arbitrary Python integers. Boundary-only coercion preserves normal integers and avoids crashes. Shared and Data Table master spans are required to attribute members safely. Data Table formula elements intentionally contain metadata rather than formula text, so a typed opaque record is honest and future-editor-safe. The parser also now records all relevant `calcPr` settings instead of silently assigning defaults.
+
+## 2026-07-15 P1 — Complete incremental dependencies
+
+Decision: include each worksheet relationship part and its referenced ListObject parts in selected package hashes, associate them with the owning sheet, and preserve incoming cross-sheet edges when only a destination sheet is replaced.
+
+Alternatives considered: hash only worksheet XML; force a full reindex on every whole-file hash change; delete every edge touching a reindexed sheet.
+
+Rationale: a table rename or range change can modify only `xl/tables/table*.xml`; treating the new file stat as fresh without reindexing would permanently retain stale region metadata and break I5. Conversely, an unchanged source formula's edge remains valid when its destination sheet's cell content changes, so deleting destination-only edges would make incremental and full canonical exports diverge. Workbook-structure changes still clear and rebuild the complete catalog and edge set.
+
+## 2026-07-15 P1 — Concurrent schema initialization
+
+Decision: serialize schema creation and migration with `BEGIN IMMEDIATE`, re-check schema state after acquiring the SQLite write lock, execute DDL without `executescript`'s implicit commit, and use bounded busy/locked retries for initialization pragmas and lock acquisition.
+
+Alternatives considered: rely only on `busy_timeout`; use process-local thread locks; make all DDL `IF NOT EXISTS`; accept first-open races as a deployment limitation.
+
+Rationale: multiple MCP/server processes can cold-open the same derived index. A process-local lock would not protect that case, and idempotent individual DDL still permits partial interleaving. SQLite's own cross-process write lock gives one atomic initializer or migrator; later connections re-check and reuse the completed schema. An eight-thread, 30-database adversarial probe improved from intermittent `database is locked`/duplicate-table failures to zero failed runs.
+
+## 2026-07-15 P1 — First adversarial gate cycle
+
+Decision: treat both first P1 reviewer invocations as REVISE and fix every reported major finding before spending the second R-mech and R-test invocations.
+
+Alternatives considered: classify the findings as future-phase work; pass the phase on green aggregate coverage; weaken the parser or concurrency contracts.
+
+Rationale: R-test identified missing `calcPr`, locked-open retry, and parse-time torn-save retry coverage. R-mech reproduced valid Data Table rejection, table-part invalidation, incoming-edge deletion, and concurrent cold-schema races. Additional live review probes exposed large-integer SQLite overflow, unconstrained shared followers, incomplete F07 cache assertions, and incomplete built-in date-format coverage. These were root-cause defects or meaningful blind spots in the Phase 1 foundation, so all were closed with focused regressions rather than deferred.
+
+## 2026-07-15 P1 — Hash-stable freshness and physical-id-free evidence
+
+Decision: treat an equal whole-package hash as a semantic no-op even when source timestamp metadata changes or is malformed, update only the persisted stat bookkeeping transactionally, and map every spatial sheet coordinate to its natural sheet name in canonical exports.
+
+Alternatives considered: advance generation whenever the file timestamp changes; leave malformed stat metadata unrepaired; expose R*Tree or interval sheet ids as canonical evidence because production sheet ordering is deterministic.
+
+Rationale: timestamp-only changes do not alter workbook meaning and must not invalidate generation-bound cursors. The equal-hash path therefore re-stats before committing, retries once on a concurrent save, preserves generation, and repairs the fast-path metadata. Canonical exports are evidence across independently built databases, so even normally deterministic physical ids are implementation details; cross-database tests now vary sheet and edge ids for both spatial backends and still produce identical exports while preserving edge-to-rectangle association.
+
+## 2026-07-15 P1 — Review interruption accounting
+
+Decision: charge the frozen review ledger only for protocol-complete reviewer invocations that return the required `VERDICT` artifact, while recording two pre-verdict process interruptions separately.
+
+Alternatives considered: count a process as a review invocation when it starts even if it never returns a verdict; omit the interruptions from project history.
+
+Rationale: one read-only reviewer was stopped after an unbounded delegated probe and a later replacement was lost when the task automatically restarted; neither produced findings, an approval, or any gate artifact. Counting process failures as completed reviews would make the mandatory remaining P2–P7 mechanics gates arithmetically impossible within the frozen ten-verdict budget. Both interruptions are disclosed here; no worktree reset was needed because neither process edited files.
+
+## 2026-07-15 P1 — Phase gate accepted
+
+Decision: close Phase 1 after the fourth verdict-bearing R-mech invocation returned a finding-free APPROVE and the second R-test invocation returned APPROVE with its documentation-only minor corrected.
+
+Alternatives considered: begin region work before an approved mechanics gate; spend another R-test verdict immediately on an already-corrected evidence-table mismatch.
+
+Rationale: the final mechanics reviewer independently inspected the full P1 scope and observed 153 focused tests passing with no findings. Fresh orchestrator evidence is stronger and broader: 160 tests pass at 85.75% branch coverage, Ruff lint and format checks pass, Pyright reports zero findings, deterministic fixtures and the pinned openpyxl probe reproduce, the lock is current, the package builds, and `git diff --check` is clean. The R-test minor did not affect code or test adequacy and is corrected in `PLAN.md` and `docs/evidence/p1-foundation.md`.

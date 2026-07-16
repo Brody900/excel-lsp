@@ -17,13 +17,13 @@ Authoritative specification: `HANDOFF.md` (v1.1). Work phases execute in order; 
 
 ### P1 — Parser, storage, and lifecycle
 
-- [ ] Implement the single-pass lxml OOXML parser and normalized cell stream.
-- [ ] Implement package/part hashing, workbook metadata, and supported-format errors.
-- [ ] Implement SQLite schema, WAL settings, R*Tree/fallback abstraction, and canonical exports.
-- [ ] Implement full/incremental indexing and freshness lifecycle.
-- [ ] Generate F01 and make the openpyxl oracle harness green.
-- [ ] Record openpyxl read-only behavior for shared formulas, tables, and merged cells.
-- [ ] Pass R-mech and R-test gates.
+- [x] Implement the single-pass lxml OOXML parser and normalized cell stream.
+- [x] Implement package/part hashing, workbook metadata, and supported-format errors.
+- [x] Implement SQLite schema, WAL settings, R*Tree/fallback abstraction, and canonical exports.
+- [x] Implement full/incremental indexing and freshness lifecycle.
+- [x] Generate F01 and make the openpyxl oracle harness green.
+- [x] Record openpyxl read-only behavior for shared formulas, tables, and merged cells.
+- [x] Pass R-mech and R-test gates.
 
 ### P2 — Regions and workbook map
 
@@ -101,8 +101,8 @@ Frozen budget: 10 R-mech, 10 R-test, 10 R-repo. Phase gates may pass on APPROVE 
 
 | Domain | Used | Remaining | Latest verdict | Notes |
 |---|---:|---:|---|---|
-| R-mech | 0 | 10 | — | Reserve at least 3 for P6–P8. |
-| R-test | 0 | 10 | — | Reserve at least 3 for P6–P8. |
+| R-mech | 4 | 6 | APPROVE (clean) | P1 used three REVISE verdicts, then a finding-free APPROVE. One verdict remains for each P2–P7 gate. |
+| R-test | 2 | 8 | APPROVE | P1 used one REVISE and one APPROVE-with-minor; the documentation minor was corrected. One verdict remains for each P2–P8 gate. |
 | R-repo | 0 | 10 | — | Spend exactly 1 at P2; reserve at least 3 for P9. |
 
 ## Definition of Done

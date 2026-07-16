@@ -28,3 +28,18 @@ surgical writer can prove that it preserves VBA content byte-for-byte.
 
 The local source workbook is intentionally ignored by Git. It is not needed to
 regenerate F16; the committed project blob is the deterministic input.
+
+## Phase 1 generated fixtures
+
+`generate.py` currently emits the P1 subset into `generated/`:
+
+- F01 `basic_single_table.xlsx`: a clean native table with arithmetic formula
+  cells and generator-computed numeric caches.
+- F07 `formula_blocks.xlsx`: two genuine shared-formula groups around a single
+  explicit formula tamper, plus caches, a native table, and the harmless
+  `E1:F1` merge used by the openpyxl read-only probe.
+
+Every OOXML member is repacked in lexical order with ZIP timestamp
+`1980-01-01 00:00:00`. Workbook document properties use `2000-01-01 00:00:00`.
+The generator never evaluates arbitrary formulas; it injects only results it
+computes directly from the values it authored.

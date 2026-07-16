@@ -24,6 +24,7 @@ htmlcov/
 # Excel LSP indexes and local fixture-authoring source
 *.xlsp.db*
 f16_source.xlsm
+tests/fixtures/generated/
 
 # Editors and operating systems
 .DS_Store
