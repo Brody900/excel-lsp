@@ -12,6 +12,7 @@ from excel_lsp.core.errors import ErrorCode, ExcelLSPError
 from excel_lsp.core.index.store import IndexStore
 from excel_lsp.core.models import IndexUpdate, PackageHashes
 from excel_lsp.core.parse import OOXMLParser
+from excel_lsp.core.regions import RegionOptions
 
 _SUPPORTED_SUFFIXES = frozenset({".xlsx", ".xlsm", ".xltx", ".xltm"})
 _WORKBOOK_PART = "xl/workbook.xml"
@@ -27,6 +28,7 @@ _WORKBOOK_STRUCTURE_PARTS = frozenset(
     }
 )
 _GLOBAL_VALUE_PARTS = frozenset({_SHARED_STRINGS_PART, _STYLES_PART})
+_REGION_ANALYSIS_VERSION = "1"
 
 
 class _WorkbookChangedDuringIndex(RuntimeError):
@@ -54,14 +56,22 @@ def index_workbook(
     path: str | Path,
     *,
     index_dir: str | Path | None = None,
+    gap_tol: int | None = None,
 ) -> IndexUpdate:
     """Open or refresh a workbook index using stat and selected-part hashes."""
+    requested_region_options = None if gap_tol is None else RegionOptions(gap_tol=gap_tol)
     workbook = Path(path).expanduser().resolve()
     initial_stat = _stat_workbook(workbook)
     index_path = resolve_index_path(workbook, index_dir)
 
     with IndexStore(index_path) as store:
-        if not store.schema_rebuilt and _fast_path_matches(store, workbook, initial_stat):
+        region_options = requested_region_options or _preserved_region_options(store, workbook)
+        if not store.schema_rebuilt and _fast_path_matches(
+            store,
+            workbook,
+            initial_stat,
+            region_options,
+        ):
             return IndexUpdate(
                 workbook_path=str(workbook),
                 index_path=str(index_path),
@@ -73,7 +83,7 @@ def index_workbook(
         source_stat = initial_stat
         for attempt in range(2):
             try:
-                return _index_from_parser(workbook, source_stat, store)
+                return _index_from_parser(workbook, source_stat, store, region_options)
             except _WorkbookChangedDuringIndex as exc:
                 if attempt:
                     raise ExcelLSPError(
@@ -96,15 +106,17 @@ def ensure_fresh(
     path: str | Path,
     *,
     index_dir: str | Path | None = None,
+    gap_tol: int | None = None,
 ) -> IndexUpdate:
     """Ensure the sidecar matches the workbook before serving a core API call."""
-    return index_workbook(path, index_dir=index_dir)
+    return index_workbook(path, index_dir=index_dir, gap_tol=gap_tol)
 
 
 def _index_from_parser(
     workbook: Path,
     source_stat: os.stat_result,
     store: IndexStore,
+    region_options: RegionOptions,
 ) -> IndexUpdate:
     with OOXMLParser(workbook) as parser:
         metadata = parser.metadata
@@ -117,6 +129,8 @@ def _index_from_parser(
             or old_workbook_hash is None
             or stored_path is None
             or not _paths_equal(stored_path, workbook)
+            or store.get_meta("analysis_version") != _REGION_ANALYSIS_VERSION
+            or store.get_meta("region_gap_tol") != str(region_options.gap_tol)
         )
         if not full_rebuild and old_workbook_hash == hashes.whole_file:
             ending_stat = _stat_workbook(workbook)
@@ -161,6 +175,8 @@ def _index_from_parser(
                 store.replace_sheet(
                     descriptor,
                     lambda on_cell, sheet=descriptor: parser.parse_sheet(sheet, on_cell),
+                    styles=parser.styles,
+                    region_options=region_options,
                 )
 
             ending_stat = _stat_workbook(workbook)
@@ -190,6 +206,8 @@ def _index_from_parser(
                         ensure_ascii=False,
                         separators=(",", ":"),
                     ),
+                    "analysis_version": _REGION_ANALYSIS_VERSION,
+                    "region_gap_tol": region_options.gap_tol,
                 }
             )
             generation = store.bump_generation()
@@ -207,6 +225,7 @@ def _fast_path_matches(
     store: IndexStore,
     workbook: Path,
     file_stat: os.stat_result,
+    region_options: RegionOptions,
 ) -> bool:
     stored_path = store.get_meta("workbook_path")
     if stored_path is None or not _paths_equal(stored_path, workbook):
@@ -216,6 +235,8 @@ def _fast_path_matches(
             int(store.get_meta("mtime_ns", "-1") or "-1") == file_stat.st_mtime_ns
             and int(store.get_meta("size", "-1") or "-1") == file_stat.st_size
             and store.get_meta("workbook_hash") is not None
+            and store.get_meta("analysis_version") == _REGION_ANALYSIS_VERSION
+            and store.get_meta("region_gap_tol") == str(region_options.gap_tol)
         )
     except ValueError:
         return False
@@ -253,7 +274,23 @@ def _stat_workbook(workbook: Path) -> os.stat_result:
 
 
 def _paths_equal(stored_path: str, workbook: Path) -> bool:
-    return os.path.normcase(str(Path(stored_path).resolve())) == os.path.normcase(str(workbook))
+    try:
+        resolved_stored_path = Path(stored_path).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
+    return os.path.normcase(str(resolved_stored_path)) == os.path.normcase(str(workbook))
+
+
+def _preserved_region_options(store: IndexStore, workbook: Path) -> RegionOptions:
+    """Reuse a valid same-workbook tolerance, otherwise use the documented default."""
+    stored_path = store.get_meta("workbook_path")
+    if stored_path is None or not _paths_equal(stored_path, workbook):
+        return RegionOptions()
+    raw_gap_tol = store.get_meta("region_gap_tol")
+    try:
+        return RegionOptions(gap_tol=int(raw_gap_tol or ""))
+    except ValueError:
+        return RegionOptions()
 
 
 def _same_stat(left: os.stat_result, right: os.stat_result) -> bool:

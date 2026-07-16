@@ -20,7 +20,9 @@ from excel_lsp.core.models import (
     Rect,
     SheetDescriptor,
     SheetParseSummary,
+    TableInfo,
 )
+from excel_lsp.core.regions import RegionOptions
 
 
 def _descriptor(name: str = "Data", *, order: int = 0, kind: str = "worksheet") -> SheetDescriptor:
@@ -433,6 +435,75 @@ def test_store_shapes_duplicate_catalog_and_cell_constraints_as_corrupt(
             store.replace_sheet(first, parse)  # type: ignore[arg-type]
         assert cell_error.value.code is ErrorCode.CORRUPT
         assert store.connection.execute("SELECT COUNT(*) FROM cells").fetchone()[0] == 0
+
+
+def test_large_sheet_warning_is_persisted_with_exact_related_json(tmp_path: Path) -> None:
+    descriptor = _descriptor()
+    with IndexStore(tmp_path / "large-sheet-warning.xlsp.db") as store:
+        store.replace_sheet_catalog((descriptor,))
+
+        def parse(on_cell: object) -> SheetParseSummary:
+            assert callable(on_cell)
+            for row in range(1, 5):
+                on_cell(CellRecord(f"A{row}", row, 1, row, "number"))
+            return SheetParseSummary(descriptor, "large-sheet", 4, 1, 4)
+
+        store.replace_sheet(
+            descriptor,
+            parse,  # type: ignore[arg-type]
+            region_options=RegionOptions(
+                large_sheet_threshold=3,
+                large_dtype_sample_limit=1,
+            ),
+        )
+
+        diagnostic = store.connection.execute(
+            """
+            SELECT severity, code, ref, related
+            FROM diagnostics
+            """
+        ).fetchone()
+        assert tuple(diagnostic) == (
+            "warn",
+            "W_LARGE_SHEET",
+            "sheet:Data",
+            '{"cellCount":4,"dtypeSampleLimit":1,"dtypeSampleStride":2}',
+        )
+
+
+def test_region_analysis_failure_rolls_back_replacement_and_generation(tmp_path: Path) -> None:
+    descriptor = _descriptor()
+    with IndexStore(tmp_path / "region-analysis-rollback.xlsp.db") as store:
+        store.replace_sheet_catalog((descriptor,))
+
+        def initial_parse(on_cell: object) -> SheetParseSummary:
+            assert callable(on_cell)
+            on_cell(CellRecord("A1", 1, 1, "Header", "string"))
+            on_cell(CellRecord("A2", 2, 1, 1, "number"))
+            return SheetParseSummary(descriptor, "initial", 2, 1, 2)
+
+        store.replace_sheet(descriptor, initial_parse)  # type: ignore[arg-type]
+        before = store.canonical_export()
+        generation = store.generation
+
+        def corrupt_parse(on_cell: object) -> SheetParseSummary:
+            assert callable(on_cell)
+            on_cell(CellRecord("B1", 1, 2, "replacement", "string"))
+            return SheetParseSummary(
+                descriptor,
+                "corrupt",
+                1,
+                2,
+                1,
+                tables=(TableInfo("BadTable", "BadTable", "not-a-range", 1, 0, ("Column",)),),
+            )
+
+        with pytest.raises(ExcelLSPError) as captured:
+            store.replace_sheet(descriptor, corrupt_parse)  # type: ignore[arg-type]
+
+        assert captured.value.code is ErrorCode.CORRUPT
+        assert store.canonical_export() == before
+        assert store.generation == generation
 
 
 def _exercise_edges(edges: EdgeStore) -> None:

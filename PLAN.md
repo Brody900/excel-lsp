@@ -27,12 +27,14 @@ Authoritative specification: `HANDOFF.md` (v1.1). Work phases execute in order; 
 
 ### P2 — Regions and workbook map
 
-- [ ] Implement ListObject-first region detection, headers, merged headers, dtypes, and confidence.
-- [ ] Implement stable symbols and the compact workbook map.
-- [ ] Generate/exercise F20 and enforce deterministic degradation plus the 8,000-character cap.
-- [ ] Meet the F03 1,500-token map budget.
-- [ ] Create README skeleton and claims-to-artifacts matrix.
-- [ ] Pass R-mech, R-test, and exactly one R-repo gate invocation.
+- [x] Implement ListObject-first region detection, headers, merged headers, dtypes, and confidence.
+- [x] Implement stable symbols and the compact workbook map.
+- [x] Generate/exercise F20 and enforce deterministic degradation plus the 8,000-character cap.
+- [x] Meet the F03 1,500-token map budget.
+- [x] Create README skeleton and claims-to-artifacts matrix.
+- [x] Pass R-test and the user-authorized early R-repo gate; every prior
+  invocation remains charged.
+- [x] Obtain a fresh R-mech approval after the latest `REVISE`.
 
 ### P3 — Formula references and blocks
 
@@ -97,13 +99,39 @@ Authoritative specification: `HANDOFF.md` (v1.1). Work phases execute in order; 
 
 ## Review ledger
 
-Frozen budget: 10 R-mech, 10 R-test, 10 R-repo. Phase gates may pass on APPROVE with minor findings, but the release aims for a clean APPROVE in every domain. If a domain exhausts with an unresolved critical finding, publish `v0.1.0-rc1` and document it in `KNOWN_ISSUES.md`.
+Original allocation: 10 R-mech, 10 R-test, 10 R-repo. The
+user-authorized amendment below keeps the frozen 30-invocation overall ceiling
+while pooling otherwise-unused domain slots. Phase gates may pass on APPROVE
+with minor findings, but the release aims for a clean APPROVE in every domain.
+If the overall pool is exhausted with an unresolved critical finding, publish
+`v0.1.0-rc1` and document it in `KNOWN_ISSUES.md`.
 
-| Domain | Used | Remaining | Latest verdict | Notes |
+| Domain | Used | Nominal remaining | Latest verdict | Notes |
 |---|---:|---:|---|---|
-| R-mech | 4 | 6 | APPROVE (clean) | P1 used three REVISE verdicts, then a finding-free APPROVE. One verdict remains for each P2–P7 gate. |
-| R-test | 2 | 8 | APPROVE | P1 used one REVISE and one APPROVE-with-minor; the documentation minor was corrected. One verdict remains for each P2–P8 gate. |
-| R-repo | 0 | 10 | — | Spend exactly 1 at P2; reserve at least 3 for P9. |
+| R-mech | 9 | 1 | APPROVE | P1 used three REVISE verdicts, then a finding-free APPROVE. P2 reviews #1–#4 found and remediated map/configuration and region-scaling majors. Fresh stateless P2 review #5 returned a clean APPROVE after independently verifying the component-first engine, exact spatial work, full suite, and staged evidence. |
+| R-test | 4 | 6 | APPROVE | P1 used one REVISE and one APPROVE-with-minor. P2 review #1 found an external-link URL secret leak; review #2 independently returned a clean APPROVE after URI/metadata hardening and adversarial regressions. |
+| R-repo | 3 | 7 | APPROVE | The first two P2 invocations remain charged as `REVISE`. Fresh review #3 returned `APPROVE` with one architecture-status minor: it still implied that R-test and all three P2 approvals were pending. This current-state update corrects that wording. Reserve at least 3 R-repo invocations for P9. |
+
+Total verdicts used: 16 of 30. Pooled verdicts remaining: 14, including the
+reserved minimum of 3 R-repo invocations for P9.
+
+### User-authorized review-governance amendment
+
+On 2026-07-16, the user explicitly authorized the smallest amendment needed to
+resolve the remaining-gate arithmetic:
+
+- Keep the maximum at 30 review invocations overall.
+- Pool otherwise-unused R-mech, R-test, and R-repo slots.
+- Permit the required P2 R-repo retry sequence after the first `REVISE`,
+  including a fresh re-review after any subsequent `REVISE`, within the
+  unchanged overall pool.
+- Preserve every phase gate, a fresh stateless reviewer for every invocation,
+  and all prior verdict accounting.
+- Reserve at least 3 R-repo invocations for P9.
+
+The minimum completion path is now 30 total invocations, leaving no pooled
+contingency slots. This amendment changes allocation only; it does not waive or
+combine any review, acceptance criterion, phase ordering rule, or release gate.
 
 ## Definition of Done
 

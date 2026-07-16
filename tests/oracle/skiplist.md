@@ -12,6 +12,10 @@ None. In particular, openpyxl 3.1.5 expands both F07 shared-formula groups in
 read-only mode: `C3`, `C11`, `C14`, and `C21` return their correctly translated
 formula text. Shared followers therefore require no oracle exception.
 
+F02/F03/F12/F13/F14/F20 also compare without exclusions. Merged-cell placeholders
+and truly empty sheets produce no canonical tuples in either reader; F13's raw
+date serials are converted through the same workbook epoch and style semantics.
+
 ## Verified read-only metadata deficiencies
 
 These observations narrow the cell-stream oracle's scope; they are not silent

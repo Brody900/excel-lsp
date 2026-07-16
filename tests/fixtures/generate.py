@@ -19,7 +19,9 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 import lxml.etree as etree
 from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
 from openpyxl.utils.cell import get_column_letter, range_boundaries
+from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -268,6 +270,21 @@ def _table(name: str, ref: str) -> Table:
     return table
 
 
+def _style_header_cells(
+    worksheet: Worksheet,
+    refs: Sequence[str],
+    *,
+    fill_color: str = "1F4E78",
+    font_color: str = "FFFFFF",
+) -> None:
+    """Apply an explicit format shift for deterministic header inference."""
+    font = Font(bold=True, color=font_color)
+    fill = PatternFill(fill_type="solid", fgColor=fill_color)
+    for ref in refs:
+        worksheet[ref].font = font
+        worksheet[ref].fill = fill
+
+
 def _generate_f01(output_dir: Path) -> Path:
     path = output_dir / "basic_single_table.xlsx"
     workbook, worksheet = _new_workbook("Sales")
@@ -289,6 +306,115 @@ def _generate_f01(output_dir: Path) -> Path:
     workbook.save(path)
     workbook.close()
     inject_cached_values(path, "Sales", caches)
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f02(output_dir: Path) -> Path:
+    path = output_dir / "multi_region.xlsx"
+    workbook, worksheet = _new_workbook("Islands")
+
+    first_island = {
+        1: ("Product", "Units", "UnitPrice"),
+        2: ("Widget", 4, 2.5),
+        3: ("Gadget", 3, 4.0),
+        5: ("Cable", 8, 1.25),
+        6: ("Adapter", 2, 6.75),
+    }
+    for row_number, values in first_island.items():
+        for column_number, value in enumerate(values, start=1):
+            worksheet.cell(row=row_number, column=column_number, value=value)
+
+    second_island = (
+        ("Department", "Budget", "Active"),
+        ("Sales", 120000.5, True),
+        ("Support", 85000.25, True),
+        ("Research", 99000.75, False),
+        ("Operations", 101500.0, True),
+    )
+    for row_number, values in enumerate(second_island, start=2):
+        for column_number, value in enumerate(values, start=6):
+            worksheet.cell(row=row_number, column=column_number, value=value)
+
+    third_island = (
+        ("Metric", "Value", "Flag"),
+        ("LatencyMs", 12.5, "ok"),
+        ("Errors", 2, "review"),
+        ("Throughput", 450, "ok"),
+    )
+    for row_number, values in enumerate(third_island, start=10):
+        for column_number, value in enumerate(values, start=2):
+            worksheet.cell(row=row_number, column=column_number, value=value)
+
+    _style_header_cells(worksheet, ("A1", "B1", "C1"))
+    _style_header_cells(worksheet, ("F2", "G2", "H2"))
+    _style_header_cells(worksheet, ("B10", "C10", "D10"))
+    workbook.save(path)
+    workbook.close()
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f03(output_dir: Path) -> Path:
+    path = output_dir / "cross_sheet_model.xlsx"
+    workbook, inputs = _new_workbook("Inputs")
+    calc = workbook.create_sheet("Calc")
+    summary = workbook.create_sheet("Summary")
+
+    inputs.append(("Input", "Value", "Unit"))
+    inputs.append(("GrowthRate", 0.10, "%"))
+    inputs.append(("BaseRevenue", 1000, "USD"))
+    inputs.append(("CostRate", 0.60, "%"))
+    inputs.append(("TaxRate", 0.25, "%"))
+    inputs.add_table(_table("InputsTable", "A1:C5"))
+
+    revenues: tuple[int | float, ...] = (1000, 1100, 1210, 1331, 1464.1)
+    costs: tuple[int | float, ...] = (600, 660, 726, 798.6, 878.46)
+    after_tax: tuple[int | float, ...] = (300, 330, 363, 399.3, 439.23)
+    calc.append(("Year", "Revenue", "Cost", "AfterTax"))
+    calc_caches: dict[str, CachedValue] = {}
+    for offset, (revenue, cost, result) in enumerate(
+        zip(revenues, costs, after_tax, strict=True),
+        start=2,
+    ):
+        revenue_formula = "=Inputs!$B$3" if offset == 2 else f"=B{offset - 1}*(1+Inputs!$B$2)"
+        calc.append(
+            (
+                2024 + offset,
+                revenue_formula,
+                f"=B{offset}*Inputs!$B$4",
+                f"=(B{offset}-C{offset})*(1-Inputs!$B$5)",
+            )
+        )
+        calc_caches[f"B{offset}"] = CachedValue(revenue)
+        calc_caches[f"C{offset}"] = CachedValue(cost)
+        calc_caches[f"D{offset}"] = CachedValue(result)
+    calc.add_table(_table("CalcTable", "A1:D6"))
+
+    summary.append(("Section", "Metric", "Value"))
+    summary_caches: dict[str, CachedValue] = {}
+    for row_number, result in enumerate(after_tax, start=2):
+        year = 2024 + row_number
+        summary.append(("Annual", f"FY{year}", f"=Calc!D{row_number}"))
+        summary_caches[f"C{row_number}"] = CachedValue(result)
+    summary.append(("KPI", "Starting Revenue", "=Calc!B2"))
+    summary.append(("KPI", "Ending Revenue", "=Calc!B6"))
+    summary.append(("KPI", "Total Cost", "=SUM(Calc!C2:C6)"))
+    summary.append(("KPI", "Total After Tax", "=SUM(Calc!D2:D6)"))
+    summary_caches.update(
+        {
+            "C7": CachedValue(1000),
+            "C8": CachedValue(1464.1),
+            "C9": CachedValue(3663.06),
+            "C10": CachedValue(1831.53),
+        }
+    )
+    summary.add_table(_table("SummaryTable", "A1:C10"))
+
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(path, "Calc", calc_caches)
+    inject_cached_values(path, "Summary", summary_caches)
     repack_deterministic(path)
     return path
 
@@ -328,12 +454,161 @@ def _generate_f07(output_dir: Path) -> Path:
     return path
 
 
+def _generate_f12(output_dir: Path) -> Path:
+    path = output_dir / "merged_headers.xlsx"
+    workbook, worksheet = _new_workbook("MergedHeaders")
+
+    worksheet["A1"] = "Region"
+    worksheet["B1"] = "Revenue"
+    worksheet["E1"] = "Units"
+    worksheet["B2"] = "Q1"
+    worksheet["C2"] = "Q2"
+    worksheet["D2"] = "Q3"
+    worksheet["E2"] = "Actual"
+    worksheet["F2"] = "Target"
+    worksheet.merge_cells("A1:A2")
+    worksheet.merge_cells("B1:D1")
+    worksheet.merge_cells("E1:F1")
+
+    rows = (
+        ("North", 100.5, 120.25, 130.75, 10, 12),
+        ("South", 90.25, 98.5, 105.75, 9, 10),
+        ("West", 110.75, 115.5, 125.25, 11, 13),
+        ("East", 80.5, 88.75, 95.25, 8, 9),
+    )
+    for row_number, values in enumerate(rows, start=3):
+        for column_number, value in enumerate(values, start=1):
+            worksheet.cell(row=row_number, column=column_number, value=value)
+
+    _style_header_cells(worksheet, ("A1", "B1", "E1"))
+    _style_header_cells(
+        worksheet,
+        ("B2", "C2", "D2", "E2", "F2"),
+        fill_color="D9EAF7",
+        font_color="000000",
+    )
+    workbook.save(path)
+    workbook.close()
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f13(output_dir: Path) -> Path:
+    path = output_dir / "mixed_types.xlsx"
+    workbook, worksheet = _new_workbook("MixedTypes")
+    worksheet.append(
+        (
+            "RecordID",
+            "PostingDate",
+            "Amount",
+            "MarginPct",
+            "AccountCode",
+            "Approved",
+            "MixedSample",
+        )
+    )
+    rows = (
+        (1, 45292, 1250.50, 0.125, "00100", True, 10),
+        (2, 45323, -42.75, 0.05, "00101", False, "pending"),
+        (3, 45352, 0.50, 0.20, "00102", True, 30),
+        (4, 45383, 999.99, 0.075, "00103", False, "hold"),
+        (5, 45413, 10.25, 0.0, "00104", True, 50),
+        (6, 45444, 200.10, 1.0, "00105", False, "done"),
+    )
+    for values in rows:
+        worksheet.append(values)
+
+    for row_number in range(2, 8):
+        worksheet[f"B{row_number}"].number_format = "yyyy-mm-dd" if row_number <= 4 else "mm-dd-yy"
+        worksheet[f"C{row_number}"].number_format = '"$"#,##0.00'
+        worksheet[f"D{row_number}"].number_format = "0.0%"
+        worksheet[f"E{row_number}"].number_format = "@"
+    worksheet.add_table(_table("MixedTypesTable", "A1:G7"))
+    workbook.save(path)
+    workbook.close()
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f14(output_dir: Path) -> Path:
+    path = output_dir / "sparse.xlsx"
+    workbook, _ = _new_workbook("EmptyBefore")
+    lone_cells = workbook.create_sheet("LoneCells")
+    workbook.create_sheet("EmptyAfter")
+    lone_cells["B2"] = 1
+    lone_cells["X100"] = 2
+    workbook.save(path)
+    workbook.close()
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f20(output_dir: Path) -> Path:
+    path = output_dir / "stress_map.xlsx"
+    workbook, stress = _new_workbook("Stress01")
+    for sheet_number in range(2, 41):
+        workbook.create_sheet(f"Stress{sheet_number:02d}")
+
+    for block_number in range(12):
+        first_column = 1 + block_number * 4
+        second_column = first_column + 1
+        max_row = 14 - block_number
+        stress.cell(row=1, column=first_column, value=f"Block{block_number + 1:02d}")
+        stress.cell(row=1, column=second_column, value=f"Value{block_number + 1:02d}")
+        for row_number in range(2, max_row + 1):
+            stress.cell(
+                row=row_number,
+                column=first_column,
+                value=f"K{block_number + 1:02d}-{row_number - 1:02d}",
+            )
+            stress.cell(
+                row=row_number,
+                column=second_column,
+                value=(block_number + 1) * 100 + row_number - 1,
+            )
+        _style_header_cells(
+            stress,
+            (
+                f"{get_column_letter(first_column)}1",
+                f"{get_column_letter(second_column)}1",
+            ),
+        )
+
+    workbook["Stress39"].sheet_state = "hidden"
+    workbook["Stress40"].sheet_state = "veryHidden"
+    for number in range(1, 61):
+        suffixes_and_refs = (
+            ("R", "'Stress01'!$A$2:$B$3"),
+            ("M", "'Stress01'!$A$2:$A$3,'Stress01'!$E$2:$E$3"),
+            ("C", f"={number}"),
+            ("F", f"=SUM('Stress01'!$B$2:$B$3)+{number}"),
+            ("L", f"=_xlfn.LAMBDA(x,x+{number})"),
+        )
+        for suffix, refers_to in suffixes_and_refs:
+            workbook.defined_names.add(DefinedName(f"N{number:03d}{suffix}", attr_text=refers_to))
+
+    workbook.save(path)
+    workbook.close()
+    repack_deterministic(path)
+    return path
+
+
 def generate_all(output_dir: Path = GENERATED_DIR) -> dict[str, Path]:
-    """Generate the Phase 1 fixture subset and return paths keyed by fixture ID."""
+    """Generate the implemented deterministic fixtures keyed by fixture ID."""
     output_dir.mkdir(parents=True, exist_ok=True)
+    # Keep the original P1 generation order intact so adding fixtures cannot
+    # perturb their byte-for-byte golden archives through library global state.
+    f01 = _generate_f01(output_dir)
+    f07 = _generate_f07(output_dir)
     return {
-        "F01": _generate_f01(output_dir),
-        "F07": _generate_f07(output_dir),
+        "F01": f01,
+        "F02": _generate_f02(output_dir),
+        "F03": _generate_f03(output_dir),
+        "F07": f07,
+        "F12": _generate_f12(output_dir),
+        "F13": _generate_f13(output_dir),
+        "F14": _generate_f14(output_dir),
+        "F20": _generate_f20(output_dir),
     }
 
 

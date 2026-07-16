@@ -26,12 +26,14 @@ from excel_lsp.core.models import (
     SheetParseSummary,
     WorkbookMetadata,
 )
+from excel_lsp.core.parse.styles import DEFAULT_STYLE_CATALOG
 
 
 class FakeOOXMLParser:
     """Narrow parser contract fake; production imports the real OOXMLParser."""
 
     parse_calls: ClassVar[list[str]] = []
+    styles = DEFAULT_STYLE_CATALOG
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -297,6 +299,85 @@ def test_schema_version_rebuild_forces_full_index_even_when_stat_is_fresh(
     assert rebuilt.reindexed_sheets == ("Alpha", "Beta", "Chart")
     assert rebuilt.generation > first.generation
     assert FakeOOXMLParser.parse_calls == ["Alpha", "Beta", "Chart"]
+
+
+@pytest.mark.parametrize(
+    ("stored_gap_tol", "stored_path"),
+    (
+        (None, None),
+        ("invalid", None),
+        ("-1", None),
+        ("0", "different-workbook.xlsx"),
+    ),
+)
+def test_omitted_gap_tolerance_defaults_when_stored_configuration_is_invalid(
+    tmp_path: Path,
+    stored_gap_tol: str | None,
+    stored_path: str | None,
+) -> None:
+    workbook = tmp_path / "stored-gap.xlsx"
+    index_dir = tmp_path / "indexes"
+    _write_document(workbook, _document())
+    first = index_workbook(workbook, index_dir=index_dir, gap_tol=0)
+    with IndexStore(first.index_path) as store:
+        if stored_gap_tol is None:
+            store.connection.execute("DELETE FROM meta WHERE key = 'region_gap_tol'")
+        else:
+            store.set_meta("region_gap_tol", stored_gap_tol)
+        if stored_path is not None:
+            store.set_meta("workbook_path", str(tmp_path / stored_path))
+
+    refreshed = ensure_fresh(workbook, index_dir=index_dir)
+
+    assert refreshed.changed is True
+    assert refreshed.generation == first.generation + 1
+    with IndexStore(refreshed.index_path) as store:
+        assert store.get_meta("workbook_path") == str(workbook.resolve())
+        assert store.get_meta("region_gap_tol") == "1"
+
+
+def test_negative_gap_tolerance_is_rejected_before_index_creation(tmp_path: Path) -> None:
+    workbook = tmp_path / "negative-gap.xlsx"
+    index_dir = tmp_path / "indexes"
+    _write_document(workbook, _document())
+    index_path = resolve_index_path(workbook, index_dir)
+
+    with pytest.raises(ValueError, match="nonnegative"):
+        index_workbook(workbook, index_dir=index_dir, gap_tol=-1)
+
+    assert not index_path.exists()
+
+
+def test_excessive_gap_tolerance_is_rejected_before_index_creation(tmp_path: Path) -> None:
+    workbook = tmp_path / "excessive-gap.xlsx"
+    index_dir = tmp_path / "indexes"
+    _write_document(workbook, _document())
+    index_path = resolve_index_path(workbook, index_dir)
+
+    with pytest.raises(ValueError, match="must not exceed 8"):
+        index_workbook(workbook, index_dir=index_dir, gap_tol=9)
+
+    assert not index_path.exists()
+
+
+@pytest.mark.parametrize("gap_tol", (True, False, 1.5, 0.0))
+def test_noninteger_gap_tolerance_is_rejected_before_index_creation(
+    tmp_path: Path,
+    gap_tol: object,
+) -> None:
+    workbook = tmp_path / "noninteger-gap.xlsx"
+    index_dir = tmp_path / "indexes"
+    _write_document(workbook, _document())
+    index_path = resolve_index_path(workbook, index_dir)
+
+    with pytest.raises(ValueError, match="gap_tol must be an integer"):
+        index_workbook(
+            workbook,
+            index_dir=index_dir,
+            gap_tol=cast(int, gap_tol),
+        )
+
+    assert not index_path.exists()
 
 
 def test_parse_time_torn_save_retries_once_after_the_source_stat_changes(

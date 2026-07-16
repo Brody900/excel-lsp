@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"
 
 BASE_SCHEMA_SQL = """
 CREATE TABLE meta (

@@ -185,3 +185,149 @@ Decision: close Phase 1 after the fourth verdict-bearing R-mech invocation retur
 Alternatives considered: begin region work before an approved mechanics gate; spend another R-test verdict immediately on an already-corrected evidence-table mismatch.
 
 Rationale: the final mechanics reviewer independently inspected the full P1 scope and observed 153 focused tests passing with no findings. Fresh orchestrator evidence is stronger and broader: 160 tests pass at 85.75% branch coverage, Ruff lint and format checks pass, Pyright reports zero findings, deterministic fixtures and the pinned openpyxl probe reproduce, the lock is current, the package builds, and `git diff --check` is clean. The R-test minor did not affect code or test adequacy and is corrected in `PLAN.md` and `docs/evidence/p1-foundation.md`.
+
+## 2026-07-15 P2 — Sparse region engine and header weights
+
+Decision: detect heuristic islands from coordinate-ordered sparse runs with a default one-blank-row/column tolerance, make ListObjects hard spatial barriers, and score up to three candidate header rows with weights 0.30 textual coverage, 0.25 type contrast, 0.20 normalized uniqueness, 0.20 style shift, and 0.05 nonblank coverage at a 0.55 threshold.
+
+Alternatives considered: construct a dense grid; infer regions from worksheet `<dimension>`; allow heuristic rectangles to overlap table blanks; use header strings alone; require bold formatting.
+
+Rationale: sparse runs scale with workbook content rather than worksheet bounds, while exact tables satisfy I5 and remove ambiguity. The mixed score handles plain exports, styled reports, and multi-row merged headers without making formatting mandatory. Pairwise rectangle normalization and non-vacuous properties give a stronger form of I4, and coordinate sorting makes I6 independent of union-find roots, relationship order, or SQLite ids.
+
+## 2026-07-15 P2 — Column identity and profiling
+
+Decision: normalize column headers with Unicode NFKC, case folding, punctuation/whitespace collapse, Unicode alphanumeric preservation, and deterministic column-letter fallback; suffix normalization collisions left-to-right with `#2`, `#3`, and so on. Profile exact nonnull counts and type-tagged distinct values up to 1,000 while sampling at most 200 dtype values.
+
+Alternatives considered: expose raw headers directly in symbol ids; ASCII-only slugs; hash headers; treat booleans as integers or error strings as text; compute unbounded exact distinct counts.
+
+Rationale: the frozen `col:{sheet}:{region}:{normHeader}[#k]` scheme needs readable, repeatable components that cannot inject `:` or `#`. Type tags keep `TRUE` distinct from `1`; int-plus-float promotes to float; stored date strings remain dates through `value_type`. Saturation bounds memory without pretending to provide exact high-cardinality statistics.
+
+## 2026-07-15 P2 — Analysis freshness and map degradation
+
+Decision: bump the derived index schema to version 2, persist a region-analysis version and `gap_tol`, and require both values on the stat/hash fast paths. Build the map in workbook order, rank displayed regions by area without renumbering their coordinate IDs, cap regions/names/external links at 8/20/10, and apply deterministic secondary degradation until compact JSON fits 8,000 characters.
+
+Alternatives considered: preserve P1 sidecars with empty region tables; treat a tolerance change as a no-op against equal workbook bytes; paginate the map; renumber regions in display order; rely on P7 to truncate an oversized P2 map.
+
+Rationale: analysis configuration is part of semantic index identity even though it is not workbook content. The map is the cheap orientation response, so pagination would defeat its purpose and physical or display-order IDs would be unstable. The F03 normalized map measures 342 `o200k_base` tokens, while F20 measures 4,575 characters with all 40 sheets and both non-visible states surfaced.
+
+## 2026-07-15 P2 — Codex-first public skeleton
+
+Decision: create the README in the frozen §10.2 order, use verified Codex MCP syntax and native TOML as the primary setup path, label generic `.mcp.json` as compatibility, and map every current or future public claim to a named phase and committed evidence path.
+
+Alternatives considered: retain historical Claude commands from the handoff; omit the README until benchmarks exist; fill comparison and benchmark sections with projected results; defer the claims matrix to release week.
+
+Rationale: the user explicitly defined historical Claude references as Codex, and the local CLI confirms `codex mcp add excel-lsp -- uvx excel-lsp serve`. Honest placeholders make the repository understandable now without selling unimplemented behavior. The early matrix lets the one required P2 repository review catch missing proof plans before P9, when retrofitting live captures and raw benchmark links would be expensive.
+
+## 2026-07-16 P2 — Sparse overlap indexing
+
+Decision: replace all-pairs region-bound normalization and disjoint validation with a self-ordering row sweep, fixed-width column buckets, exact candidate checks, and repeated DSU bounding-box closure; reuse the same overlap enumerator for table and merge validation.
+
+Alternatives considered: retain the simple quadratic loops; rely on wall-clock thresholds; add a general-purpose interval-tree dependency; stop after optimizing only the final disjoint assertion.
+
+Rationale: a valid 2,500-cell isolated grid reproduced 6,247,500 rectangle-intersection calls and multi-second analysis. The sparse sweep reduces that probe to 46,200 calls while preserving the former closure semantics. The committed regression gates on candidate work rather than machine timing, and a 100-example Hypothesis property compares the indexed pair set with brute force, including wide rectangles and reversed input order.
+
+## 2026-07-16 P2 — Pre-review proof hardening
+
+Decision: finish P2 preflight before spending its one remaining mechanics verdict, one remaining test verdict, and one-shot repository verdict; strengthen exact serialized goldens, tokenizer metadata, degradation branches, fixture caches, transactional rollback, persisted warnings, current-claim links, and future-claim path accounting.
+
+Alternatives considered: invoke formal reviewers as soon as aggregate tests passed; treat parsed JSON equality as an exact golden; leave unexecuted degradation branches and future documentation paths for P9.
+
+Rationale: the frozen review arithmetic leaves exactly one mechanics and one test verdict for each remaining implementation gate, while P2 permits exactly one repository invocation. Preflight found one real quadratic path and several evidence gaps that ordinary green coverage did not expose. Closing them first produced 216 passing tests at 88.69% branch coverage, exact F03/F20 serialization and budget checks, complete F03 cache expectations, and an auditable README skeleton without consuming a formal verdict.
+
+## 2026-07-16 P2 — Formal review remediation
+
+Decision: charge the first formal P2 R-mech and R-test verdicts as `REVISE`, close every reported major before re-review, preserve stored region-analysis configuration on omitted freshness calls, project the map through fixed SQL limits with visibility-aware omission totals, and sanitize public external-link labels through URL-aware basename extraction.
+
+Alternatives considered: treat the map as an administrative read that may reset `gap_tol`; retain a single visibility-neutral `sheetListMore`; keep application-level per-sheet/per-region queries because the serialized result is small; expose the raw external target or hostname when no safe path basename exists; reclassify either formal verdict as a preflight.
+
+Rationale: map reads must not mutate semantic configuration, and a bounded response does not justify unbounded source loading. The remediated loader performs seven reads on both tiny and 121-sheet indexes and uses response-cap proofs to bound its projection at 200 sheets, 80 round-robin regions, 16 base columns per selected region plus 512 extras, 20 names, and 10 links while retaining exact totals for degradation. A 205-sheet regression crosses the sheet ceiling without changing the query count. Visibility counts keep hidden and veryHidden state discoverable even when identities no longer fit. URL labels discard authority, query, fragment, parameters, unsupported schemes, malformed targets, encoded delimiters, and non-text or noncanonical metadata entries while the raw valid index metadata remains available for later reference resolution. Fresh verification now reports 235 passing tests at 88.56% branch coverage; no verdict or review spend was hidden.
+
+## 2026-07-16 P2 — Test approval and repository-plan correction
+
+Decision: count the second formal R-test invocation as a clean `APPROVE`, count the required early R-repo invocation as `REVISE`, and correct every repository finding without weakening a frozen success criterion: restore S5's at-least-10× naive-baseline threshold, add an exact future CLI test/evidence route for `excel-lsp bench`, and enumerate the raw benchmark filenames and acceptance gates.
+
+Alternatives considered: summarize S5 as any positive reduction; assume the benchmark runner scripts prove the advertised CLI command; leave raw-result filenames distributed only across the claims matrix; treat the R-repo findings as future P8/P9 concerns; omit the `REVISE` because the early repository review was intended as a single invocation.
+
+Rationale: the claims-to-artifacts plan is specifically meant to make later evidence mechanically auditable. A weaker paraphrase could falsely certify S5, scripts alone do not prove CLI wiring, and a raw-results link should tell contributors exactly what must exist and what makes it acceptable. The formal R-test reviewer independently reran the P2 security, golden, property, fixture, and coverage evidence and returned no findings. The repository verdict remains charged and visible even though its findings are documentation-only.
+
+## 2026-07-16 P2 — Review-governance pause
+
+Decision: do not spend the formal P2 mechanics re-review or a repository re-review until the user authorizes a transparent amendment to the frozen review allocation; continue all non-verdict remediation, testing, evidence, and staging work meanwhile.
+
+Alternatives considered: combine later phase verdicts in one reviewer process; treat an interim statement as a second phase approval without charging it; skip the repository re-review after `REVISE`; silently transfer a repository slot to mechanics; proceed into P3 before P2 closes.
+
+Rationale: five mechanics slots remain, but P2 reapproval and the five P3-P7 mechanics gates require six fresh invocations. The early P2 repository invocation also returned `REVISE`, so the general protocol requires a new invocation even though the budget section says to spend exactly one at P2. The minimum honest completion path uses 26 of the 30 total reviews if unused domain slots are pooled and a P2 repository retry is allowed, leaving four contingencies while preserving every gate and at least three P9 repository reviews. Until authorized, the original domain caps and one-shot wording remain authoritative.
+
+## 2026-07-16 P2 — Review-governance amendment authorized
+
+Decision: activate the user's explicit authorization to pool otherwise-unused review-domain slots under the unchanged 30-invocation ceiling, permit the required second P2 R-repo invocation after its first `REVISE`, preserve every phase gate and fresh stateless reviewer requirement, retain all prior verdict charges, and reserve at least three R-repo invocations for P9.
+
+Alternatives considered: keep the project paused; waive the P2 repository re-review; combine multiple later gates into one verdict; raise the overall budget above 30; alter or erase prior review accounting.
+
+Rationale: the amendment resolves the mechanical and repository retry arithmetic without weakening the review protocol or Definition of Done. Ten verdicts have been used, the minimum complete path still totals 26, and four pooled contingency invocations remain available while the P9 repository reserve stays protected.
+
+## 2026-07-16 P2 — Second formal re-reviews returned REVISE
+
+Decision: charge formal P2 R-mech re-review #2 and R-repo re-review #2 as `REVISE`, keep P2 gate-pending, update the ledger to R-mech 6 used, R-test 4 used, and R-repo 2 used, and require fresh stateless re-reviews after focused remediation. Twelve of 30 verdicts are now used, 18 pooled verdicts remain, the minimum completion path is 28, two contingency verdicts remain, and at least three R-repo invocations stay reserved for P9.
+
+Alternatives considered: treat the re-reviews as preflights; preserve stale exactly-one or one-shot repository wording; count the first repository `REVISE` as satisfying the gate; continue into P3; describe the findings as fixed before focused verification and new verdicts exist.
+
+Rationale: R-mech found three major scaling defects. ListObject hard-barrier processing rescanned every table for adjacent runs and repartitioned all accumulated zones once per table, with a 12,000-cell probe growing from 6.1 seconds at 1,000 tables to 23.6 seconds at 2,000; remediation requires indexed table candidates and a many-ListObject work-bound regression. Cascading rectangle overlaps could trigger repeated global sort-and-sweep closure passes, with a 2,000-rectangle staircase taking 17.8 seconds; remediation requires queue-driven component expansion backed by spatial candidate lookup and a cascading-closure regression. Merged-header inference scanned the complete merge list per candidate region and then linearly searched it per header coordinate, with 4,000 sparse merged-header regions taking 3.7 seconds; remediation requires indexed region assignment or direct coordinate-to-anchor lookup plus a many-merge scaling regression. R-repo found that `PLAN.md`, the claims plan, the evidence index, the P2 evidence draft, index internals, and the changelog still described the R-repo gate as exactly-one or one-shot and retry authorization as pending. Current-state documentation must instead state that the first required early invocation remains charged as `REVISE` and the user-authorized fresh re-review protocol continues until approval or the documented overall exhaustion policy.
+
+## 2026-07-16 P2 — Indexed region scaling remediation
+
+Decision: replace the three reviewer-identified quadratic paths with rect-key-ordered ListObject barrier lookup and consecutive full-height batching, live dynamic interval/grid component indexing with full-batch bounding-box closure, and one sparse merged-header index with at-most-three-row interval views. Gate the changes with operation counts and exact differentials rather than machine-time thresholds.
+
+Alternatives considered: retain the first indexed draft after its original focused tests passed; loosen timing thresholds; batch every full-height barrier regardless of intervening ordered barriers; count only `Rect.intersects`; use dense merge-coordinate maps; proceed directly to another formal verdict.
+
+Rationale: non-verdict preflight reproduced a residual side-by-side-table path at 6,030,012 copied runs and 19.245 seconds for 1,000 barriers, and found that the isolated-grid test did not observe the new private intersection path. The final 500-to-1,000 barrier regression copies exactly 12,024 then 24,024 runs, while corrected isolated-grid instrumentation totals 39,096 candidate operations versus the original 6,247,500 comparisons. A broader differential then caught one semantic error in the batching optimization: a later full-height barrier was being moved across an earlier partial-height barrier. Batching is now limited to the consecutive rect-key prefix, the exact counterexample is committed, the property runs 400 examples in both metadata orders, and an additional 30,000-case two-order preflight found no mismatch. Independent smoke probes completed full analysis of 1,000 full-height tables over 12,012 cells in 0.482 seconds, the 2,000-rectangle cascade in 0.361 seconds, and 4,000 merged-header regions in 1.509 seconds. Fresh formal mechanics and repository verdicts remain required.
+
+## 2026-07-16 P2 — Third formal reviews split
+
+Decision: charge formal P2 R-mech review #3 as `REVISE` and R-repo review #3 as `APPROVE` with one minor, keep P2 gate-pending solely on a fresh R-mech approval, and update the ledger to R-mech 7 used, R-test 4 used, and R-repo 3 used. Fourteen of 30 verdicts are now used, 16 pooled verdicts remain, the minimum completion path is 29, one contingency verdict remains, and at least three R-repo invocations stay reserved for P9.
+
+Alternatives considered: treat the repository minor as a failed repository gate; leave architecture implying that R-test and all three approvals are pending; treat the mechanics probes as optional optimization; proceed into P3; describe unimplemented mechanics remediation as complete.
+
+Rationale: R-repo approved the early repository gate but identified one current-state minor in `docs/architecture.md`: its P2 wording still implied that R-test and all three required approvals were pending. The current architecture must instead state that R-test and R-repo have approved and that only fresh R-mech approval remains. R-mech found three major scaling defects. Rect-key BVH decoy traversal performed 82,931 checks for 400 tables and 203 zones, then 326,622 for 800 tables and 403 zones; remediation requires adaptive exact spatial candidates with deterministic ordering plus a decoy-work gate. Anchored merges expanded one run per covered row, so a 100,000-row merge produced 100,001 runs; remediation requires lazy rectangles or spans plus a tall-merge regression. Unrestricted `gap_tol` bridging performed 499,500 union calls for 1,000 same-column runs and 1,999,000 for 2,000; remediation requires component/indexed sweeping or an authoritative validated small maximum plus an adversarial regression. No mechanics remediation or approval is recorded by this decision.
+
+## 2026-07-16 P2 — Spatial, tall-merge, and tolerance remediation
+
+Decision: replace the decoy-prone rect-key BVH with a spatially partitioned tree that preserves exact rect-key output order; replace per-row anchored-merge expansion with compressed row-band spans and algebraic ListObject clipping; bound `gap_tol` to the authoritative range 0–8 and reject larger values before index creation; retain the existing bounding-box closure after a sparse row-expiry and column-interval component sweep.
+
+Alternatives considered: materialize and sort every exact table candidate on every query; keep only merge endpoint sentinels; connect raw merge rectangles before table partitioning; preserve unrestricted tolerance and optimize arbitrary-distance row joins; accept timing-only regressions; begin P3 before a fresh P2 mechanics approval.
+
+Rationale: the spatial tree removes the reviewer-supplied decoy traversal while retaining the BSP's deterministic table order. Row-band events at populated rows, merge boundaries, and table boundaries reproduce the former per-row horizontal coalescing without work proportional to merge height. A maximum of 8 preserves the documented configurable behavior around the default of 1 while limiting active-row comparisons to a small constant; lifecycle validation prevents partial sidecars. Fresh preflight measured 21,137, 45,489, and 97,393 checks for 800, 1,600, and 3,200 reviewer-style tables, with exact reverse-order output. `A1:B1048576` remained four runs, one span, one zone, and zero unions at 7,576 bytes peak. Maximum-tolerance union work scaled 8,955 → 17,955 → 35,955 for 1,000 → 2,000 → 4,000 rows. An independent row-expanded oracle completed 60,018 production detector runs with zero mismatches (seed 20260716; rolling hash `61ff18b8ee9f595cf1f7e66c5e1beb04bd377020776f1ab68737b0469ad51b55`). These are non-verdict remediation results; P2 remains gated on one fresh stateless R-mech approval.
+
+## 2026-07-16 P2 — Raw-span correction after non-verdict audit
+
+Decision: supersede the compressed row-band implementation before formal review. Coalesce ordinary cell runs once, retain exactly one raw span for each anchored merged range, partition the mixed primitives through the existing ListObject BSP, and use the sparse component sweep only for sheets that contain anchored merges. Preserve the original ordinary-sheet component fast path.
+
+Alternatives considered: keep the green row-band candidate because it passed the reviewer-supplied cases; cap the number of merges or row events; cache complete active-merge signatures; accept an output-sensitive `O(active merges × row events)` path; spend the fresh formal verdict before another preflight.
+
+Rationale: a read-only audit proved that 40, 80, and 160 tall disjoint merges plus equal unrelated row events processed 3,360, 13,120, and 51,840 band inputs and emitted 3,280, 12,960, and 51,520 intermediate spans—approximately 4× work for each 2× input increase. The raw-span replacement creates 96 then 192 spans and 288 then 576 total mixed primitives for the corresponding doubled committed gate. Root independently compared it with explicit per-row expansion for 30,000 geometries, tolerances 0–3, and both metadata orders (240,000 comparisons) with zero mismatches. A second audit completed 229,376 exhaustive small-grid and 100,000 randomized comparisons with zero mismatches. The spatial decoy fix and tolerance cap remain unchanged. P2 is still gate-pending; this correction spent no formal review invocation.
+
+## 2026-07-16 P2 — Fourth mechanics review found global barrier fragmentation
+
+Decision: charge formal P2 R-mech invocation #4 as `REVISE`, keep P2 gate-pending, and update the ledger to R-mech 8 used, R-test 4 used, and R-repo 3 used. Fifteen of 30 verdicts are now used. The minimum completion path consumes all 30 available invocations, so the next fresh P2 mechanics review is the final available invocation and no pooled contingency remains.
+
+Alternatives considered: treat the green raw-span equivalence oracle as proof of the legacy global BSP; classify quadratic empty-region output as harmless metadata; waive the final mechanics approval; proceed into P3; edit during the formal review; omit the runtime tolerance-type minor because static typing says `int`.
+
+Rationale: the reviewer confirmed one major. The global mixed run/span BSP still sliced every tall merge at every unrelated table row before component closure. With n disjoint tall anchored merges on the left, n one-cell tables at distinct rows on the right, and adjacent non-table cells keeping one coarse zone, n=10, 20, 40, and 80 produced 220, 840, 3,280, and 12,960 heuristic regions in 0.022, 0.085, 0.344, and 1.431 seconds. Direct span constructions reached 300, 1,200, 4,800, 19,200, and 76,800 for n=10, 20, 40, 80, and 160. Even `A1:A20` fragmented into `A1`, `A2`, and `A3:A20` because of a horizontally disjoint `M2` table. Remediation must compute sparse proximity plus bounding-box components before applying a table BSP, then split only components whose bounds intersect that table and keep disjoint spans atomic. The reviewer also reported a minor: `bool` and non-integer `gap_tol` values must be rejected at runtime to prevent persisted configuration drift. Focused 105 tests, the full 255-test suite, Ruff, formatting, Pyright, and 50,000 exact spatial-order queries were otherwise green; the reviewer made no worktree changes.
+
+## 2026-07-16 P2 — Component-first regions and final-verdict preflight
+
+Decision: replace the global mixed-geometry barrier pass with a table-aware later-primitive component sweep, all-root bounding-box closure, and fixed-order component-local BSP. Define primitive proximity by the existence of a table-free minimal cell-to-cell witness; use projected interval coverage for horizontal and vertical corridors and the nearest boundary rectangle for diagonal corridors. Retain root membership in immutable power-of-two spatial-index blocks that meld binomially, keep a separate row-active root index for witness discovery, query immutable blocks through exact spatial traversal, and reject boolean or non-integer `gap_tol` values before lifecycle side effects.
+
+Alternatives considered: split all spans globally and accept output proportional to unrelated table rows; apply table barriers before components; use a whole-corridor `intersects_any` shortcut that incorrectly blocks parallel witness rows; count only calls to the final witness predicate; cache one member index for every historical component; rescan flat retained-member lists; use a single global primitive index and filter same-root members after enumeration; accept balanced-axis candidates because wall time was still modest; spend the final formal verdict before exhaustive non-verdict work.
+
+Rationale: component-first semantics preserves an unrelated `A1:A20` merge atomically while still producing exact directional `D1` and `D2` children around a real barrier. Several deliberately adversarial preflights prevented another premature formal invocation. Recomputing every primitive pair after each child made the connected-wrap family super-output-linear. An all-root implementation then revisited blocked roots and retained quadratic historical member indexes; eager flat membership also copied quadratically. The later-primitive invariant removed old-old rechecks, and root-local binomial blocks removed historical and same-root work. A final audit found that the generic balanced-axis intersection path still enumerated 89,651 then 343,155 internal candidates for two output components at `n=320,640`; immutable member blocks now use the exact spatial iterator instead. Post-fix, that family performs 19,131 then 41,883 exact spatial checks, and its total work ratio is 2.157.
+
+Independent preflight on `regions.py` SHA-256 `58a8f85dae2fde434015eb9c25f61d75e3f704f033f8b2dccac1da04c15ff0ef` completed 201,632 exhaustive plus 100,000 seeded random witness comparisons and 20,001 full component/BSP geometries in both table metadata orders with zero mismatch. The canonical wrap family returned the exact 1,721 and 6,641 regions and 5,740 and 22,680 fragments; fully counted work grew 53,361 to 225,365, or 4.2234× for inherently quadratic output. Unrelated tall merges doubled exact work, maximum-height merge memory remained near 22 KiB, strict tolerance and lifecycle checks passed, the full suite reported 278 passing tests and 89.96% branch coverage for `excel_lsp.core`, and Ruff, formatting, Pyright, and diff checks were clean. No review invocation was consumed by this work. The candidate remains P2 gate-pending until the final available fresh stateless mechanics verdict.
+
+## 2026-07-16 P2 — Final mechanics approval and phase closure
+
+Decision: charge fresh stateless P2 R-mech review #5 as a clean `APPROVE`, close every P2 checklist item, update the ledger to R-mech 9 used, R-test 4 used, and R-repo 3 used, and proceed to the P2 milestone commit before starting P3. Sixteen of 30 verdicts are now used, 14 pooled invocations remain, the minimum P3–P9 path uses all 14, and at least three R-repo invocations remain reserved for P9.
+
+Alternatives considered: treat the exhaustive preflight as the required verdict; reuse an earlier reviewer; combine P2 approval with P3 review; begin P3 before recording the gate; leave active-phase language in public status documents; alter or erase the four charged P2 mechanics revisions.
+
+Rationale: the final reviewer inspected only the frozen staged candidate from P1 HEAD `8651386f08b729343f4334549b099c3339ac5177` and returned no critical, major, or minor findings. Fresh independent commands produced 82 focused and 278 full passing tests, clean Ruff/format/Pyright/lock/diff checks, 101,990 literal witness comparisons, exact prior-fragmentation and maximum-height behavior, a 2.1605 fully counted same-root scaling ratio at 640→1,280, 33,115→71,019 checks for 600→1,200 spatial decoys, and 6,000 exact spatial-order queries over 1,800 rectangles. The reviewer verified the staged `regions.py` SHA-256 and confirmed no worktree mutation. P2's R-mech, R-test, and early R-repo gates are therefore all approved.

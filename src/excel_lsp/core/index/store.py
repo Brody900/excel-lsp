@@ -6,11 +6,11 @@ import json
 import math
 import sqlite3
 import time
-from collections.abc import Callable, Generator, Mapping, Sequence
+from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from types import TracebackType
-from typing import Self
+from typing import Self, cast
 
 from excel_lsp.core.errors import ErrorCode, ExcelLSPError
 from excel_lsp.core.index.edges import EdgeStore
@@ -21,10 +21,19 @@ from excel_lsp.core.index.schema import (
 )
 from excel_lsp.core.models import (
     CellRecord,
+    CellScalar,
+    CellValueType,
     DataTableFormulaInfo,
     SheetDescriptor,
     SheetParseSummary,
     WorkbookMetadata,
+)
+from excel_lsp.core.parse.styles import DEFAULT_STYLE_CATALOG, StyleCatalog
+from excel_lsp.core.regions import (
+    RegionAnalysis,
+    RegionCell,
+    RegionOptions,
+    analyze_sheet_regions,
 )
 from excel_lsp.core.values import JsonScalar, normalize_value
 
@@ -321,6 +330,8 @@ class IndexStore:
         parse_sheet: SheetParser,
         *,
         batch_size: int = 1_000,
+        styles: StyleCatalog = DEFAULT_STYLE_CATALOG,
+        region_options: RegionOptions | None = None,
     ) -> SheetParseSummary:
         """Stream one parser callback into an atomic per-sheet replacement.
 
@@ -374,6 +385,13 @@ class IndexStore:
             flush()
             if summary.descriptor.name != descriptor.name:
                 raise ValueError("sheet parser returned a summary for a different sheet")
+            region_analysis = analyze_sheet_regions(
+                summary,
+                styles,
+                lambda: self._iter_region_cells(sheet_id),
+                region_options,
+            )
+            self._insert_region_analysis(sheet_id, region_analysis)
             self._connection.executemany(
                 """
                 INSERT INTO validations(
@@ -418,6 +436,93 @@ class IndexStore:
             if owns_transaction:
                 self.bump_generation()
             return summary
+
+    def _iter_region_cells(self, sheet_id: int) -> Iterator[RegionCell]:
+        rows = self._connection.execute(
+            """
+            SELECT row, col, value, value_type, style_idx, formula
+            FROM cells WHERE sheet_id = ? ORDER BY row, col
+            """,
+            (sheet_id,),
+        )
+        for row in rows:
+            value_type = cast(CellValueType, str(row["value_type"]))
+            yield RegionCell(
+                row=int(row["row"]),
+                col=int(row["col"]),
+                value=_region_cell_value(row["value"], value_type=value_type),
+                value_type=value_type,
+                style_idx=int(row["style_idx"]),
+                formula=None if row["formula"] is None else str(row["formula"]),
+            )
+
+    def _insert_region_analysis(self, sheet_id: int, analysis: RegionAnalysis) -> None:
+        for region in analysis.regions:
+            cursor = self._connection.execute(
+                """
+                INSERT INTO regions(
+                    sheet_id, n, row_min, row_max, col_min, col_max,
+                    header_rows, kind, list_object_name, confidence
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    sheet_id,
+                    region.n,
+                    region.rect.row_min,
+                    region.rect.row_max,
+                    region.rect.col_min,
+                    region.rect.col_max,
+                    region.header_rows,
+                    region.kind,
+                    region.list_object_name,
+                    region.confidence,
+                ),
+            )
+            if cursor.lastrowid is None:
+                raise RuntimeError("SQLite did not return a region row id")
+            region_id = cursor.lastrowid
+            self._connection.executemany(
+                """
+                INSERT INTO columns(
+                    region_id, idx, header, norm_header, dtype,
+                    nonnull, distinct_est, formula_block_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+                """,
+                (
+                    (
+                        region_id,
+                        column.idx,
+                        column.header,
+                        column.norm_header,
+                        column.dtype,
+                        column.nonnull,
+                        column.distinct_est,
+                    )
+                    for column in region.columns
+                ),
+            )
+        self._connection.executemany(
+            """
+            INSERT INTO diagnostics(
+                severity, code, sheet_id, row, col, ref, message, related
+            ) VALUES (?, ?, ?, NULL, NULL, ?, ?, ?)
+            """,
+            (
+                (
+                    warning.severity,
+                    warning.code,
+                    sheet_id,
+                    warning.ref,
+                    warning.message,
+                    json.dumps(
+                        dict(sorted(warning.related.items())),
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                )
+                for warning in analysis.warnings
+            ),
+        )
 
     def canonical_export(self) -> dict[str, tuple[tuple[object, ...], ...]]:
         """Return content rows in natural order with local row ids projected out.
@@ -783,6 +888,20 @@ def _sqlite_scalar(value: JsonScalar, *, ref: str) -> JsonScalar:
             details={"ref": ref},
         )
     return real_value
+
+
+def _region_cell_value(value: object, *, value_type: CellValueType) -> CellScalar:
+    if value is None:
+        return None
+    if value_type == "bool":
+        return bool(value)
+    if isinstance(value, (int, float, str)):
+        return value
+    raise ExcelLSPError(
+        ErrorCode.CORRUPT,
+        "Index contains an unsupported stored cell value.",
+        details={"valueType": type(value).__name__},
+    )
 
 
 def _data_table_json(data_table: DataTableFormulaInfo | None) -> str | None:

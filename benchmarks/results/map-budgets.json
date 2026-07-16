@@ -1,0 +1,18 @@
+{
+  "encoding": "o200k_base",
+  "maps": {
+    "F03": {
+      "characterCap": 8000,
+      "characters": 1041,
+      "tokenCap": 1500,
+      "tokens": 342
+    },
+    "F20": {
+      "characterCap": 8000,
+      "characters": 4575,
+      "tokenCap": null,
+      "tokens": 1595
+    }
+  },
+  "tiktokenVersion": "0.13.0"
+}
