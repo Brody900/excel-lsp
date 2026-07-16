@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "excel-lsp"
+dynamic = ["version"]
+description = "LSP-style semantic tooling for Excel workbooks"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+  "lxml>=5.3,<7",
+  "mcp>=1.0,<2",
+  "openpyxl==3.1.5",
+  "pydantic>=2,<3",
+  "typer>=0.15,<1",
+]
+
+[project.optional-dependencies]
+live = [
+  "pywin32>=308,<400; sys_platform == 'win32'",
+]
+
+[project.scripts]
+excel-lsp = "excel_lsp.cli:app"
+
+[dependency-groups]
+dev = [
+  "hypothesis>=6,<7",
+  "matplotlib>=3.9,<4",
+  "pyright>=1.1.390,<2",
+  "pytest>=8,<10",
+  "pytest-cov>=6,<8",
+  "ruff>=0.9,<1",
+  "tiktoken==0.13.0",
+]
+
+[tool.hatch.version]
+path = "src/excel_lsp/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/excel_lsp"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["tests/fixtures/generated"]
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["excel_lsp"]
+
+[tool.pyright]
+include = ["src", "tests", "benchmarks"]
+exclude = ["tests/fixtures/generated"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+strict = ["src/excel_lsp/core"]
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+addopts = ["--strict-config", "--strict-markers", "-ra", "-m", "not live"]
+testpaths = ["tests"]
+markers = [
+  "live: requires desktop Microsoft Excel and is excluded from automated CI",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["excel_lsp.core"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
