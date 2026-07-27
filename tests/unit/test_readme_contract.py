@@ -150,16 +150,16 @@ def test_readme_preserves_security_scope_and_limitations() -> None:
         "every OOXML part not deliberately modified stays byte-identical",
         "Planned P6/P8",
         "will not recalculate formulas",
-        "Planned P3/P5",
-        "will be flaggable but opaque to static dependency analysis",
+        "Verified P3; P5 catalog pending",
+        "are flaggable but opaque to static dependency analysis",
         "every inferred region exposes a confidence score",
         "Planned P6",
         "Written strings will use OOXML inline strings",
         "Planned P6/P7",
         "Datetime cell writes will be rejected in v0.1.0",
         "Writes inside multi-cell array formulas will be refused",
-        "Planned P3",
-        "Dynamic-array spill extents will not be statically tracked",
+        "Verified P3",
+        "Dynamic-array spill extents are not statically tracked",
         "Flagship v1.x item",
         "powered by the dependency graph",
         "A real LSP wire-protocol server",
@@ -340,7 +340,7 @@ def test_repository_skeleton_documents_are_substantive_and_pre_release() -> None
     assert "Excel LSP is pre-release" in changelog
 
 
-def test_p2_review_governance_current_state_is_consistent() -> None:
+def test_review_governance_current_state_is_consistent() -> None:
     plan = _read(PLAN)
     claims = _read(CLAIMS)
     architecture = _read(ARCHITECTURE)
@@ -354,11 +354,13 @@ def test_p2_review_governance_current_state_is_consistent() -> None:
         ROOT / "CHANGELOG.md",
     )
 
-    assert "Total verdicts used: 16 of 30." in plan
-    assert "Pooled verdicts remaining: 14" in plan
+    assert "Total verdict-bearing invocations recorded: 22." in plan
+    assert "8 nominal slots remain" in plan
     assert "The minimum completion path is now 30 total invocations" in plan
     assert "leaving no pooled\ncontingency slots" in plan
     assert "fresh re-review after any subsequent `REVISE`" in plan
+    assert "2026-07-27 unbounded-review amendment" in plan
+    assert "supersedes the first amendment's 30-invocation hard stop" in plan
     assert "The first required early P2 R-repo invocation is charged as `REVISE`." in claims
     assert "a fresh stateless R-repo re-review\nfollows each `REVISE`" in claims
     assert "The early P2 repository gate\nis approved." in claims

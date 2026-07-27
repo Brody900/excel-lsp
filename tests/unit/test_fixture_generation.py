@@ -18,10 +18,13 @@ MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 OFFICE_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
-EXPECTED_FIXTURE_IDS = {"F01", "F02", "F03", "F07", "F12", "F13", "F14", "F20"}
+EXPECTED_FIXTURE_IDS = {"F01", "F02", "F03", "F07", "F12", "F13", "F14", "F19", "F20"}
 P1_SHA256 = {
     "F01": "8d57d9143edf78a66be6c33bcede3bcc7fba8ed1ac2d816391a4139a28a41270",
     "F07": "50015028edc75a4bab5cd13af9b4576f520d8c1f4cf0e3b223bab54c3476c871",
+}
+P3_SHA256 = {
+    "F19": "db6ab279299ff1ed28d120fdc4ba6b057227867fc92e98caba50ca4ce761dcdf",
 }
 GenerateAll = Callable[[Path], dict[str, Path]]
 generate_all = cast(
@@ -118,6 +121,9 @@ def test_generation_is_byte_identical_with_stable_zip_metadata(tmp_path: Path) -
     assert {
         fixture_id: hashlib.sha256(first_bytes[fixture_id]).hexdigest() for fixture_id in P1_SHA256
     } == P1_SHA256
+    assert {
+        fixture_id: hashlib.sha256(first_bytes[fixture_id]).hexdigest() for fixture_id in P3_SHA256
+    } == P3_SHA256
 
 
 def test_f01_has_listobject_formulas_and_injected_caches(tmp_path: Path) -> None:
@@ -398,7 +404,7 @@ def test_f20_has_40_sheets_12_islands_and_300_typed_names(tmp_path: Path) -> Non
         ("N001M", "'Stress01'!$A$2:$A$3,'Stress01'!$E$2:$E$3"),
         ("N001C", "=1"),
         ("N001F", "=SUM('Stress01'!$B$2:$B$3)+1"),
-        ("N001L", "=_xlfn.LAMBDA(x,x+1)"),
+        ("N001L", "=_xlfn.LAMBDA(_xlpm.x,_xlpm.x+1)"),
     ]
 
     with OOXMLParser(path) as parser:
@@ -409,3 +415,49 @@ def test_f20_has_40_sheets_12_islands_and_300_typed_names(tmp_path: Path) -> Non
             "formula": 60,
             "lambda": 60,
         }
+
+
+def test_f19_has_exact_modern_formulas_names_spills_and_caches(tmp_path: Path) -> None:
+    path = generate_all(tmp_path)["F19"]
+    cells = _cells(path, "Modern")
+
+    assert {
+        ref: _formula_and_value(cells[ref]) for ref in ("A1", "B1", "C1", "D1", "E1", "F1", "G2")
+    } == {
+        "A1": ("_xlfn._xlws.FILTER(I2:I4,I2:I4>=20)", "20"),
+        "B1": ("SUM(A1#)", "50"),
+        "C1": ("SUM(FilteredValues#)", "50"),
+        "D1": (
+            "_xlfn.LET(_xlpm.rate,I2,_xlpm.bonus,1,_xlpm.rate*3+_xlpm.bonus)",
+            "31",
+        ),
+        "E1": ("DoubleIt(I3)", "40"),
+        "F1": ('_xlfn.XLOOKUP("beta",H2:H4,I2:I4,"missing")', "20"),
+        "G2": ("@I2:I4", "10"),
+    }
+    assert _formula_and_value(cells["A2"]) == (None, "30")
+
+    workbook = _xml_member(path, "xl/workbook.xml")
+    defined_names = workbook.findall(f".//{{{MAIN_NS}}}definedName")
+    assert [(name.get("name"), "".join(name.itertext())) for name in defined_names] == [
+        ("DoubleIt", "=_xlfn.LAMBDA(_xlpm.x,_xlpm.x*2)"),
+        ("FilteredValues", "'Modern'!$A$1"),
+    ]
+
+    with OOXMLParser(path) as parser:
+        names = parser.metadata.defined_names
+        assert [(name.name, name.refers_to, name.kind) for name in names] == [
+            ("DoubleIt", "=_xlfn.LAMBDA(_xlpm.x,_xlpm.x*2)", "lambda"),
+            ("FilteredValues", "'Modern'!$A$1", "range"),
+        ]
+        assert names[0].areas == ()
+        assert [
+            (
+                area.sheet_name,
+                area.rect.row_min,
+                area.rect.row_max,
+                area.rect.col_min,
+                area.rect.col_max,
+            )
+            for area in names[1].areas
+        ] == [("Modern", 1, 1, 1, 1)]

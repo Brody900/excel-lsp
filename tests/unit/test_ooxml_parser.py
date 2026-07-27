@@ -77,6 +77,12 @@ def _contract_parts() -> dict[str, bytes]:
                 <definedName name="Constant">=42</definedName>
                 <definedName name="Formula">=SUM('Data'!$C$1:$C$3)</definedName>
                 <definedName name="Increment">=_xlfn.LAMBDA(x,x+1)</definedName>
+                <definedName name="RelativeLocal" localSheetId="1">B7</definedName>
+                <definedName name="MixedGlobal">'Data'!$A1</definedName>
+                <definedName name="AbsoluteColumns">'Data'!$A:$B</definedName>
+                <definedName name="MixedColumns">'Data'!$A:B</definedName>
+                <definedName name="AbsoluteRows">'Data'!$1:$2</definedName>
+                <definedName name="MixedRows">'Data'!$1:2</definedName>
                 <definedName name="_xlnm.Print_Area">'Data'!$A$1:$D$3</definedName>
               </definedNames>
               <externalReferences>
@@ -429,6 +435,12 @@ def test_parses_names_external_links_vba_and_tolerates_chartsheet(tmp_path: Path
     assert names["Constant"].kind == "constant"
     assert names["Formula"].kind == "formula"
     assert names["Increment"].kind == "lambda"
+    assert (names["RelativeLocal"].kind, names["RelativeLocal"].areas) == ("formula", ())
+    assert (names["MixedGlobal"].kind, names["MixedGlobal"].areas) == ("formula", ())
+    assert names["AbsoluteColumns"].areas == (NameArea("Data", Rect(1, 1_048_576, 1, 2)),)
+    assert (names["MixedColumns"].kind, names["MixedColumns"].areas) == ("formula", ())
+    assert names["AbsoluteRows"].areas == (NameArea("Data", Rect(1, 2, 1, 16_384)),)
+    assert (names["MixedRows"].kind, names["MixedRows"].areas) == ("formula", ())
     assert names["_xlnm.Print_Area"].is_builtin is True
 
 
@@ -452,6 +464,8 @@ def test_hashes_selected_parts_and_never_mutates_source(tmp_path: Path) -> None:
         "xl/tables/table1.xml",
         "xl/worksheets/sheet2.xml",
         "xl/chartsheets/sheet1.xml",
+        "xl/externalLinks/externalLink1.xml",
+        "xl/externalLinks/_rels/externalLink1.xml.rels",
     }
     assert hashes.whole_file == hashlib.sha256(before).hexdigest()
     assert hashes.parts.keys() == selected_parts
@@ -481,6 +495,22 @@ def test_duplicate_sheet_names_are_reported_as_corrupt_ooxml(tmp_path: Path) -> 
     assert caught.value.code is ErrorCode.CORRUPT
 
 
+def test_duplicate_case_insensitive_defined_names_are_reported_as_corrupt_ooxml(
+    tmp_path: Path,
+) -> None:
+    parts = _contract_parts()
+    parts["xl/workbook.xml"] = parts["xl/workbook.xml"].replace(
+        b"</definedNames>",
+        b"<definedName name=\"GLOBALRANGE\">'Data'!$A$1</definedName></definedNames>",
+    )
+    path = _write_package(tmp_path / "duplicate-defined-names.xlsx", parts)
+
+    with pytest.raises(ExcelLSPError) as caught, OOXMLParser(path):
+        pass
+
+    assert caught.value.code is ErrorCode.CORRUPT
+
+
 def test_duplicate_cell_coordinates_are_reported_as_corrupt_ooxml(tmp_path: Path) -> None:
     parts = _contract_parts()
     parts["xl/worksheets/sheet1.xml"] = _xml(
@@ -491,6 +521,40 @@ def test_duplicate_cell_coordinates_are_reported_as_corrupt_ooxml(tmp_path: Path
         """
     )
     path = _write_package(tmp_path / "duplicate-cells.xlsx", parts)
+
+    with OOXMLParser(path) as parser, pytest.raises(ExcelLSPError) as caught:
+        parser.collect_cells(parser.metadata.sheets[0])
+
+    assert caught.value.code is ErrorCode.CORRUPT
+
+
+@pytest.mark.parametrize(
+    "table_xml",
+    [
+        f"""
+        <table xmlns="{MAIN_NS}" name="Orders" displayName="Orders" ref="A1:D3">
+          <tableColumns count="3">
+            <tableColumn id="1" name="A"/>
+            <tableColumn id="2" name="B"/>
+            <tableColumn id="3" name="C"/>
+          </tableColumns>
+        </table>
+        """,
+        f"""
+        <table xmlns="{MAIN_NS}" name="Orders" displayName="Orders" ref="A1:A1"
+          headerRowCount="1" totalsRowCount="1">
+          <tableColumns count="1"><tableColumn id="1" name="A"/></tableColumns>
+        </table>
+        """,
+    ],
+)
+def test_invalid_table_geometry_is_reported_as_corrupt_ooxml(
+    tmp_path: Path,
+    table_xml: str,
+) -> None:
+    parts = _contract_parts()
+    parts["xl/tables/table1.xml"] = _xml(table_xml)
+    path = _write_package(tmp_path / "invalid-table.xlsx", parts)
 
     with OOXMLParser(path) as parser, pytest.raises(ExcelLSPError) as caught:
         parser.collect_cells(parser.metadata.sheets[0])
@@ -601,6 +665,52 @@ def test_shared_formula_groups_require_and_enforce_master_span(
         parser.collect_cells(parser.metadata.sheets[0])
 
     assert caught.value.code is ErrorCode.CORRUPT
+
+
+def test_shared_formula_translation_handles_modern_reference_syntax(
+    tmp_path: Path,
+) -> None:
+    parts = _contract_parts()
+    parts["xl/worksheets/sheet1.xml"] = _xml(
+        f"""
+        <worksheet xmlns="{MAIN_NS}">
+          <sheetData>
+            <row r="2">
+              <c r="B2"><f t="shared" si="1" ref="B2:B3">@A2</f><v>1</v></c>
+              <c r="C2"><f t="shared" si="2" ref="C2:C3">A2:INDEX(A:A,2)</f><v>1</v></c>
+              <c r="D2"><f t="shared" si="3" ref="D2:D3">A2#</f><v>1</v></c>
+              <c r="E2"><f t="shared" si="4" ref="E2:E3">SUM(A2#)</f><v>1</v></c>
+              <c r="F2"><f t="shared" si="5" ref="F2:F3">Esc[A'[B]</f><v>1</v></c>
+            </row>
+            <row r="3">
+              <c r="B3"><f t="shared" si="1"/><v>1</v></c>
+              <c r="C3"><f t="shared" si="2"/><v>1</v></c>
+              <c r="D3"><f t="shared" si="3"/><v>1</v></c>
+              <c r="E3"><f t="shared" si="4"/><v>1</v></c>
+              <c r="F3"><f t="shared" si="5"/><v>1</v></c>
+            </row>
+          </sheetData>
+        </worksheet>
+        """
+    )
+    path = _write_package(tmp_path / "modern-shared-formulas.xlsx", parts)
+
+    with OOXMLParser(path) as parser:
+        cells = parser.collect_cells(parser.metadata.sheets[0])
+
+    formulas = {cell.ref: cell.formula for cell in cells}
+    assert formulas == {
+        "B2": "=@A2",
+        "C2": "=A2:INDEX(A:A,2)",
+        "D2": "=A2#",
+        "E2": "=SUM(A2#)",
+        "F2": "=Esc[A'[B]",
+        "B3": "=@A3",
+        "C3": "=A3:INDEX(A:A,2)",
+        "D3": "=A3#",
+        "E3": "=SUM(A3#)",
+        "F3": "=Esc[A'[B]",
+    }
 
 
 def test_locked_package_open_retries_once_after_the_frozen_delay(

@@ -31,7 +31,7 @@ regenerate F16; the committed project blob is the deterministic input.
 
 ## Implemented generated fixtures
 
-`generate.py` currently emits the P1/P2 subset into `generated/`:
+`generate.py` currently emits the implemented P1-P3 subset into `generated/`:
 
 - F01 `basic_single_table.xlsx`: a clean native table with arithmetic formula
   cells and generator-computed numeric caches.
@@ -52,9 +52,15 @@ regenerate F16; the committed project blob is the deterministic input.
 - F14 `sparse.xlsx`: two empty sheets surrounding a sheet with two distant
   singleton cells. Its bounds stay moderate so the independent openpyxl oracle
   does not turn a sparse test into a dense stress test.
+- F19 `modern_functions.xlsx`: stored `_xlfn.`/`_xlws.` functions and Excel's
+  `_xlpm.` lexical-local spelling, multiple LET bindings, a LAMBDA defined name
+  invoked as a function, XLOOKUP, literal `A1#`
+  and defined-name spill consumers, `@` implicit intersection, a saved spill
+  follower value, and generator-computed caches for every formula.
 - F20 `stress_map.xlsx`: 40 sheets, 12 distinctly sized regions on the first
   sheet, hidden and very-hidden sheets, and 300 global defined names split
-  evenly across range, multi-range, constant, formula, and lambda kinds.
+  evenly across range, multi-range, constant, formula, and lambda kinds. Its
+  generated LAMBDA names also preserve `_xlpm.` parameter spelling.
 
 Every OOXML member is repacked in lexical order with ZIP timestamp
 `1980-01-01 00:00:00`. Workbook document properties use `2000-01-01 00:00:00`.

@@ -21,10 +21,11 @@ from types import MappingProxyType
 from typing import IO, cast
 
 from lxml import etree
-from openpyxl.formula.translate import Translator, TranslatorError
 from openpyxl.utils.datetime import CALENDAR_MAC_1904, CALENDAR_WINDOWS_1900, from_excel
 
 from excel_lsp.core.errors import ErrorCode, ExcelLSPError
+from excel_lsp.core.formulas.a1 import CellRef
+from excel_lsp.core.formulas.translation import translate_a1_formula
 from excel_lsp.core.models import (
     CalculationMode,
     CalculationProperties,
@@ -408,7 +409,10 @@ class OOXMLParser:
         sheets = self._parse_sheets(workbook_root, workbook_rels, content_types)
         date1904 = self._parse_date_system(workbook_root)
         calculation = self._parse_calculation_properties(workbook_root)
-        external_links = self._parse_external_links(workbook_root, workbook_rels)
+        external_links, external_link_parts = self._parse_external_links(
+            workbook_root,
+            workbook_rels,
+        )
         defined_names = self._parse_defined_names(workbook_root, sheets)
 
         if self._has_part("xl/styles.xml"):
@@ -428,6 +432,7 @@ class OOXMLParser:
         )
         selected_parts.extend(sheet.xml_part for sheet in sheets)
         selected_parts.extend(part for sheet in sheets for part in sheet.related_parts)
+        selected_parts.extend(external_link_parts)
         part_hashes: dict[str, str] = {}
         for part in selected_parts:
             if part not in part_hashes:
@@ -697,11 +702,12 @@ class OOXMLParser:
         sheets: tuple[SheetDescriptor, ...],
     ) -> tuple[DefinedName, ...]:
         defined_names: list[DefinedName] = []
+        seen_names: set[tuple[int | None, str]] = set()
         for element in workbook_root.iter():
             if not isinstance(element.tag, str) or local_name(element.tag) != "definedName":
                 continue
             name = attr_by_local(element, "name")
-            if name is None:
+            if not name:
                 raise _PackageCorrupt("definedName has no name")
             scope_text = attr_by_local(element, "localSheetId")
             scope = (
@@ -709,6 +715,10 @@ class OOXMLParser:
                 if scope_text is None
                 else _bounded_int(scope_text, 0, max(0, len(sheets) - 1), "localSheetId")
             )
+            lookup_key = (scope, name.casefold())
+            if lookup_key in seen_names:
+                raise _PackageCorrupt(f"duplicate defined name in one scope: {name!r}")
+            seen_names.add(lookup_key)
             refers_to = "".join(element.itertext())
             kind, areas = _classify_defined_name(refers_to, scope, sheets)
             defined_names.append(
@@ -727,8 +737,9 @@ class OOXMLParser:
         self,
         workbook_root: etree._Element,
         workbook_rels: dict[str, _Relationship],
-    ) -> dict[int, str]:
+    ) -> tuple[dict[int, str], tuple[str, ...]]:
         links: dict[int, str] = {}
+        selected_parts: set[str] = set()
         link_index = 0
         for element in workbook_root.iter():
             if not isinstance(element.tag, str) or local_name(element.tag) != "externalReference":
@@ -742,10 +753,14 @@ class OOXMLParser:
                 or not self._has_part(relationship.part)
             ):
                 continue
+            selected_parts.add(relationship.part)
+            rels_part = _relationships_part(relationship.part)
+            if self._has_part(rels_part):
+                selected_parts.add(rels_part)
             target = self._external_link_target(relationship.part)
             if target is not None:
                 links[link_index] = target
-        return links
+        return links, tuple(sorted(selected_parts))
 
     def _external_link_target(self, link_part: str) -> str | None:
         root = parse_xml(self._read_required(link_part))
@@ -873,11 +888,13 @@ class OOXMLParser:
                             f"shared formula follower {ref} is outside its master ref span"
                         )
                     try:
-                        formula = cast(
-                            str,
-                            Translator(master.formula, origin=master.origin).translate_formula(ref),
+                        master_row, master_col = _checked_cell_ref(master.origin)
+                        formula = translate_a1_formula(
+                            master.formula,
+                            origin=CellRef(master_row, master_col),
+                            target=CellRef(row, col),
                         )
-                    except (TranslatorError, ValueError) as error:
+                    except ValueError as error:
                         raise _PackageCorrupt(
                             f"could not translate shared formula at {ref}"
                         ) from error
@@ -1058,7 +1075,7 @@ class OOXMLParser:
                 ref = attr_by_local(root, "ref")
                 if name is None or display_name is None or ref is None:
                     raise _PackageCorrupt("table is missing name, displayName, or ref")
-                _checked_rect(ref)
+                table_rect = _checked_rect(ref)
                 header_rows = _optional_bounded_int(
                     attr_by_local(root, "headerRowCount"), 1, 0, 1_048_576, "headerRowCount"
                 )
@@ -1072,6 +1089,12 @@ class OOXMLParser:
                         if column_name is None:
                             raise _PackageCorrupt("tableColumn has no name")
                         column_names.append(column_name)
+                expected_columns = table_rect.col_max - table_rect.col_min + 1
+                if len(column_names) != expected_columns:
+                    raise _PackageCorrupt("tableColumn count does not match the table range")
+                table_rows = table_rect.row_max - table_rect.row_min + 1
+                if header_rows + totals_rows > table_rows:
+                    raise _PackageCorrupt("table header and totals rows exceed the table range")
                 tables.append(
                     TableInfo(
                         name=name,
@@ -1211,12 +1234,38 @@ def _parse_name_areas(
             sheet = sheet_by_name.get(sheet_name.casefold())
             if sheet is None:
                 return ()
+        if not _is_absolute_name_area(reference):
+            return ()
         try:
             rect = parse_rect(reference)
         except ValueError:
             return ()
         areas.append(NameArea(sheet.name, rect))
     return tuple(areas)
+
+
+def _is_absolute_name_area(reference: str) -> bool:
+    """Return whether a defined-name area has no anchor-relative axes."""
+    pieces = reference.strip().split(":")
+    if len(pieces) == 1:
+        return re.fullmatch(r"\$[A-Za-z]{1,3}\$[1-9][0-9]{0,6}", pieces[0]) is not None
+    if len(pieces) != 2:
+        return False
+    left, right = pieces
+    return (
+        (
+            re.fullmatch(r"\$[A-Za-z]{1,3}\$[1-9][0-9]{0,6}", left) is not None
+            and re.fullmatch(r"\$[A-Za-z]{1,3}\$[1-9][0-9]{0,6}", right) is not None
+        )
+        or (
+            re.fullmatch(r"\$[A-Za-z]{1,3}", left) is not None
+            and re.fullmatch(r"\$[A-Za-z]{1,3}", right) is not None
+        )
+        or (
+            re.fullmatch(r"\$[1-9][0-9]{0,6}", left) is not None
+            and re.fullmatch(r"\$[1-9][0-9]{0,6}", right) is not None
+        )
+    )
 
 
 def _split_union(expression: str) -> tuple[str, ...]:

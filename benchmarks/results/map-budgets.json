@@ -9,9 +9,9 @@
     },
     "F20": {
       "characterCap": 8000,
-      "characters": 4575,
+      "characters": 4623,
       "tokenCap": null,
-      "tokens": 1595
+      "tokens": 1619
     }
   },
   "tiktokenVersion": "0.13.0"

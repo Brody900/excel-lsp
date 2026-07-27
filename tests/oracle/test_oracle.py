@@ -8,7 +8,7 @@ from typing import cast
 from excel_lsp.core.values import JsonScalar
 
 CanonicalCell = tuple[str, str, JsonScalar, str | None]
-EXPECTED_FIXTURE_IDS = {"F01", "F02", "F03", "F07", "F12", "F13", "F14", "F20"}
+EXPECTED_FIXTURE_IDS = {"F01", "F02", "F03", "F07", "F12", "F13", "F14", "F19", "F20"}
 GenerateAll = Callable[[Path], dict[str, Path]]
 CanonicalReader = Callable[[Path], tuple[CanonicalCell, ...]]
 Probe = Callable[[Path], dict[str, object]]
@@ -79,6 +79,29 @@ def test_openpyxl_315_read_only_probe_matches_recorded_behavior(tmp_path: Path) 
             "merged_ranges": ["E1:F1"],
         },
     }
+
+
+def test_openpyxl_dual_load_observes_f19_modern_formulas_and_caches(tmp_path: Path) -> None:
+    canonical = openpyxl_canonical_cells(generate_all(tmp_path)["F19"])
+    by_ref = {(sheet, ref): (value, formula) for sheet, ref, value, formula in canonical}
+
+    assert by_ref[("Modern", "A1")] == (
+        20,
+        "=_xlfn._xlws.FILTER(I2:I4,I2:I4>=20)",
+    )
+    assert by_ref[("Modern", "A2")] == (30, None)
+    assert by_ref[("Modern", "B1")] == (50, "=SUM(A1#)")
+    assert by_ref[("Modern", "C1")] == (50, "=SUM(FilteredValues#)")
+    assert by_ref[("Modern", "D1")] == (
+        31,
+        "=_xlfn.LET(_xlpm.rate,I2,_xlpm.bonus,1,_xlpm.rate*3+_xlpm.bonus)",
+    )
+    assert by_ref[("Modern", "E1")] == (40, "=DoubleIt(I3)")
+    assert by_ref[("Modern", "F1")] == (
+        20,
+        '=_xlfn.XLOOKUP("beta",H2:H4,I2:I4,"missing")',
+    )
+    assert by_ref[("Modern", "G2")] == (10, "=@I2:I4")
 
 
 def test_every_emitted_fixture_matches_production_ooxml_parser(tmp_path: Path) -> None:

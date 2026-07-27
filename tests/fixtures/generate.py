@@ -582,13 +582,62 @@ def _generate_f20(output_dir: Path) -> Path:
             ("M", "'Stress01'!$A$2:$A$3,'Stress01'!$E$2:$E$3"),
             ("C", f"={number}"),
             ("F", f"=SUM('Stress01'!$B$2:$B$3)+{number}"),
-            ("L", f"=_xlfn.LAMBDA(x,x+{number})"),
+            ("L", f"=_xlfn.LAMBDA(_xlpm.x,_xlpm.x+{number})"),
         )
         for suffix, refers_to in suffixes_and_refs:
             workbook.defined_names.add(DefinedName(f"N{number:03d}{suffix}", attr_text=refers_to))
 
     workbook.save(path)
     workbook.close()
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f19(output_dir: Path) -> Path:
+    path = output_dir / "modern_functions.xlsx"
+    workbook, worksheet = _new_workbook("Modern")
+
+    lookup_rows = (
+        ("Key", "Value"),
+        ("alpha", 10),
+        ("beta", 20),
+        ("gamma", 30),
+    )
+    for row_number, values in enumerate(lookup_rows, start=1):
+        for column_number, value in enumerate(values, start=8):
+            worksheet.cell(row=row_number, column=column_number, value=value)
+
+    # A1 is the dynamic-array anchor and A2 is the saved spill follower value.
+    # The formulas deliberately retain Excel's stored modern-function prefixes.
+    worksheet["A1"] = "=_xlfn._xlws.FILTER(I2:I4,I2:I4>=20)"
+    worksheet["A2"] = 30
+    worksheet["B1"] = "=SUM(A1#)"
+    worksheet["C1"] = "=SUM(FilteredValues#)"
+    worksheet["D1"] = "=_xlfn.LET(_xlpm.rate,I2,_xlpm.bonus,1,_xlpm.rate*3+_xlpm.bonus)"
+    worksheet["E1"] = "=DoubleIt(I3)"
+    worksheet["F1"] = '=_xlfn.XLOOKUP("beta",H2:H4,I2:I4,"missing")'
+    worksheet["G2"] = "=@I2:I4"
+
+    workbook.defined_names.add(
+        DefinedName("DoubleIt", attr_text="=_xlfn.LAMBDA(_xlpm.x,_xlpm.x*2)")
+    )
+    workbook.defined_names.add(DefinedName("FilteredValues", attr_text="'Modern'!$A$1"))
+
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(
+        path,
+        "Modern",
+        {
+            "A1": CachedValue(20),
+            "B1": CachedValue(50),
+            "C1": CachedValue(50),
+            "D1": CachedValue(31),
+            "E1": CachedValue(40),
+            "F1": CachedValue(20),
+            "G2": CachedValue(10),
+        },
+    )
     repack_deterministic(path)
     return path
 
@@ -609,6 +658,7 @@ def generate_all(output_dir: Path = GENERATED_DIR) -> dict[str, Path]:
         "F13": _generate_f13(output_dir),
         "F14": _generate_f14(output_dir),
         "F20": _generate_f20(output_dir),
+        "F19": _generate_f19(output_dir),
     }
 
 

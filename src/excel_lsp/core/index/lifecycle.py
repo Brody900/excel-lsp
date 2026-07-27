@@ -28,7 +28,13 @@ _WORKBOOK_STRUCTURE_PARTS = frozenset(
     }
 )
 _GLOBAL_VALUE_PARTS = frozenset({_SHARED_STRINGS_PART, _STYLES_PART})
+_FORMULA_CONTEXT_PREFIXES = (
+    "xl/externalLinks/",
+    "xl/tables/",
+    "xl/worksheets/_rels/",
+)
 _REGION_ANALYSIS_VERSION = "1"
+_FORMULA_ANALYSIS_VERSION = "1"
 
 
 class _WorkbookChangedDuringIndex(RuntimeError):
@@ -130,6 +136,7 @@ def _index_from_parser(
             or stored_path is None
             or not _paths_equal(stored_path, workbook)
             or store.get_meta("analysis_version") != _REGION_ANALYSIS_VERSION
+            or store.get_meta("formula_analysis_version") != _FORMULA_ANALYSIS_VERSION
             or store.get_meta("region_gap_tol") != str(region_options.gap_tol)
         )
         if not full_rebuild and old_workbook_hash == hashes.whole_file:
@@ -153,6 +160,11 @@ def _index_from_parser(
         changed_parts = _changed_parts(old_parts, hashes)
         workbook_structure_changed = bool(changed_parts.intersection(_WORKBOOK_STRUCTURE_PARTS))
         global_values_changed = bool(changed_parts.intersection(_GLOBAL_VALUE_PARTS))
+        formula_context_changed = (
+            full_rebuild
+            or workbook_structure_changed
+            or any(part.startswith(_FORMULA_CONTEXT_PREFIXES) for part in changed_parts)
+        )
 
         if full_rebuild or workbook_structure_changed or global_values_changed:
             sheets_to_reindex = metadata.sheets
@@ -171,6 +183,7 @@ def _index_from_parser(
                 store.replace_sheet_catalog(metadata.sheets)
                 store.replace_defined_names(metadata)
 
+            store.prepare_list_object_refresh(sheets_to_reindex)
             for descriptor in sheets_to_reindex:
                 store.replace_sheet(
                     descriptor,
@@ -178,6 +191,9 @@ def _index_from_parser(
                     styles=parser.styles,
                     region_options=region_options,
                 )
+
+            formula_sheets = metadata.sheets if formula_context_changed else sheets_to_reindex
+            store.replace_formula_analysis(metadata, formula_sheets)
 
             ending_stat = _stat_workbook(workbook)
             if not _same_stat(source_stat, ending_stat):
@@ -207,6 +223,7 @@ def _index_from_parser(
                         separators=(",", ":"),
                     ),
                     "analysis_version": _REGION_ANALYSIS_VERSION,
+                    "formula_analysis_version": _FORMULA_ANALYSIS_VERSION,
                     "region_gap_tol": region_options.gap_tol,
                 }
             )
@@ -236,6 +253,7 @@ def _fast_path_matches(
             and int(store.get_meta("size", "-1") or "-1") == file_stat.st_size
             and store.get_meta("workbook_hash") is not None
             and store.get_meta("analysis_version") == _REGION_ANALYSIS_VERSION
+            and store.get_meta("formula_analysis_version") == _FORMULA_ANALYSIS_VERSION
             and store.get_meta("region_gap_tol") == str(region_options.gap_tol)
         )
     except ValueError:

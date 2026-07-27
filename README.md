@@ -180,10 +180,12 @@ ListObjects take precedence; otherwise bounded header, type, style, merge, and
 density features produce a region and an explicit confidence score. See
 [the architecture](docs/architecture.md).
 
-P3 normalizes copied formulas into R1C1 signatures and groups matching cells
-into formula blocks. That design lets an agent reason about a large calculated
-column as one semantic unit while preserving cell-level references and
-anomalies. See [index internals](docs/index-internals.md).
+Verified P3 normalizes copied formulas into R1C1 signatures
+and groups matching cells into formula blocks. That design lets an agent reason
+about a large calculated column as one semantic unit while preserving
+cell-level references and anomalies. See
+[the P3 evidence](docs/evidence/p3-formulas-blocks.md) and
+[index internals](docs/index-internals.md).
 
 P4 stores formula range dependencies as rectangles in SQLite R*Tree, with a
 portable interval-table fallback. Point and range queries then feed bounded
@@ -208,21 +210,21 @@ and implementation status.
 
 ### Limitations
 
-Header-confidence behavior is implemented in P2. The other bullets below are
-frozen release limitations, visibly phase-qualified until their implementations
-and evidence land; they do not describe current worktree behavior yet.
+Header-confidence behavior is implemented in P2. Formula-analysis limitations
+are verified P3 behavior; later-phase bullets remain planned release behavior.
 
 - **Planned P6/P8:** Excel LSP will not recalculate formulas; it will read cached
   values and delegate recalculation to Excel.
-- **Planned P3/P5:** `INDIRECT` and other dynamic references will be flaggable
-  but opaque to static dependency analysis.
+- **Verified P3; P5 catalog pending:** `INDIRECT` and other
+  dynamic references are flaggable but opaque to static dependency analysis.
 - Header inference is heuristic and can be wrong; every inferred region exposes
   a confidence score.
 - **Planned P6:** Written strings will use OOXML inline strings, which Excel and
   LibreOffice support but some third-party tools handle poorly.
 - **Planned P6/P7:** Datetime cell writes will be rejected in v0.1.0.
 - **Planned P6/P7:** Writes inside multi-cell array formulas will be refused.
-- **Planned P3:** Dynamic-array spill extents will not be statically tracked.
+- **Verified P3:** Dynamic-array spill extents are not statically
+  tracked.
 
 ### Non-goals for v0.1.0
 

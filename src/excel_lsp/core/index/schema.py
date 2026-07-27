@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-SCHEMA_VERSION = "2"
+SCHEMA_VERSION = "3"
 
 BASE_SCHEMA_SQL = """
 CREATE TABLE meta (
@@ -35,6 +35,35 @@ CREATE TABLE regions (
     confidence REAL NOT NULL,
     FOREIGN KEY (sheet_id) REFERENCES sheets(id) ON DELETE CASCADE,
     UNIQUE (sheet_id, n)
+);
+
+-- Internal ListObject catalog. The public region schema deliberately stays
+-- frozen, while formula analysis retains the header/totals metadata needed to
+-- resolve structured references exactly after an incremental refresh.
+CREATE TABLE list_objects (
+    id INTEGER PRIMARY KEY,
+    sheet_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    lookup_name TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL,
+    row_min INTEGER NOT NULL,
+    row_max INTEGER NOT NULL,
+    col_min INTEGER NOT NULL,
+    col_max INTEGER NOT NULL,
+    header_rows INTEGER NOT NULL,
+    totals_rows INTEGER NOT NULL,
+    FOREIGN KEY (sheet_id) REFERENCES sheets(id) ON DELETE CASCADE
+);
+
+CREATE TABLE list_object_columns (
+    id INTEGER PRIMARY KEY,
+    list_object_id INTEGER NOT NULL,
+    idx INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    lookup_name TEXT NOT NULL,
+    FOREIGN KEY (list_object_id) REFERENCES list_objects(id) ON DELETE CASCADE,
+    UNIQUE (list_object_id, idx),
+    UNIQUE (list_object_id, lookup_name)
 );
 
 CREATE TABLE columns (
@@ -169,6 +198,8 @@ CREATE TABLE package_parts (
 
 CREATE INDEX regions_bounds
     ON regions(sheet_id, row_min, row_max, col_min, col_max);
+CREATE INDEX list_objects_bounds
+    ON list_objects(sheet_id, row_min, row_max, col_min, col_max);
 CREATE INDEX fblocks_bounds
     ON fblocks(sheet_id, row_min, row_max, col_min, col_max);
 CREATE INDEX name_areas_bounds
@@ -188,6 +219,8 @@ CONTENT_TABLES_DELETE_ORDER = (
     "columns",
     "regions",
     "fblocks",
+    "list_object_columns",
+    "list_objects",
     "name_areas",
     "defined_names",
     "validations",

@@ -3,8 +3,11 @@
 Excel LSP stores one disposable SQLite semantic index per workbook. P1's parser,
 schema, persistence, spatial-backend abstraction, canonical export, and
 freshness lifecycle are verified. P2's region, column, symbol, and compact-map
-contracts are also verified. Tables for later graph, diagnostics, and editor
-phases are reserved schema, not evidence that those features already exist.
+contracts are also verified. Verified P3 populates formula blocks, reference
+edges, ListObject context, and its bounded subset of formula diagnostics.
+Tables for later graph, complete
+diagnostics, and editor phases remain reserved schema, not evidence that those
+features already exist.
 
 ## Sidecar placement
 
@@ -48,9 +51,10 @@ response.
 | `defined_names`, `name_areas` | Global/sheet names and resolvable area rectangles | Verified P1 |
 | `validations` | Sparse validation rectangles and constraints | Verified P1 |
 | `regions`, `columns` | Region bounds, headers, type summaries and confidence | Verified P2 |
-| `fblocks` | R1C1 formula-block rectangles and flags | P3 planned |
-| `edges` plus spatial table | Formula destinations and overlap lookup | Storage verified P1; graph P4 planned |
-| `diagnostics` | Bounded workbook and formula findings | P5 planned |
+| `list_objects`, `list_object_columns` | Durable ListObject aliases, bounds, header/totals counts, and ordered column names used by structured-reference analysis | Verified P3 |
+| `fblocks` | Exact R1C1 formula-block rectangles, flags, and formula count | Verified P3 |
+| `edges` plus spatial table | P3 formula destinations and overlap storage; graph traversal remains P4 | P3 population verified; P4 queries planned |
+| `diagnostics` | P3 parse/name/dynamic/inconsistency findings; the complete diagnostic catalog remains P5 | P3 subset verified; P5 completion planned |
 | `staleness` | Rectangles affected by surgical writes | P6 planned |
 
 `cells` is a `WITHOUT ROWID` table keyed by `(sheet_id, row, col)`. Values cross
@@ -199,21 +203,91 @@ the release proof paths are listed in the
 
 ## Formula blocks
 
-Planned for P3. This section will document A1-to-R1C1 normalization, contiguous
-block construction, sheet-bounds-clamped extrusion, modern-formula handling,
-and inconsistency detection after their executable evidence exists.
+Verified P3 normalizes every formula cell independently with the
+tokenizer-backed `to_r1c1`. Absolute row and column coordinates stay absolute;
+relative coordinates become offsets from that cell. Names, structured
+references, spill operands, quoted qualifiers, and non-reference tokens pass
+through without being mistaken for ordinary A1 coordinates. Shared-formula
+translation uses the same quote-, bracket-, and 3-D-aware reference grammar,
+including modern `@` and `#` endpoint forms.
+
+Block construction scans exact formula coordinates column-major, joins equal
+contiguous R1C1 runs vertically, then merges only adjacent columns with exactly
+matching row spans and signatures. Singleton and malformed-but-contained
+formula patterns remain valid blocks. Consequently, every formula cell has one
+owner and the union of block rectangles is exactly the formula-cell set.
+
+References are classified once per block. Relative destination rectangles are
+extruded across the block, absolute dimensions remain fixed, and every result
+is clamped to Excel's row and column bounds. Structured operands whose meaning
+depends on the source cell—including endpoints nested in colon, intersection,
+or union expressions—are projected over an exact row-event tiling of
+homogeneous ListObject contexts. The block-anchor formula is translated to each
+tile anchor with coordinate spill anchors preserved before contextual
+reanalysis. The block identity stays whole while edge and opacity coverage
+remain equivalent to per-cell classification. Spill edges target only their
+statically known definition anchor and are never extruded into a guessed
+dynamic extent.
+
+Reference-result inference is typed through lexical LET/LAMBDA bindings,
+first-class named LAMBDAs, higher-order arguments and returned callables, and
+conservative `CHOOSE`/`IF` callable alternatives. Computed range endpoints are
+visible as `opaque:<callable>` plus `I_DYNAMIC_REF` unless a supported static
+operator can be represented exactly. Static colon/intersection folding handles
+transparent parentheses, whole axes, concrete range names, and compatible
+structured endpoints; an unrepresentable mixed-coordinate intersection
+remains explicitly opaque instead of silently claiming completeness. Constants
+and formula/LAMBDA names are never treated as exact geometry merely because
+their bodies expose one precedent. Their precedents remain indexed, while
+result-reference metadata preserves `INDEX`/dynamic callable attribution
+through LET, aliases, colon, and whitespace intersection. Expansion uses a
+execution-local cache owned by retained `Thread` and asyncio `Task` objects.
+Its identity key retains the exact `ReferenceContext`, anchor, spelling, spill
+mode, and recursion stack so copied contexts and recycled numeric thread ids
+cannot share mutable expansion state.
+
+Excel-authored OOXML prefixes LET/LAMBDA declarations and their local uses with
+`_xlpm.`. Lookup preserves that prefix as a distinct lexical namespace, while
+public labels and duplicate-name checks use the prefix-free, case-insensitive
+display spelling. Raw formula declarations follow the installed worksheet UI:
+valid in-grid A1 spellings are rejected, while R1C1-like and beyond-grid
+spellings are accepted. Stored `_xlpm.` declarations are authoritative even
+when their suffix resembles a cell address. A lexical local participating in
+`:` or whitespace intersection keeps every concrete precedent but also emits
+conservative opacity; scalar locals never gain false reference identity, while
+reference-valued locals retain outer dynamic attribution.
+
+Formula inconsistency detection examines maximal vertical and horizontal runs
+of at least five formulas. It reports minority signatures only when the
+dominant signature covers at least 80% and the minority count is at most
+`max(3, ceil(0.05*n))`, de-duplicating cells seen in both passes. F07 freezes the
+one planted `C12` finding.
+
+Formula analysis is part of the same index transaction as sheet/catalog
+refresh. A worksheet change replaces only source-owned blocks, edges, and P3
+diagnostics while retaining valid incoming edges; name, ListObject, or external
+link context changes reclassify every affected source. A failure rolls back the
+semantic rows and generation together. The executable candidate evidence is
+in [the P3 report](evidence/p3-formulas-blocks.md).
 
 ## Range edges
 
-Planned for P4. This section will document graph population, rectangle edge
-semantics, precedent/dependent traversal, path queries, and bounded circular
-detection after their executable evidence exists. P1 verified only the physical
-R*Tree/interval abstraction described above.
+P3 populates one or more destination rectangles per formula block for statically
+resolved A1, 3-D, name, structured, spill-anchor, and supported composite
+references. Dynamic/external/unresolved destinations retain a deliberate
+`via` label and may have no destination rectangle. The R*Tree and interval
+fallback persist equal natural-key semantics.
+
+P4 still owns graph construction over these rows, precedent/dependent
+traversal, paths, pagination/truncation, and bounded circular detection. A
+populated `edges` table therefore proves P3 extraction, not P4 query behavior.
 
 ## Later-phase population
 
-P3 populates `fblocks`; P4 populates graph edges and spatial rectangles; P5
-populates diagnostics; P6 populates staleness and applies direct post-write index
-patches. P7 exposes these through bounded MCP and CLI calls. Until each phase
-gate closes, the presence of its schema table is only forward-compatible
-storage design.
+P3 populates `list_objects`, `list_object_columns`, `fblocks`, formula
+destination edges, and its parse/name/dynamic/inconsistency diagnostic subset.
+P4 consumes those edges for graph queries and circular analysis. P5 completes
+the diagnostics catalog. P6 populates staleness and applies direct post-write
+index patches. P7 exposes these through bounded MCP and CLI calls. Until each
+phase gate closes, the presence of its schema table is not evidence for a later
+phase's behavior.

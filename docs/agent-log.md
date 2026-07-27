@@ -331,3 +331,371 @@ Decision: charge fresh stateless P2 R-mech review #5 as a clean `APPROVE`, close
 Alternatives considered: treat the exhaustive preflight as the required verdict; reuse an earlier reviewer; combine P2 approval with P3 review; begin P3 before recording the gate; leave active-phase language in public status documents; alter or erase the four charged P2 mechanics revisions.
 
 Rationale: the final reviewer inspected only the frozen staged candidate from P1 HEAD `8651386f08b729343f4334549b099c3339ac5177` and returned no critical, major, or minor findings. Fresh independent commands produced 82 focused and 278 full passing tests, clean Ruff/format/Pyright/lock/diff checks, 101,990 literal witness comparisons, exact prior-fragmentation and maximum-height behavior, a 2.1605 fully counted same-root scaling ratio at 640→1,280, 33,115→71,019 checks for 600→1,200 spatial decoys, and 6,000 exact spatial-order queries over 1,800 rectangles. The reviewer verified the staged `regions.py` SHA-256 and confirmed no worktree mutation. P2's R-mech, R-test, and early R-repo gates are therefore all approved.
+
+## 2026-07-16 P3 — Formula semantics and modern shared translation
+
+Decision: build reference extraction on the pinned openpyxl tokenizer behind a
+source-faithful compatibility wrapper; normalize the frozen modern-function
+catalog before callable/name lookup; implement lexical LET/LAMBDA bindings; and
+replace production shared-formula expansion with Excel LSP's tokenizer-backed
+A1 translator.
+
+Alternatives considered: treat every non-legacy function as an unknown name;
+bind a LET declaration inside its own value; keep openpyxl Translator as the
+production shared-group expander; reject spill, implicit-intersection, or
+structured-escape shared groups.
+
+Rationale: stored `_xlfn.`/`_xlws.` formulas and modern syntax are normal Excel
+OOXML, not parse failures. Desktop Excel confirmed that a LET binding is not
+visible inside its own value. Adversarial parser probes proved openpyxl
+Translator leaves `@A2` and an `A2:INDEX(...)` endpoint unchanged and raises on
+spill/escaped-structured formulas. The replacement matches openpyxl exactly on
+a committed 300-example supported-grammar property while dedicated regressions
+cover modern constructs that openpyxl cannot translate safely.
+
+## 2026-07-16 P3 — Exact blocks with semantic structured contexts
+
+Decision: normalize every formula cell independently to R1C1, grow
+column-major equal runs and merge exact adjacent columns, then extract
+references once per block. For bare source-dependent structured operands,
+retain the one block and reclassify only that direct operand over homogeneous
+ListObject-context rectangles.
+
+Alternatives considered: one edge interpretation from only the block anchor;
+split one formula block per table or per cell; re-tokenize every cell; propagate
+structured references found indirectly inside defined-name bodies as if they
+were direct operands.
+
+Rationale: adjacent tables can contain identical `=[@Input]` formulas with one
+R1C1 signature but different source columns. Direct-operand provenance plus
+semantic tiling preserves I9/I11 and exact edge coverage without fragmenting
+the formula identity. Three deterministic Hypothesis differentials compare
+against brute per-cell classification and exact context partitions. Replacing
+an active-context rescan with a touched-column row-event sweep reduced the
+1,024-context adversarial probe from about 5.16 seconds to 0.012 seconds.
+
+## 2026-07-16 P3 — Dynamic reference expression purity
+
+Decision: determine `INDEX` reference context from complete matched token spans,
+including purely parenthesized endpoints and openpyxl's synthetic `:(` group
+tokens. Propagate nested `INDEX`, `OFFSET`, `INDIRECT`, and reference-returning
+`CHOOSE` results only when the complete branch remains a pure reference
+expression.
+
+Alternatives considered: emit when INDEX closes immediately before a colon;
+emit as soon as INDEX opens after a colon; treat every INDEX call as
+reference-valued; omit nested reference-returning CHOOSE branches.
+
+Rationale: suffix-only state produced order-dependent false positives for
+`(1+INDEX(...)):A5` and `A1:(INDEX(...)+1)`, while an unconditional nested rule
+misclassified `INDEX({1,2},1)`. Matched whole-expression spans distinguish
+those scalar cases from arbitrary parenthesized range endpoints. A 1,440-case
+independent endpoint differential matched the resulting model before formal
+review.
+
+## 2026-07-16 P3 — Correctness-first normalization and honest S1 status
+
+Decision: discard both cross-cell Translator reuse and a custom fused R1C1
+lexer; keep exact per-cell tokenizer semantics for the P3 gate. Record the
+current 50,000-formula and complete 50,000-by-10 timings without claiming S1,
+and carry the profiled parser/region optimization path to the P8 benchmark
+gate.
+
+Alternatives considered: retain a one-row or maximum-row Translator probe;
+ship the sub-second fused lexer after only the simple fill-down benchmark;
+omit the known cold-index miss from P3 evidence.
+
+Rationale: Translator reuse collapsed distinct `=@A2` and
+`=A2:INDEX(A:A,2)` formulas, and boundary probes did not constitute a general
+proof. Fuzzing the fused lexer found name tokens such as `C$a4` that it split
+and partially rewrote. The safe exact baseline is slower but reviewable:
+median R1C1 normalization is 4.154 seconds for 50,000 formulas, while block
+construction is 0.036 seconds. The complete current cold path is 37.880
+seconds; profiling identifies row-end OOXML parsing and a conservative exact
+dense-region accumulator as the material route to the P8 target.
+
+## 2026-07-16 P3 — Typed callable reference flow
+
+Decision: represent reference identity and callable identity separately through
+LET/LAMBDA inference. Preserve lexical closures, first-class named LAMBDAs,
+higher-order callable arguments and results, and conservative callable
+alternatives returned by `CHOOSE` or `IF`. When a computed callable result is a
+range endpoint, emit a visible `opaque:<callable>` edge and `I_DYNAMIC_REF`;
+retain nested INDEX attribution through simple reference-preserving wrappers.
+
+Alternatives considered: treat every local or defined LAMBDA result as a
+scalar; treat every callable result as a reference; recognize only direct
+inline LAMBDA calls; discard argument identity at higher-order boundaries; emit
+only the innermost dynamic function for arbitrarily deep compositions.
+
+Rationale: Excel permits callables to be passed, selected, returned, named, and
+invoked after grouping. Scalar-only inference silently lost real computed
+endpoints, while unconditional promotion produced false dynamic edges for
+arithmetic and scalar-returning controls. Typed bindings keep those cases
+separate. The committed matrix includes `Apply`, `Pick`, `Make`, inline and
+lexical closures, callable selectors, scalar controls, both endpoint
+directions, and transparent grouping.
+
+## 2026-07-16 P3 — Unified composite reference grammar
+
+Decision: use one quote-, bracket-, and 3-D-aware A1 endpoint grammar for
+classification, shared translation, and R1C1 normalization. Fold exact static
+colon and representable intersection operators through transparent
+parentheses and `@` groups. Compute compatible bounds across A1, names, whole
+axes, and structured operands; preserve context-free column/name ambiguity;
+and emit explicit opacity for computed or geometrically unrepresentable cases.
+
+Alternatives considered: keep three partially overlapping endpoint parsers;
+split every colon at the first textual delimiter; reduce all intersections to
+bounding boxes; emit independent endpoint edges without the combined range;
+silently drop an operator when its result cannot fit the frozen geometry
+model.
+
+Rationale: tokenizer edge forms include synthetic `:(` function tokens,
+triple-colon whole-axis/name syntax, escaped structured headers, quoted 3-D
+spans, and independent `@` or `#` modifiers. Late non-verdict fuzzing exposed
+grouped whole-column, name-to-structured, and extra-parenthesized named or
+lexical callable endpoints that earlier focused cases did not cover. Exact
+compatible geometry plus visible conservative fallback fixes those losses.
+Permanent regressions now cover both directions and nested wrappers; the
+context-free translation path remains deliberately non-committal where only a
+workbook-defined name can disambiguate the spelling.
+
+## 2026-07-16 P3 — No-verdict final hardening cycle
+
+Decision: delay the formal P3 freeze after non-verdict adversarial passes found
+four additional root-cause defects. Retain composite range endpoint geometries
+through block extrusion; release all selected sheets' stale ListObject aliases
+inside the atomic refresh transaction; flatten, identity-deduplicate, and cap
+callable alternatives at 32 with conservative overflow; normalize `:@(` as a
+real colon plus grouped implicit intersection; and require exact directional
+translation before extending a noncanonical R1C1 block bucket.
+
+Alternatives considered: spend the formal verdicts on the earlier green
+candidate; bound only formula length; accept anchor-exact mixed ranges; insert
+replacement tables sequentially and special-case sheet order; make every
+computed callable opaque without type flow; use only a symmetric block key; or
+force every spill formula into a singleton.
+
+Rationale: the mixed endpoint `E3:E10 = SUM(A<row>:SalesTable[Qty])` persisted
+only `A2:B5` because the moving endpoint was inside the fixed table range at
+the anchor; component-wise extrusion now yields `A2:B10`, with a deterministic
+150-example two-dimensional/boundary differential. Moving a table alias from a
+later-order sheet to an earlier one collided with its stale row; batch
+pre-release permits the move while preserving rollback and real collision
+errors. Duplicate callable choices grew from 2.743 seconds at depth 17 to
+11.238 seconds at depth 19; normalization reduces the 14-level reproducer from
+about 3.68 seconds to about 0.0065 seconds and retains possible reference
+results beyond the cap. Both-sided `@(A1):@(B5)` had produced an empty callable
+and `W_PARSE`; a 144-case depth/name/structured matrix is now exact.
+
+R1C1 alone also collapsed `A1:A1` with `A2`, nested degenerate composite
+endpoints, and directional lowercase/absolute column spellings. Explicit range
+arity is now retained, shared translation preserves Excel's absolute-column
+case rules, and proposed vertical/horizontal merges verify the top-left formula
+at the candidate coordinate. Canonical uppercase formulas retain a fast path.
+Coordinate spill operands follow the frozen §5.4 exception: block translation
+holds their anchors verbatim while still translating and checking every other
+reference in the formula. The final 50,000-formula-column medians are 4.547
+seconds normalization, 0.195 seconds guarded block construction, and 0.369
+seconds inconsistency analysis. No formal review invocation was spent in this
+cycle.
+
+## 2026-07-27 P3 — Computed-name endpoint identity and bounded expansion
+
+Decision: distinguish concrete range names from constants and formula/LAMBDA
+names at the classification boundary. Preserve every body precedent, but never
+use those precedents as exact result geometry for colon or whitespace
+intersection. Carry result-reference and dynamic-function provenance through
+LET and alias chains, emitting `opaque:<FN>` plus `I_DYNAMIC_REF` for dynamic
+results and `opaque:ref` for scalar or bare-callable endpoints. Treat whitespace
+intersection as a full reference context. Memoize resolved name expansion only
+inside one task-local analysis scope, keyed by context, scope, anchor, token,
+spill/function mode, and complete recursion stack.
+
+Alternatives considered: accept generic block opacity after preventing the
+false hull; mark every name use opaque; infer exact output geometry from the
+first body precedent; keep colon-specific dynamic detection; cache on the
+`ReferenceContext` across workbook cells; or rely only on the depth-32 guard.
+
+Rationale: `Pick = INDEX($A:$A,1)` had been persisted as an exact
+`A1:B1048576` hull in `Pick:B5`, while `Scalar = ABS($A$1)` fabricated `A1:B5`.
+The first containment fix retained precedents but lost `opaque:INDEX` and
+`I_DYNAMIC_REF`; direct or named-LAMBDA INDEX results on whitespace
+intersection also became silently nonopaque. Parenthesized constants could
+drop the operator entirely. Finally, valid `_F31 -> ... -> _F0 -> Fixed` alias
+chains expanded exponentially because folding, inference, and extraction each
+reanalyzed the same bodies. Typed result metadata closes the semantic gaps,
+and the scoped memo reduces the valid 32-name reproducer to under 0.01 seconds
+without sharing state across formulas or weakening recursive-name containment.
+Direct, reverse, grouped, block-extrusion, persistence, structured-negative,
+and alias-depth regressions are committed. No formal review invocation was
+spent in this hardening cycle.
+
+## 2026-07-27 P3 — Occurrence-complete intersections and execution-local memoization
+
+Decision: scan every unfolded whitespace intersection in encounter order and
+retain occurrence-specific dynamic markers while emitting at most the required
+generic conservative fallback. Deduplicate dynamic diagnostics semantically by
+code and function identity when a nested computed-name body is reused as a
+colon endpoint. Scope the defined-name memo to the actual execution owner,
+represented by retained `Thread` and asyncio `Task` objects, and retain the
+exact `ReferenceContext` object in an identity key.
+
+Alternatives considered: stop after the first intersection; globally dedupe
+same-label dynamic events; dedupe diagnostics only by full message text; allow
+copied contexts to share a mutable cache; use copy-on-write mappings; identify
+threads only by recyclable numeric ids; or disable memoization under
+concurrency.
+
+Rationale: formulas with an earlier generic intersection silently lost later
+`INDEX` attribution, and repeated computed intersections emitted only the first
+event. A nested name such as `Both = LET(x,Pick B5,x)` then used in `Both:C6`
+could persist two differently worded `I_DYNAMIC_REF` rows for the one INDEX.
+The first memo implementation also let inherited asyncio tasks and copied
+thread contexts mutate one dictionary; an owner check based on `get_ident()`
+still failed when Windows recycled a terminated thread's id. Retained execution
+objects make ownership unambiguous, while the context identity wrapper prevents
+stale id reuse and preserves same-owner nested cache hits. Permanent tests cover
+mixed and repeated intersections, nested diagnostic deduplication, child-task
+and copied-thread isolation, and actual owner-object identity. Independent
+stress passes exercised 33 intersections per formula, 1,024 inherited
+executions, exception resets, recursive/depth-bounded aliases, and an exact
+numeric-thread-id recycling reproducer without finding another defect. No
+formal review invocation was spent in this hardening cycle.
+
+## 2026-07-27 P3 — Initial formal split and declaration investigation
+
+Decision: charge global formal invocation #17 / R-mech #10 as `REVISE` and
+global invocation #18 / R-test #5 as a clean `APPROVE` on the initial frozen
+tree, then reopen P3 because the mechanics finding required a runtime oracle.
+Bind that historical candidate to base
+`3359a974dc72db1dd1ec47507eaf24891c670c92`, stage tree
+`4b8364b6060ec52245260448601c9c61f19856a3`, and cached-diff blob
+`1a0b6eb4c92cc56345203f1a7f4171aab7c66628` (45 files, 14,600 insertions,
+156 deletions). Do not carry the old test approval across any correction.
+
+Alternatives considered: accept general Name Manager rules as the LET/LAMBDA
+grammar without testing; treat the clean R-test verdict as approval of later
+code; suppress R1C1-like declarations; permit periods because one Microsoft
+page says names may contain them; or proceed to P4 with a split gate.
+
+Rationale: Microsoft's LET, LAMBDA, and general formula-name pages disagree at
+their boundaries. A 49-probe worksheet-entry matrix on desktop Excel 16.0 build
+19530 produced 26 calculated formulas and 23 rejected literals: the UI accepted
+Unicode, underscore/backslash, R1C1-like, and beyond-grid A1-like locals, while
+rejecting in-grid A1 spellings, periods, operators, spaces, `@`/`#`, leading
+digits, and same-scope case-insensitive duplicates. COM `Range.Formula2`
+followed a distinct acceptance path. Saved OOXML then exposed the real gap:
+Excel prefixes ordinary LET/LAMBDA declarations and their uses with `_xlpm.`.
+The exact UI matrix is committed as
+`docs/evidence/p3-excel-declaration-oracle.csv`; the unsaved synthetic Book1 is
+left open pending explicit user authorization to discard it.
+
+## 2026-07-27 P3 — Exact stored namespace and composite remediation
+
+Decision: model raw and `_xlpm.` locals as distinct exact lexical namespaces;
+strip `_xlpm.` only for public display and duplicate-name identity. Preserve
+unprefixed built-in precedence in function-call position. Retain concrete
+precedents plus conservative opacity for direct, reversed, and grouped lexical
+colon/intersection endpoints; keep scalar locals non-reference-valued and
+propagate reference-valued outer attribution. Reuse one matching-group map per
+formula and skip scope-bound occurrences in the global intersection prepass.
+
+Alternatives considered: strip `_xlpm.` for every lookup; expose it in public
+function labels; let a prefixed local shadow an unprefixed built-in or defined
+name; treat all lexical composites as exact; discard the operator; rerun group
+matching for every whitespace token; or preserve the first formal candidate
+because its full test suite was green.
+
+Rationale: prefix-stripped lookup made `_xlpm.SUM` shadow raw `SUM` and leaked
+private labels. The scope-blind intersection pass could resurrect a global
+`Pick = INDEX(...)` beneath `LET(Pick,...)`. Parenthesized locals beside `:`
+bypassed direct composite handling, while 1,900 grouped intersections rebuilt
+the parenthesis map 1,900 times. Exact-style keys, intrinsic/display function
+separation, occurrence-index skipping, and grouped endpoint recovery close
+those gaps. The maximum-sized 7,615-character stress probe now completes in
+0.099 seconds on the development machine. F19/F20 fixtures, semantic/map
+goldens, oracle expectations, and map budgets were refreshed together.
+
+The user explicitly authorized unbounded review loops and continued subagent
+orchestration at high reasoning. This supersedes the earlier 30-invocation hard
+stop without erasing its nominal allocation: every extra verdict remains
+charged, every reviewer remains fresh/stateless, and every changed candidate
+must receive new R-mech and R-test reviews before the P3 gate can close.
+
+## 2026-07-27 P3 — Raw axis-shaped lexical precedence
+
+Decision: when a simple raw spelling in a colon composite exactly matches an
+active LET/LAMBDA binding, resolve that lexical binding before contextual
+whole-column or whole-row recovery. Preserve known defined names and ordinary
+unbound axis ranges, keep scalar bindings non-reference-valued, retain concrete
+and dynamic identity for reference-valued bindings, and exclude qualified,
+structured, external, and 3-D spellings from lexical reinterpretation.
+
+Alternatives considered: classify every all-letter pair as an A1 whole-column
+range before scope analysis; always prefer lexical-looking text even when no
+binding exists; treat every ambiguous composite as reference-valued; or reject
+the spelling instead of containing it conservatively.
+
+Rationale: a read-only preflight proved that `r:s`, `rr:ss`, and grouped or
+reversed variants could falsely promote scalar LET expressions and emit
+`I_DYNAMIC_REF`. A disposable live-Excel differential confirmed lexical
+precedence for reference-valued `C:C` and `R:R` locals and errors for scalar
+locals. The corrected candidate passed 319 focused reference tests, a 576-case
+LET/LAMBDA cross-product, a second independent matrix exceeding 1,000 cases,
+and bounded 900- and 1,000-expression stress probes. The full repository then
+passed 764 tests at 90.35% branch coverage. These were non-verdict preflights;
+fresh formal R-mech and R-test reviews remain required after fingerprinting.
+
+## 2026-07-27 P3 — Second formal split and contextual tile provenance
+
+Decision: charge global invocation #19 / R-mech #11 as `REVISE` and global
+invocation #20 / R-test #6 as a clean `APPROVE` on the second frozen tree, then
+invalidate the test approval because the mechanics corrections changed that
+tree. Bind the historical candidate to base
+`3359a974dc72db1dd1ec47507eaf24891c670c92`, stage tree
+`c7de5e88dbccc9b0c0f7276af1ed3bd585d8ee0a`, and cached-diff blob
+`f4e58e1213c4b4616a3a8d9e05d6c05255df9eeb` (51 files, 15,923 insertions,
+193 deletions).
+
+Alternatives considered: inspect only complete structured tokens; reuse the
+block-anchor formula at every tile; translate coordinate spills with ordinary
+relative references; retain the initial anchor's static endpoints when grouped
+operator folding changes by context; or omit opacity markers that appear only
+in later tiles.
+
+Rationale: R-mech #11 reproduced incorrect multi-table coverage for
+`[@Input]:F2` and relative-endpoint drift after horizontal tiling. Structured
+requirements now aggregate recursively across safe composite operands and can
+retain multiple qualified current-row tables. Each tile analyzes the formula
+translated from the block origin with coordinate spills deliberately fixed.
+An independent 101-case block-versus-per-cell differential then found grouped
+colon ownership and intersection-opacity mismatches at inside/outside table
+boundaries. Treating opaque structured failures as foldable endpoints and
+unioning tile-derived `opaque:ref` markers closed both gaps. The differential
+finished with zero failures, the focused P3 slice passed 501 tests, and the full
+repository passed 771 tests at 90.41% branch coverage. Fresh formal R-mech and
+R-test verdicts remain required on the next exact fingerprint.
+
+## 2026-07-27 P3 — Final clean approvals and gate close
+
+Decision: close P3 after global invocation #21 / R-mech #12 and global
+invocation #22 / R-test #7 both returned clean `APPROVE` verdicts with no
+findings on one unchanged candidate. Bind the approved tree to base
+`3359a974dc72db1dd1ec47507eaf24891c670c92`, stage tree
+`a6ced2a07ca3e438c47e11e93e261b572699cc50`, and cached-diff blob
+`fe3d0c40a75446da3d1b6af146292eae778eb3f6` (51 files, 16,309 insertions,
+194 deletions; 107 tracked files; zero tracked forbidden junk).
+
+Alternatives considered: carry forward R-test #6 from the prior tree; combine
+the two domains; accept only the author's differential; or leave current-state
+documentation gate-pending after formal closure.
+
+Rationale: both fresh reviewers independently reproduced the 501-test focused
+slice, all 771 repository tests, and 90.41% branch coverage. R-mech #12 also ran
+a separate 605-case block-versus-per-cell differential over contextual
+structured composites with zero failures. Each reviewer confirmed the stage
+tree and cached-diff blob before and after inspection and found no unstaged or
+untracked changes. The review ledger now records 12 R-mech, 7 R-test, and 3
+R-repo invocations; P4 may begin only after the P3 milestone commit.

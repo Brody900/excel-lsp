@@ -38,11 +38,11 @@ Authoritative specification: `HANDOFF.md` (v1.1). Work phases execute in order; 
 
 ### P3 — Formula references and blocks
 
-- [ ] Implement reference classification, names, structured/3-D/external refs, and dynamic/volatile flags.
-- [ ] Implement LET/LAMBDA suppression, modern prefix normalization, spills, and implicit intersection.
-- [ ] Implement R1C1 normalization, block construction/extrusion/clamping, and inconsistency detection.
-- [ ] Generate/exercise F19 and verify invariant I20.
-- [ ] Pass R-mech and R-test gates.
+- [x] Implement reference classification, names, structured/3-D/external refs, and dynamic/volatile flags.
+- [x] Implement LET/LAMBDA suppression, modern prefix normalization, spills, and implicit intersection.
+- [x] Implement R1C1 normalization, block construction/extrusion/clamping, and inconsistency detection.
+- [x] Generate/exercise F19 and verify invariant I20.
+- [x] Pass R-mech and R-test gates.
 
 ### P4 — Graph and traces
 
@@ -99,21 +99,24 @@ Authoritative specification: `HANDOFF.md` (v1.1). Work phases execute in order; 
 
 ## Review ledger
 
-Original allocation: 10 R-mech, 10 R-test, 10 R-repo. The
-user-authorized amendment below keeps the frozen 30-invocation overall ceiling
-while pooling otherwise-unused domain slots. Phase gates may pass on APPROVE
-with minor findings, but the release aims for a clean APPROVE in every domain.
-If the overall pool is exhausted with an unresolved critical finding, publish
-`v0.1.0-rc1` and document it in `KNOWN_ISSUES.md`.
+Original allocation: 10 R-mech, 10 R-test, 10 R-repo. The first amendment
+pooled that nominal 30-invocation budget. On 2026-07-27, the user explicitly
+superseded the hard ceiling with unbounded fresh-review loops and continued
+subagent orchestration. The original allocation and every verdict remain
+visible for audit; extra invocations are charged sequentially and never waive
+a phase gate. Phase gates may pass on APPROVE with minor findings, but the
+release aims for a clean APPROVE in every domain.
 
 | Domain | Used | Nominal remaining | Latest verdict | Notes |
 |---|---:|---:|---|---|
-| R-mech | 9 | 1 | APPROVE | P1 used three REVISE verdicts, then a finding-free APPROVE. P2 reviews #1–#4 found and remediated map/configuration and region-scaling majors. Fresh stateless P2 review #5 returned a clean APPROVE after independently verifying the component-first engine, exact spatial work, full suite, and staged evidence. |
-| R-test | 4 | 6 | APPROVE | P1 used one REVISE and one APPROVE-with-minor. P2 review #1 found an external-link URL secret leak; review #2 independently returned a clean APPROVE after URI/metadata hardening and adversarial regressions. |
+| R-mech | 12 | 0 nominal; unbounded retries authorized | APPROVE | P1 used three REVISE verdicts, then a finding-free APPROVE. P2 reviews #1–#4 found and remediated map/configuration and region-scaling majors; #5 approved. P3 #10 and #11 reopened two candidates; #12 cleanly approved the final fingerprint after independently passing a 605-case contextual differential. |
+| R-test | 7 | 3 nominal; unbounded retries authorized | APPROVE | P1 used one REVISE and one APPROVE-with-minor. P2 used one REVISE and one clean APPROVE. P3 #5 and #6 approved superseded trees; #7 cleanly approved the same final fingerprint as R-mech #12 with 501 focused and 771 full-suite passes. |
 | R-repo | 3 | 7 | APPROVE | The first two P2 invocations remain charged as `REVISE`. Fresh review #3 returned `APPROVE` with one architecture-status minor: it still implied that R-test and all three P2 approvals were pending. This current-state update corrects that wording. Reserve at least 3 R-repo invocations for P9. |
 
-Total verdicts used: 16 of 30. Pooled verdicts remaining: 14, including the
-reserved minimum of 3 R-repo invocations for P9.
+Total verdict-bearing invocations recorded: 22. Against the historical
+allocation, 8 nominal slots remain, including at least 3 R-repo invocations
+reserved for P9. The later user authorization permits additional fresh
+invocations whenever a `REVISE` or changed candidate requires them.
 
 ### User-authorized review-governance amendment
 
@@ -132,6 +135,16 @@ resolve the remaining-gate arithmetic:
 The minimum completion path is now 30 total invocations, leaving no pooled
 contingency slots. This amendment changes allocation only; it does not waive or
 combine any review, acceptance criterion, phase ordering rule, or release gate.
+
+### 2026-07-27 unbounded-review amendment
+
+After P3's initial formal split, the user explicitly directed Codex to keep
+unbounded review loops and subagent orchestration even at high reasoning. This
+later instruction supersedes the first amendment's 30-invocation hard stop.
+Every invocation remains stateless, fingerprint-bound, and charged in this
+ledger; a changed candidate always receives fresh reviews. No approval is
+carried across a code change, no gate is combined, and phase ordering remains
+unchanged.
 
 ## Definition of Done
 

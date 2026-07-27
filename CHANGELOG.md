@@ -31,11 +31,17 @@ public API is being claimed yet.
 - The P2 public-repository skeleton, security scope, contribution guide, and an
   exhaustive README claims-to-artifacts contract. P2's mechanics, test, and
   user-authorized early repository gates all have approving verdicts.
+- Formula tokenization and reference classification for A1, names, 3-D,
+  structured, external, spill, implicit-intersection, and dynamic-reference
+  forms; typed LET/LAMBDA and first-class callable flow; exact `_xlpm.` stored
+  local namespaces; conservative lexical colon/intersection handling; modern
+  shared-formula translation; exact R1C1 formula blocks; translated,
+  context-equivalent structured-reference tiling; clamped edge extrusion;
+  F07/F19 semantic goldens; and atomic incremental formula lifecycle persistence.
 
 ### Planned before v0.1.0
 
-- Formula-reference classification, R1C1 blocks, graph navigation, and
-  diagnostics.
+- Graph navigation and the complete diagnostics catalog.
 - A surgical OOXML editor with untouched-part fidelity evidence.
 - The 14-tool stdio MCP server, CLI, response-cap conformance, and Codex
   quickstart verification.

@@ -54,6 +54,8 @@ def test_store_configures_sqlite_and_creates_frozen_schema(tmp_path: Path) -> No
             "meta",
             "sheets",
             "regions",
+            "list_objects",
+            "list_object_columns",
             "columns",
             "fblocks",
             "defined_names",
@@ -119,6 +121,78 @@ def test_streaming_sheet_replace_normalizes_values_and_stores_formulas(
         ]
         assert store.connection.execute("SELECT COUNT(*) FROM validations").fetchone()[0] == 1
         assert store.generation == 1
+
+
+def test_sheet_replace_persists_complete_list_object_catalog(tmp_path: Path) -> None:
+    descriptor = _descriptor()
+    table = TableInfo(
+        name="SalesTable",
+        display_name="SalesTable",
+        ref="B2:D8",
+        header_rows=1,
+        totals_rows=1,
+        columns=("Item", "Net Sales", "Tax"),
+    )
+
+    with IndexStore(tmp_path / "tables.xlsp.db") as store:
+        store.replace_sheet_catalog((descriptor,))
+
+        def parse(on_cell: object) -> SheetParseSummary:
+            assert callable(on_cell)
+            for ref, col, value in zip(
+                ("B2", "C2", "D2"),
+                range(2, 5),
+                table.columns,
+                strict=True,
+            ):
+                on_cell(CellRecord(ref, 2, col, value, "string"))
+            return SheetParseSummary(
+                descriptor,
+                "table-part-hash",
+                8,
+                4,
+                len(table.columns),
+                tables=(table,),
+            )
+
+        store.replace_sheet(descriptor, parse)  # type: ignore[arg-type]
+
+        catalog = store.connection.execute(
+            """
+            SELECT s.name, t.name, t.lookup_name, t.display_name,
+                   t.row_min, t.row_max, t.col_min, t.col_max,
+                   t.header_rows, t.totals_rows
+            FROM list_objects AS t
+            JOIN sheets AS s ON s.id = t.sheet_id
+            """
+        ).fetchone()
+        assert tuple(catalog) == (
+            "Data",
+            "SalesTable",
+            "salestable",
+            "SalesTable",
+            2,
+            8,
+            2,
+            4,
+            1,
+            1,
+        )
+        columns = store.connection.execute(
+            """
+            SELECT idx, name, lookup_name
+            FROM list_object_columns
+            ORDER BY idx
+            """
+        ).fetchall()
+        assert tuple(map(tuple, columns)) == (
+            (0, "Item", "item"),
+            (1, "Net Sales", "net sales"),
+            (2, "Tax", "tax"),
+        )
+        assert store.canonical_export()["list_objects"] == (
+            ("Data", "SalesTable", "SalesTable", 2, 8, 2, 4, 1, 1),
+        )
 
 
 def test_nonworksheet_sheet_replacement_keeps_catalog_row_without_cells(tmp_path: Path) -> None:

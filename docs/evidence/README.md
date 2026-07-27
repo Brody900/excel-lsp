@@ -23,12 +23,18 @@ or other secrets.
   implemented P2 contracts, fixtures, invariants, and measured F03/F20 map
   budgets. Its R-mech, R-test, and user-authorized early R-repo gates have all
   approved.
+- [Phase 3 formula references and blocks](p3-formulas-blocks.md) records the
+  implemented reference, R1C1, block, fixture, lifecycle, privacy, and
+  performance evidence. Fresh R-mech and R-test reviewers both cleanly approved
+  the final frozen fingerprint.
+- [P3 desktop-Excel declaration oracle](p3-excel-declaration-oracle.csv)
+  preserves the exact 49 worksheet-entry probes behind the raw LET/LAMBDA name
+  grammar decision (26 calculated, 23 rejected on Excel 16.0 build 19530).
 
 ## Planned evidence paths
 
 These paths are contracts, not links to completed work:
 
-- `p3-formulas-blocks.md`: reference classification and R1C1 formula blocks.
 - `p4-graph.md`: rectangle edges, graph traces, paths, and circular detection.
 - `p5-diagnostics.md`: complete diagnostics matrix.
 - `p6-editor.md`: surgical editing and staleness behavior.

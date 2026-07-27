@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import json
-import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
-from urllib.parse import unquote, urlsplit
+from pathlib import Path
 
+from excel_lsp.core.external_links import external_link_label
 from excel_lsp.core.index import IndexStore, ensure_fresh
 from excel_lsp.core.parse.coordinates import make_cell_ref
 from excel_lsp.core.symbols import defined_name_symbol_id, region_symbol_id
@@ -26,27 +25,6 @@ _SHEET_SOURCE_LIMIT = 200
 _REGION_SOURCE_LIMIT = 80
 _BASE_COLUMN_SOURCE_LIMIT = 16
 _EXTRA_COLUMN_SOURCE_LIMIT = 512
-_MAX_EXTERNAL_TARGET_LENGTH = 4_096
-_MAX_EXTERNAL_DECODE_ROUNDS = 16
-_NEUTRAL_EXTERNAL_LINK = "[external-workbook]"
-_URI_SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
-_WINDOWS_DRIVE = re.compile(r"^[A-Za-z]:[\\/]")
-_HTTP_URI = re.compile(r"^https?://", re.IGNORECASE)
-_FILE_URI = re.compile(r"^file://", re.IGNORECASE)
-_WORKBOOK_SUFFIXES = (
-    ".xlsx",
-    ".xlsm",
-    ".xltx",
-    ".xltm",
-    ".xlsb",
-    ".xls",
-    ".xlt",
-    ".csv",
-    ".tsv",
-    ".ods",
-    ".fods",
-)
-
 _HINTS = (
     "Use get_region_schema for columns+samples",
     "trace_dependents for impact analysis",
@@ -429,7 +407,7 @@ def _load_source(
         for row in name_rows
     )
     external_links = tuple(
-        _external_link_label(str(row["target"])) for row in link_rows if row["target"] is not None
+        external_link_label(str(row["target"])) for row in link_rows if row["target"] is not None
     )
     external_link_count = int(link_rows[0]["total"]) if link_rows else 0
     return _MapSource(
@@ -590,88 +568,6 @@ def _range_ref(row_min: int, row_max: int, col_min: int, col_max: int) -> str:
     start = make_cell_ref(row_min, col_min)
     end = make_cell_ref(row_max, col_max)
     return start if start == end else f"{start}:{end}"
-
-
-def _external_link_label(target: str) -> str:
-    decoded_target = _bounded_unquote(target.strip())
-    if decoded_target is None:
-        return _NEUTRAL_EXTERNAL_LINK
-    path = decoded_target
-    try:
-        if _WINDOWS_DRIVE.match(decoded_target):
-            path = decoded_target
-        elif decoded_target.startswith(("//", "\\\\")):
-            path = urlsplit(f"https:{decoded_target.replace(chr(92), '/')}").path
-        elif _HTTP_URI.match(decoded_target):
-            parsed = urlsplit(decoded_target)
-            if parsed.scheme.casefold() not in {"http", "https"} or not parsed.hostname:
-                return _NEUTRAL_EXTERNAL_LINK
-            path = parsed.path
-        elif _FILE_URI.match(decoded_target):
-            parsed = urlsplit(decoded_target)
-            if parsed.scheme.casefold() != "file" or "@" in parsed.netloc:
-                return _NEUTRAL_EXTERNAL_LINK
-            path = parsed.path
-        elif _URI_SCHEME.match(decoded_target) or "://" in decoded_target:
-            return _NEUTRAL_EXTERNAL_LINK
-    except ValueError:
-        return _NEUTRAL_EXTERNAL_LINK
-
-    decoded = _bounded_unquote(path)
-    if decoded is None:
-        return _NEUTRAL_EXTERNAL_LINK
-    for delimiter in ("?", "#", ";"):
-        decoded = decoded.split(delimiter, 1)[0]
-    normalized = decoded.replace("\\", "/").rstrip("/")
-    name = PurePosixPath(normalized).name.strip()
-    if name.startswith("[") and name.endswith("]"):
-        name = name[1:-1].strip()
-    if not _is_safe_workbook_name(name):
-        return _NEUTRAL_EXTERNAL_LINK
-    return f"[{name}]"
-
-
-def _bounded_unquote(value: str) -> str | None:
-    if len(value) > _MAX_EXTERNAL_TARGET_LENGTH:
-        return None
-    decoded = value
-    for _round in range(_MAX_EXTERNAL_DECODE_ROUNDS):
-        next_decoded = unquote(decoded)
-        if next_decoded == decoded:
-            return decoded
-        decoded = next_decoded
-    return decoded if unquote(decoded) == decoded else None
-
-
-def _is_safe_workbook_name(name: str) -> bool:
-    if not name or name in {".", ".."} or len(name) > 255:
-        return False
-    if any(ord(character) < 32 for character in name):
-        return False
-    if any(
-        character in name
-        for character in (
-            "/",
-            "\\",
-            ":",
-            "@",
-            "?",
-            "#",
-            ";",
-            "&",
-            "=",
-            "+",
-            "[",
-            "]",
-            "%",
-        )
-    ):
-        return False
-    folded = name.casefold()
-    for suffix in _WORKBOOK_SUFFIXES:
-        if folded.endswith(suffix):
-            return bool(name[: -len(suffix)].strip(" ."))
-    return False
 
 
 __all__ = [

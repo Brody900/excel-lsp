@@ -13,6 +13,15 @@ from types import TracebackType
 from typing import Self, cast
 
 from excel_lsp.core.errors import ErrorCode, ExcelLSPError
+from excel_lsp.core.formulas.blocks import FormulaBlock, FormulaCell
+from excel_lsp.core.formulas.indexing import (
+    SheetFormulaAnalysis,
+    analyze_sheet_formulas,
+)
+from excel_lsp.core.formulas.references import (
+    ReferenceContext,
+    TableBinding,
+)
 from excel_lsp.core.index.edges import EdgeStore
 from excel_lsp.core.index.schema import (
     BASE_SCHEMA_SQL,
@@ -24,10 +33,13 @@ from excel_lsp.core.models import (
     CellScalar,
     CellValueType,
     DataTableFormulaInfo,
+    Rect,
     SheetDescriptor,
     SheetParseSummary,
+    TableInfo,
     WorkbookMetadata,
 )
+from excel_lsp.core.parse.coordinates import make_cell_ref, parse_rect
 from excel_lsp.core.parse.styles import DEFAULT_STYLE_CATALOG, StyleCatalog
 from excel_lsp.core.regions import (
     RegionAnalysis,
@@ -50,6 +62,12 @@ INSERT INTO cells(
 _SQLITE_INT_MIN = -(1 << 63)
 _SQLITE_INT_MAX = (1 << 63) - 1
 _INITIALIZATION_RETRY_DELAYS = (0.01, 0.025, 0.05, 0.1, 0.2, 0.4)
+_P3_DIAGNOSTIC_CODES = (
+    "I_DYNAMIC_REF",
+    "W_INCONSISTENT_FORMULA",
+    "W_PARSE",
+    "W_UNKNOWN_NAME",
+)
 
 
 class IndexStore:
@@ -324,6 +342,36 @@ class IndexStore:
                 area_rows,
             )
 
+    def prepare_list_object_refresh(self, sheets: Sequence[SheetDescriptor]) -> None:
+        """Release table aliases for one atomic multi-sheet replacement batch.
+
+        Table names and display names are unique across a workbook. Removing
+        every selected sheet's old catalog before inserting any replacement
+        lets a valid table move between sheets without colliding with its stale
+        owner. The caller must keep the complete replacement in one transaction
+        so an intermediate catalog cannot escape if parsing or validation fails.
+        """
+        if not self._connection.in_transaction:
+            raise RuntimeError("ListObject refresh preparation requires an active transaction")
+        ordered = tuple(sorted(sheets, key=lambda sheet: sheet.order))
+        if len({sheet.order for sheet in ordered}) != len(ordered):
+            raise ValueError("ListObject refresh sheet selection contains duplicates")
+        sheet_ids = tuple(self._sheet_id(descriptor) for descriptor in ordered)
+        for sheet_id in sheet_ids:
+            self._connection.execute(
+                """
+                DELETE FROM list_object_columns
+                WHERE list_object_id IN (
+                    SELECT id FROM list_objects WHERE sheet_id = ?
+                )
+                """,
+                (sheet_id,),
+            )
+            self._connection.execute(
+                "DELETE FROM list_objects WHERE sheet_id = ?",
+                (sheet_id,),
+            )
+
     def replace_sheet(
         self,
         descriptor: SheetDescriptor,
@@ -392,6 +440,7 @@ class IndexStore:
                 region_options,
             )
             self._insert_region_analysis(sheet_id, region_analysis)
+            self._insert_list_objects(sheet_id, summary)
             self._connection.executemany(
                 """
                 INSERT INTO validations(
@@ -436,6 +485,307 @@ class IndexStore:
             if owns_transaction:
                 self.bump_generation()
             return summary
+
+    def replace_formula_analysis(
+        self,
+        metadata: WorkbookMetadata,
+        sheets: Sequence[SheetDescriptor] | None = None,
+    ) -> tuple[str, ...]:
+        """Replace P3 formula semantics for selected source sheets atomically.
+
+        All worksheet and ListObject rows must already reflect ``metadata``.
+        Calling this method without an outer transaction performs one generation
+        bump; lifecycle refreshes nest it inside their aggregate transaction.
+        """
+        selected = tuple(
+            sorted(metadata.sheets if sheets is None else sheets, key=lambda sheet: sheet.order)
+        )
+        _validate_formula_sheet_selection(metadata.sheets, selected)
+        owns_transaction = not self._connection.in_transaction
+        with self.transaction():
+            context = self._formula_reference_context(metadata)
+            analyzed: list[str] = []
+            for descriptor in selected:
+                sheet_id = self._sheet_id(descriptor)
+                formula_cells = tuple(
+                    FormulaCell(
+                        row=int(row["row"]),
+                        col=int(row["col"]),
+                        formula=str(row["formula"]),
+                    )
+                    for row in self._connection.execute(
+                        """
+                        SELECT row, col, formula
+                        FROM cells
+                        WHERE sheet_id = ? AND formula IS NOT NULL
+                        ORDER BY col, row
+                        """,
+                        (sheet_id,),
+                    )
+                )
+                regions = tuple(
+                    Rect(
+                        int(row["row_min"]),
+                        int(row["row_max"]),
+                        int(row["col_min"]),
+                        int(row["col_max"]),
+                    )
+                    for row in self._connection.execute(
+                        """
+                        SELECT row_min, row_max, col_min, col_max
+                        FROM regions WHERE sheet_id = ? ORDER BY n
+                        """,
+                        (sheet_id,),
+                    )
+                )
+                analysis = analyze_sheet_formulas(
+                    descriptor,
+                    formula_cells,
+                    regions,
+                    context,
+                )
+                self._replace_sheet_formula_analysis(sheet_id, analysis)
+                analyzed.append(descriptor.name)
+            if owns_transaction:
+                self.bump_generation()
+            return tuple(analyzed)
+
+    def _formula_reference_context(self, metadata: WorkbookMetadata) -> ReferenceContext:
+        # The schema's unique ``lookup_name`` column protects table names, but
+        # formulas may legally use either ``name`` or ``displayName``.  Validate
+        # the complete alias namespace here as a defensive boundary for
+        # sidecars created by older builds or modified outside IndexStore.
+        self._list_object_alias_owners()
+        try:
+            sheet_orders = {sheet.name: sheet.order for sheet in metadata.sheets}
+            columns_by_table: dict[int, list[str]] = {}
+            for row in self._connection.execute(
+                """
+                SELECT list_object_id, idx, name
+                FROM list_object_columns
+                ORDER BY list_object_id, idx
+                """
+            ):
+                columns_by_table.setdefault(int(row["list_object_id"]), []).append(str(row["name"]))
+
+            tables: list[TableBinding] = []
+            for row in self._connection.execute(
+                """
+                SELECT t.id, s.name AS sheet_name, t.name, t.display_name,
+                       t.row_min, t.row_max, t.col_min, t.col_max,
+                       t.header_rows, t.totals_rows
+                FROM list_objects AS t
+                JOIN sheets AS s ON s.id = t.sheet_id
+                ORDER BY s.id, t.row_min, t.col_min, t.name
+                """
+            ):
+                sheet_name = str(row["sheet_name"])
+                try:
+                    sheet_order = sheet_orders[sheet_name]
+                except KeyError as exc:
+                    raise ValueError("ListObject catalog uses an unknown sheet") from exc
+                start = make_cell_ref(int(row["row_min"]), int(row["col_min"]))
+                end = make_cell_ref(int(row["row_max"]), int(row["col_max"]))
+                table_id = int(row["id"])
+                tables.append(
+                    TableBinding(
+                        sheet_order,
+                        sheet_name,
+                        TableInfo(
+                            name=str(row["name"]),
+                            display_name=str(row["display_name"]),
+                            ref=start if start == end else f"{start}:{end}",
+                            header_rows=int(row["header_rows"]),
+                            totals_rows=int(row["totals_rows"]),
+                            columns=tuple(columns_by_table.get(table_id, ())),
+                        ),
+                    )
+                )
+            return ReferenceContext(
+                sheets=metadata.sheets,
+                defined_names=metadata.defined_names,
+                tables=tuple(tables),
+                external_links=metadata.external_links,
+            )
+        except ValueError as error:
+            raise ExcelLSPError(
+                ErrorCode.CORRUPT,
+                "Workbook metadata cannot form a valid formula reference context.",
+            ) from error
+
+    def _replace_sheet_formula_analysis(
+        self,
+        sheet_id: int,
+        analysis: SheetFormulaAnalysis,
+    ) -> None:
+        affected_edges = self._connection.execute(
+            "SELECT id FROM edges WHERE src_sheet_id = ?",
+            (sheet_id,),
+        ).fetchall()
+        for edge in affected_edges:
+            self.edge_store.delete(int(edge[0]))
+        self._connection.execute("DELETE FROM edges WHERE src_sheet_id = ?", (sheet_id,))
+        self._connection.execute(
+            """
+            UPDATE columns SET formula_block_id = NULL
+            WHERE region_id IN (SELECT id FROM regions WHERE sheet_id = ?)
+            """,
+            (sheet_id,),
+        )
+        self._connection.execute("DELETE FROM fblocks WHERE sheet_id = ?", (sheet_id,))
+        placeholders = ",".join("?" for _code in _P3_DIAGNOSTIC_CODES)
+        self._connection.execute(
+            f"DELETE FROM diagnostics WHERE sheet_id = ? AND code IN ({placeholders})",
+            (sheet_id, *_P3_DIAGNOSTIC_CODES),
+        )
+
+        block_ids: dict[int, int] = {}
+        for block in analysis.blocks:
+            cursor = self._connection.execute(
+                """
+                INSERT INTO fblocks(
+                    sheet_id, n, r1c1, row_min, row_max, col_min, col_max,
+                    volatile, opaque
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    sheet_id,
+                    block.n,
+                    block.r1c1,
+                    block.rect.row_min,
+                    block.rect.row_max,
+                    block.rect.col_min,
+                    block.rect.col_max,
+                    int(block.volatile),
+                    int(block.opaque),
+                ),
+            )
+            if cursor.lastrowid is None:
+                raise RuntimeError("SQLite did not return a formula-block id")
+            block_ids[block.n] = int(cursor.lastrowid)
+
+        for edge in analysis.edges:
+            try:
+                source_id = block_ids[edge.source_block_n]
+            except KeyError as exc:
+                raise RuntimeError("formula edge names an unknown source block") from exc
+            destination_id = None
+            if edge.dst_sheet_order is not None:
+                destination_id = self._sheet_id_by_order(edge.dst_sheet_order)
+            rect = edge.rect
+            cursor = self._connection.execute(
+                """
+                INSERT INTO edges(
+                    src_kind, src_id, src_sheet_id, dst_sheet_id,
+                    dst_row_min, dst_row_max, dst_col_min, dst_col_max, via
+                ) VALUES ('fblock', ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    source_id,
+                    sheet_id,
+                    destination_id,
+                    None if rect is None else rect.row_min,
+                    None if rect is None else rect.row_max,
+                    None if rect is None else rect.col_min,
+                    None if rect is None else rect.col_max,
+                    edge.via,
+                ),
+            )
+            if cursor.lastrowid is None:
+                raise RuntimeError("SQLite did not return an edge id")
+            if destination_id is not None and rect is not None:
+                self.edge_store.insert(int(cursor.lastrowid), destination_id, rect)
+
+        self._connection.executemany(
+            """
+            INSERT INTO diagnostics(
+                severity, code, sheet_id, row, col, ref, message, related
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                (
+                    diagnostic.severity,
+                    diagnostic.code,
+                    sheet_id,
+                    diagnostic.row,
+                    diagnostic.col,
+                    diagnostic.ref,
+                    diagnostic.message,
+                    json.dumps(
+                        dict(sorted(diagnostic.related.items())),
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                )
+                for diagnostic in analysis.diagnostics
+            ),
+        )
+        self._link_region_columns_to_blocks(sheet_id, analysis.blocks, block_ids)
+
+    def _link_region_columns_to_blocks(
+        self,
+        sheet_id: int,
+        blocks: Sequence[FormulaBlock],
+        block_ids: Mapping[int, int],
+    ) -> None:
+        totals_by_table = {
+            str(row["name"]).casefold(): int(row["totals_rows"])
+            for row in self._connection.execute(
+                "SELECT name, totals_rows FROM list_objects WHERE sheet_id = ?",
+                (sheet_id,),
+            )
+        }
+        rows = self._connection.execute(
+            """
+            SELECT c.id, c.idx, r.row_min, r.row_max, r.col_min,
+                   r.header_rows, r.list_object_name
+            FROM columns AS c
+            JOIN regions AS r ON r.id = c.region_id
+            WHERE r.sheet_id = ?
+            ORDER BY r.n, c.idx
+            """,
+            (sheet_id,),
+        )
+        for row in rows:
+            column = int(row["col_min"]) + int(row["idx"])
+            body_min = int(row["row_min"]) + int(row["header_rows"])
+            table_name = row["list_object_name"]
+            totals_rows = (
+                0 if table_name is None else totals_by_table.get(str(table_name).casefold(), 0)
+            )
+            body_max = int(row["row_max"]) - totals_rows
+            if body_min > body_max:
+                continue
+            candidates = [
+                block
+                for block in blocks
+                if block.rect.col_min <= column <= block.rect.col_max
+                and block.rect.row_min <= body_min
+                and block.rect.row_max >= body_max
+            ]
+            if len(candidates) == 1:
+                self._connection.execute(
+                    "UPDATE columns SET formula_block_id = ? WHERE id = ?",
+                    (block_ids[candidates[0].n], int(row["id"])),
+                )
+
+    def _sheet_id(self, descriptor: SheetDescriptor) -> int:
+        row = self._connection.execute(
+            "SELECT id FROM sheets WHERE id = ? AND name = ?",
+            (descriptor.order + 1, descriptor.name),
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"sheet is missing from index catalog: {descriptor.name}")
+        return int(row["id"])
+
+    def _sheet_id_by_order(self, sheet_order: int) -> int:
+        row = self._connection.execute(
+            "SELECT id FROM sheets WHERE id = ?",
+            (sheet_order + 1,),
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"formula destination uses unknown sheet order: {sheet_order}")
+        return int(row["id"])
 
     def _iter_region_cells(self, sheet_id: int) -> Iterator[RegionCell]:
         rows = self._connection.execute(
@@ -524,17 +874,125 @@ class IndexStore:
             ),
         )
 
+    def _insert_list_objects(self, sheet_id: int, summary: SheetParseSummary) -> None:
+        alias_owners = self._list_object_alias_owners()
+        ordered = sorted(
+            summary.tables,
+            key=lambda table: (
+                parse_rect(table.ref).row_min,
+                parse_rect(table.ref).col_min,
+                table.name.casefold(),
+            ),
+        )
+        for table in ordered:
+            aliases = (table.name, table.display_name)
+            if any(not alias for alias in aliases):
+                raise self._list_object_alias_error(table, summary)
+            lookup_aliases = {alias.casefold() for alias in aliases}
+            if lookup_aliases.intersection(alias_owners):
+                raise self._list_object_alias_error(table, summary)
+            rect = parse_rect(table.ref)
+            try:
+                cursor = self._connection.execute(
+                    """
+                    INSERT INTO list_objects(
+                        sheet_id, name, lookup_name, display_name,
+                        row_min, row_max, col_min, col_max,
+                        header_rows, totals_rows
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        sheet_id,
+                        table.name,
+                        table.name.casefold(),
+                        table.display_name,
+                        rect.row_min,
+                        rect.row_max,
+                        rect.col_min,
+                        rect.col_max,
+                        table.header_rows,
+                        table.totals_rows,
+                    ),
+                )
+            except sqlite3.IntegrityError as error:
+                raise ExcelLSPError(
+                    ErrorCode.CORRUPT,
+                    "Excel Table names and columns must be unique workbook-wide.",
+                    details={"table": table.name, "sheet": summary.descriptor.name},
+                ) from error
+            if cursor.lastrowid is None:
+                raise RuntimeError("SQLite did not return a ListObject row id")
+            table_id = int(cursor.lastrowid)
+            alias_owners.update({alias: table_id for alias in lookup_aliases})
+            try:
+                self._connection.executemany(
+                    """
+                    INSERT INTO list_object_columns(
+                        list_object_id, idx, name, lookup_name
+                    ) VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        (table_id, index, name, name.casefold())
+                        for index, name in enumerate(table.columns)
+                    ),
+                )
+            except sqlite3.IntegrityError as error:
+                raise ExcelLSPError(
+                    ErrorCode.CORRUPT,
+                    "Excel Table column names must be unique.",
+                    details={"table": table.name, "sheet": summary.descriptor.name},
+                ) from error
+
+    def _list_object_alias_owners(self) -> dict[str, int]:
+        owners: dict[str, int] = {}
+        rows = self._connection.execute(
+            """
+            SELECT t.id, t.name, t.display_name, s.name AS sheet_name
+            FROM list_objects AS t
+            JOIN sheets AS s ON s.id = t.sheet_id
+            ORDER BY t.id
+            """
+        )
+        for row in rows:
+            table_id = int(row["id"])
+            name = str(row["name"])
+            display_name = str(row["display_name"])
+            for alias in {name, display_name}:
+                lookup_alias = alias.casefold()
+                owner = owners.get(lookup_alias)
+                if not alias or (owner is not None and owner != table_id):
+                    raise ExcelLSPError(
+                        ErrorCode.CORRUPT,
+                        "Excel Table names and display names must be unique workbook-wide.",
+                        details={"table": name, "sheet": str(row["sheet_name"])},
+                    )
+                owners[lookup_alias] = table_id
+        return owners
+
+    @staticmethod
+    def _list_object_alias_error(
+        table: TableInfo,
+        summary: SheetParseSummary,
+    ) -> ExcelLSPError:
+        return ExcelLSPError(
+            ErrorCode.CORRUPT,
+            "Excel Table names and display names must be unique workbook-wide.",
+            details={"table": table.name, "sheet": summary.descriptor.name},
+        )
+
     def canonical_export(self) -> dict[str, tuple[tuple[object, ...], ...]]:
         """Return content rows in natural order with local row ids projected out.
 
         Lifecycle-only ``generation`` and ``indexed_at`` metadata are omitted so
         a full build and an incremental build of the same workbook are directly
-        comparable for invariant I2.
+        comparable for invariant I2. Raw external-link targets are also omitted:
+        the index retains them for reference resolution, but canonical debug and
+        test projections must not disclose URL credentials, paths, or tokens.
         """
         queries = {
             "meta": """
                 SELECT key, value FROM meta
-                WHERE key NOT IN ('generation', 'indexed_at')
+                WHERE key NOT IN ('generation', 'indexed_at', 'external_links')
                 ORDER BY key
             """,
             "sheets": """
@@ -555,6 +1013,21 @@ class IndexStore:
                 JOIN sheets AS s ON s.id = r.sheet_id
                 LEFT JOIN fblocks AS fb ON fb.id = c.formula_block_id
                 ORDER BY s.name, r.n, c.idx
+            """,
+            "list_objects": """
+                SELECT s.name, t.name, t.display_name,
+                       t.row_min, t.row_max, t.col_min, t.col_max,
+                       t.header_rows, t.totals_rows
+                FROM list_objects AS t
+                JOIN sheets AS s ON s.id = t.sheet_id
+                ORDER BY s.name, t.row_min, t.col_min, t.name
+            """,
+            "list_object_columns": """
+                SELECT s.name, t.name, c.idx, c.name
+                FROM list_object_columns AS c
+                JOIN list_objects AS t ON t.id = c.list_object_id
+                JOIN sheets AS s ON s.id = t.sheet_id
+                ORDER BY s.name, t.name, c.idx
             """,
             "fblocks": """
                 SELECT s.name, f.n, f.r1c1, f.row_min, f.row_max, f.col_min,
@@ -785,6 +1258,8 @@ class IndexStore:
             "columns",
             "regions",
             "fblocks",
+            "list_object_columns",
+            "list_objects",
             "validations",
             "cells",
         ):
@@ -792,6 +1267,12 @@ class IndexStore:
                 self._connection.execute(
                     "DELETE FROM columns WHERE region_id IN "
                     "(SELECT id FROM regions WHERE sheet_id = ?)",
+                    (sheet_id,),
+                )
+            elif table == "list_object_columns":
+                self._connection.execute(
+                    "DELETE FROM list_object_columns WHERE list_object_id IN "
+                    "(SELECT id FROM list_objects WHERE sheet_id = ?)",
                     (sheet_id,),
                 )
             else:
@@ -818,6 +1299,22 @@ def _normalize_part_name(part_name: str) -> str:
     return part_name.replace("\\", "/").lstrip("/")
 
 
+def _validate_formula_sheet_selection(
+    workbook_sheets: Sequence[SheetDescriptor],
+    selected: Sequence[SheetDescriptor],
+) -> None:
+    by_order = {sheet.order: sheet for sheet in workbook_sheets}
+    if len(by_order) != len(workbook_sheets):
+        raise ValueError("workbook sheet orders must be unique")
+    seen: set[int] = set()
+    for descriptor in selected:
+        if descriptor.order in seen:
+            raise ValueError("formula-analysis sheet selection contains duplicates")
+        seen.add(descriptor.order)
+        if by_order.get(descriptor.order) != descriptor:
+            raise ValueError("formula-analysis sheet selection is not from workbook metadata")
+
+
 def _part_kind(part_name: str) -> str:
     if part_name == "xl/workbook.xml":
         return "workbook"
@@ -827,6 +1324,10 @@ def _part_kind(part_name: str) -> str:
         return "shared_strings"
     if part_name == "xl/styles.xml":
         return "styles"
+    if part_name.startswith("xl/externalLinks/"):
+        return "external_link"
+    if part_name.startswith("xl/tables/"):
+        return "worksheet_metadata"
     if part_name.startswith("xl/worksheets/"):
         return "worksheet"
     return "package"

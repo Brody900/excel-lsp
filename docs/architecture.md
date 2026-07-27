@@ -3,9 +3,10 @@
 Excel LSP is a local, derived semantic index for modern Excel OOXML workbooks.
 The verified P1 implementation streams workbook packages into a per-workbook
 SQLite sidecar and refreshes that index from package hashes. Verified P2 adds
-sparse regions, stable symbols, and the compact workbook map. Formula
-navigation, editing, MCP, benchmarks, and release behavior remain planned in
-their ordered phases.
+sparse regions, stable symbols, and the compact workbook map. Verified P3 adds
+formula reference extraction and R1C1 blocks. Graph navigation, editing, MCP,
+benchmarks, and release behavior
+remain planned in their ordered phases.
 
 ## Layer boundaries
 
@@ -105,7 +106,7 @@ bounded map projection over indexed rows. See
 | P0 | Packaging, locked environment, CI and fixture scaffold | Verified |
 | P1 | OOXML parser, SQLite store, spatial abstraction, freshness lifecycle | Verified |
 | P2 | Regions, headers, stable symbols, compact workbook map | Verified |
-| P3 | Formula reference classification and R1C1 formula blocks | Planned |
+| P3 | Formula reference classification and R1C1 formula blocks | Verified |
 | P4 | Dependency graph, spatial edge queries, traces, paths, circular checks | Planned |
 | P5 | Formula and workbook diagnostics | Planned |
 | P6 | Surgical OOXML editing and transitive staleness | Planned |

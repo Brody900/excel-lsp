@@ -149,8 +149,10 @@ F01 and F07:
 | F14 | Empty sheets remain indexed with no regions; `B2` and `X100` are deterministic singleton regions. |
 | F20 | 40 sheets, 12 ranked islands, 300 names (60 of each defined-name kind), hidden and veryHidden sheets, eight regions plus `{"more":4}`, and 20 names plus `namesMore:280`. |
 
-Every one of the eight currently generated fixtures has byte-identical repeated
-generation and exact production-parser versus pinned-openpyxl oracle equality.
+Every one of the eight fixtures generated at the P2 gate had byte-identical
+repeated generation and exact production-parser versus pinned-openpyxl oracle
+equality. P3 later added F19 and corrected F20 LAMBDA serialization to preserve
+Excel's `_xlpm.` locals; the F20 golden and budget below were refreshed together.
 
 ## Map budgets
 
@@ -161,7 +163,7 @@ The committed normalized counts in
 | Fixture | Serialized characters | Tokens | Required cap |
 |---|---:|---:|---:|
 | F03 | 1,041 | 342 | 1,500 tokens and 8,000 characters |
-| F20 | 4,575 | 1,595 | 8,000 characters |
+| F20 | 4,623 | 1,619 | 8,000 characters |
 
 The exact normalized maps are committed as
 `tests/golden/f03-workbook-map.json` and
