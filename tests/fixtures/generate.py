@@ -19,6 +19,8 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 import lxml.etree as etree
 from openpyxl import Workbook
+from openpyxl.chart import BarChart, Reference
+from openpyxl.drawing.image import Image
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils.cell import get_column_letter, range_boundaries
 from openpyxl.workbook.defined_name import DefinedName
@@ -37,6 +39,12 @@ _PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 _CONTENT_TYPES_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
 _DCTERMS_NS = "http://purl.org/dc/terms/"
 _REL_TYPE_BASE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+_VBA_PROJECT = Path(__file__).resolve().parent / "assets" / "vbaProject.bin"
+_PNG_16X16 = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000100000001008060000001ff3ff61"
+    "0000001d49444154789c63601805a360148c02c40f181818f8cfc0c000000c8c01"
+    "1f90f52f5a0000000049454e44ae426082"
+)
 
 CachedValueKind = Literal["number", "string", "error", "boolean"]
 
@@ -316,6 +324,51 @@ def inject_external_link(
         encoding="utf-8",
     )
     members["[Content_Types].xml"] = etree.tostring(content_types, encoding="utf-8")
+    _write_deterministic_archive(workbook_path, members)
+
+
+def inject_vba_project(workbook_path: Path, project_path: Path = _VBA_PROJECT) -> None:
+    """Inject the sanctioned F16 VBA project and macro-enabled package metadata."""
+    members = _read_archive(workbook_path)
+    relationships = etree.fromstring(members["xl/_rels/workbook.xml.rels"])
+    if any(
+        relationship.get("Id") == "rIdVbaProject"
+        for relationship in relationships.findall(f"{{{_PACKAGE_REL_NS}}}Relationship")
+    ):
+        raise ValueError("workbook already contains the fixture VBA relationship id")
+    etree.SubElement(
+        relationships,
+        f"{{{_PACKAGE_REL_NS}}}Relationship",
+        Id="rIdVbaProject",
+        Type=f"{_REL_TYPE_BASE}/vbaProject",
+        Target="vbaProject.bin",
+    )
+
+    content_types = etree.fromstring(members["[Content_Types].xml"])
+    workbook_override = next(
+        (
+            override
+            for override in content_types.findall(f"{{{_CONTENT_TYPES_NS}}}Override")
+            if override.get("PartName") == "/xl/workbook.xml"
+        ),
+        None,
+    )
+    if workbook_override is None:
+        raise ValueError("workbook content-type override is missing")
+    workbook_override.set(
+        "ContentType",
+        "application/vnd.ms-excel.sheet.macroEnabled.main+xml",
+    )
+    etree.SubElement(
+        content_types,
+        f"{{{_CONTENT_TYPES_NS}}}Override",
+        PartName="/xl/vbaProject.bin",
+        ContentType="application/vnd.ms-office.vbaProject",
+    )
+
+    members["xl/_rels/workbook.xml.rels"] = etree.tostring(relationships)
+    members["[Content_Types].xml"] = etree.tostring(content_types)
+    members["xl/vbaProject.bin"] = project_path.read_bytes()
     _write_deterministic_archive(workbook_path, members)
 
 
@@ -956,6 +1009,52 @@ def _generate_f19(output_dir: Path) -> Path:
     return path
 
 
+def _generate_f16(output_dir: Path) -> Path:
+    path = output_dir / "macro_book.xlsm"
+    workbook, worksheet = _new_workbook("MacroModel")
+    worksheet.append(("Input", "Doubled"))
+    worksheet.append((21, "=A2*2"))
+    worksheet["Y1"] = "Stamp target"
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(path, "MacroModel", {"B2": CachedValue(42)})
+    inject_vba_project(path)
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f21(output_dir: Path) -> Path:
+    path = output_dir / "chart_image.xlsx"
+    image_path = output_dir / ".f21-source.png"
+    image_path.write_bytes(_PNG_16X16)
+    try:
+        workbook, worksheet = _new_workbook("Dashboard")
+        worksheet.append(("Category", "Value"))
+        for category, value in (("North", 10), ("South", 20), ("West", 15), ("East", 25)):
+            worksheet.append((category, value))
+
+        chart = BarChart()
+        chart.title = "Regional values"
+        chart.y_axis.title = "Value"
+        chart.x_axis.title = "Category"
+        chart.add_data(Reference(worksheet, min_col=2, min_row=1, max_row=5), titles_from_data=True)
+        chart.set_categories(Reference(worksheet, min_col=1, min_row=2, max_row=5))
+        chart.height = 7.5
+        chart.width = 12
+        worksheet.add_chart(chart, "D2")
+
+        image = Image(image_path)
+        image.width = 32
+        image.height = 32
+        worksheet.add_image(image, "D17")
+        workbook.save(path)
+        workbook.close()
+    finally:
+        image_path.unlink(missing_ok=True)
+    repack_deterministic(path)
+    return path
+
+
 def generate_all(output_dir: Path = GENERATED_DIR) -> dict[str, Path]:
     """Generate the implemented deterministic fixtures keyed by fixture ID."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -987,6 +1086,12 @@ def generate_all(output_dir: Path = GENERATED_DIR) -> dict[str, Path]:
             "F10": _generate_f10(output_dir),
             "F11": _generate_f11(output_dir),
             "F18": _generate_f18(output_dir),
+        }
+    )
+    existing.update(
+        {
+            "F16": _generate_f16(output_dir),
+            "F21": _generate_f21(output_dir),
         }
     )
     return existing

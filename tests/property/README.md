@@ -30,7 +30,12 @@ P3's formula/reference, structured-context, and R1C1 properties live in their
 corresponding files. P5's central non-whitelist error contract is instead
 protected by the exact F08 OOXML fixture: all specified errors plus an
 unrecognized `t="e"` value are asserted end to end, so a synthetic random-text
-property would add no independent semantic dimension. Later phases add the
-surgical-edit properties required for I18. A property counts as evidence only
-when it asserts the named invariant rather than merely proving that random
-input does not crash.
+property would add no independent semantic dimension.
+
+P6 adds `test_editor_preservation.py`: 50 generated edit scripts mix unique
+coordinates, formulas, finite numbers, booleans, strings, and nulls over small
+authored workbooks. Every untouched OOXML member must remain byte-identical,
+and reparsing must recover every requested value or formula exactly. This is
+the randomized I18 proof alongside the exact F16/F21 part diffs. A property
+counts as evidence only when it asserts the named invariant rather than merely
+proving that random input does not crash.

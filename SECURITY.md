@@ -8,12 +8,12 @@ promise.
 
 ## Development status
 
-This repository is pre-release. The streaming parser, derived SQLite index, and
-freshness lifecycle are verified. Sparse regions, stable symbols, and the
-compact workbook map are implemented and tested in the active P2 worktree but
-remain gate-pending. The MCP server, path-confinement boundary, and two write
-tools are gated for P6-P7 and must not be described as available until their
-tests and evidence are committed.
+This repository is pre-release. The parser, index, regions, symbols, formula
+analysis, graph, and diagnostics are verified through P5. The P6 core surgical
+editor, direct index patch, transitive staleness, complete F16/F21 part
+manifests, property proof, and desktop-Excel smoke are implemented; their
+combined formal gate is pending. The MCP server and path-confinement boundary
+remain P7 work, so the edit services are not yet exposed as release tools.
 
 ## Supported files and trust boundary
 
@@ -41,18 +41,21 @@ smallest workbook directory it needs.
 
 ## Write scope and workbook fidelity
 
-P6 will implement exactly two write tools: `write_cells` and
-`set_column_formula`. They will use surgical OOXML patches rather than loading
-and saving an existing workbook through openpyxl. A successful edit may modify
-the targeted worksheet XML and required calculation metadata, including
-deliberate calc-chain handling. Every other ZIP part must remain byte-identical.
+P6 implements exactly two core edit services for the later tools:
+`write_cells` and `set_column_formula`. They use surgical OOXML patches rather
+than loading and saving an existing workbook through openpyxl. A successful
+edit may modify the targeted worksheet XML and required calculation metadata,
+including deliberate calc-chain handling. Every other ZIP part must remain
+byte-identical.
 
-Writes will refuse an Excel-open workbook when its lockfile is present, reject
-a workbook changed since indexing, reject unsupported values, and refuse cells
+Writes refuse an Excel-open workbook when its lockfile is present, reject a
+workbook changed since indexing or immediately after replacement, reject
+unsupported values, and refuse cells
 inside multi-cell array formulas. The release gate includes deterministic
-part-diff tests on macro, chart, and image fixtures plus a live Excel pass. None
-of those statements should be read as a claim that editing is implemented in
-the current P2 codebase.
+part-diff tests on macro, chart, and image fixtures plus a live Excel pass. The
+P6 candidate evidence is in [`docs/evidence/p6-editor.md`](docs/evidence/p6-editor.md);
+P7 still owns MCP exposure and path confinement, while P8 owns the complete
+live protocol.
 
 ## Runtime data handling
 

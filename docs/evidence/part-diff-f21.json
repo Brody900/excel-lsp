@@ -1,0 +1,112 @@
+{
+  "artifactVersion": 1,
+  "deletedParts": [],
+  "edit": {
+    "ref": "A2",
+    "sheet": "Dashboard",
+    "value": 99
+  },
+  "editedSha256": "d2bdb74ec0b26edb2249af915a3fe2e3d58c1551791feb22c281f12863cba727",
+  "fixture": "chart_image.xlsx",
+  "fixtureId": "F21",
+  "modifiedParts": [
+    "xl/worksheets/sheet1.xml"
+  ],
+  "partCountAfter": 14,
+  "partCountBefore": 14,
+  "parts": [
+    {
+      "afterSha256": "9c920356f29628df19235730b7e6a23c0094122110bcc376a6649ed305bab7bc",
+      "beforeSha256": "9c920356f29628df19235730b7e6a23c0094122110bcc376a6649ed305bab7bc",
+      "name": "[Content_Types].xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "c545941ba36c15fcdce4ae4568c663f3ced1a2226ad5082d3fd66b178bfac11a",
+      "beforeSha256": "c545941ba36c15fcdce4ae4568c663f3ced1a2226ad5082d3fd66b178bfac11a",
+      "name": "_rels/.rels",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "209fca6b00afe72a5029754b94be5953d8f16d96f67130325566b9366ad4ccc5",
+      "beforeSha256": "209fca6b00afe72a5029754b94be5953d8f16d96f67130325566b9366ad4ccc5",
+      "name": "docProps/app.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "3d52b623d9b8d632aaf4708e338a4eddbdfa59f554be178ea6400c988b390696",
+      "beforeSha256": "3d52b623d9b8d632aaf4708e338a4eddbdfa59f554be178ea6400c988b390696",
+      "name": "docProps/core.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "26ad8fcc38d41229833e624496df364492772697ad2e5d6696e1738f05ba225f",
+      "beforeSha256": "26ad8fcc38d41229833e624496df364492772697ad2e5d6696e1738f05ba225f",
+      "name": "xl/_rels/workbook.xml.rels",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "87964abeb05d85956f090e5b9e118e0853c11a6d5924ce1314c1dd82e1256941",
+      "beforeSha256": "87964abeb05d85956f090e5b9e118e0853c11a6d5924ce1314c1dd82e1256941",
+      "name": "xl/charts/chart1.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "47c8965d753ce7748fd2601e9de7ce3512023f8c3d707ea6543e16475de3c2a8",
+      "beforeSha256": "47c8965d753ce7748fd2601e9de7ce3512023f8c3d707ea6543e16475de3c2a8",
+      "name": "xl/drawings/_rels/drawing1.xml.rels",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "fa222d05b8f1b22a3c60f7c763476f73ba09465db706112d446980190c9ec5cb",
+      "beforeSha256": "fa222d05b8f1b22a3c60f7c763476f73ba09465db706112d446980190c9ec5cb",
+      "name": "xl/drawings/drawing1.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "dfb46175df5f4f4b3134344ceafcab5acad16b31ab0b9ff6027a2da2d7d84047",
+      "beforeSha256": "dfb46175df5f4f4b3134344ceafcab5acad16b31ab0b9ff6027a2da2d7d84047",
+      "name": "xl/media/image1.png",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "ceabc26839ae8c5285c667366bffa538562f76e219eb4f2f5188626232d96900",
+      "beforeSha256": "ceabc26839ae8c5285c667366bffa538562f76e219eb4f2f5188626232d96900",
+      "name": "xl/styles.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "d15e8ebf78ef7b9720839d7ae8fdc81a7df5bc24706d8e137df61a5683c358d9",
+      "beforeSha256": "d15e8ebf78ef7b9720839d7ae8fdc81a7df5bc24706d8e137df61a5683c358d9",
+      "name": "xl/theme/theme1.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "5f7c5123b6dfa28b576f576227cedc4dd30bf032703a723baa2e39023abc5722",
+      "beforeSha256": "5f7c5123b6dfa28b576f576227cedc4dd30bf032703a723baa2e39023abc5722",
+      "name": "xl/workbook.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "0043881ca7f803da685c9fc201bc7c04f045356813c7b94a5d00253d3b5df9ee",
+      "beforeSha256": "0043881ca7f803da685c9fc201bc7c04f045356813c7b94a5d00253d3b5df9ee",
+      "name": "xl/worksheets/_rels/sheet1.xml.rels",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "6611bcada87d2893e75541637a33913d38463fd1e8cb47af0868c0ade8c960be",
+      "beforeSha256": "2a7c5c115577fce88f4d7b7c744a4eef4cf368dc50620f35ba28723683a38051",
+      "name": "xl/worksheets/sheet1.xml",
+      "status": "modified"
+    }
+  ],
+  "protectedParts": [
+    "xl/charts/chart1.xml",
+    "xl/drawings/drawing1.xml",
+    "xl/drawings/_rels/drawing1.xml.rels",
+    "xl/media/image1.png"
+  ],
+  "protectedPartsByteIdentical": true,
+  "sourceSha256": "d8f0d32d51ce7aa864f47c1ad83a192eb650559ee6ac800e297562d3eb0212fb",
+  "untouchedPartsByteIdentical": true
+}

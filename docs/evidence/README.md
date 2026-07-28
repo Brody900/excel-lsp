@@ -37,13 +37,15 @@ or other secrets.
 - [Phase 5 diagnostics](p5-diagnostics.md) records the complete catalog,
   error/link/volatile persistence, filtering, four fixtures, exact golden,
   oracle agreement, lifecycle invalidation, and verified combined formal gate.
+- [Phase 6 surgical editor](p6-editor.md) records the verified OOXML writer,
+  direct index patch, staleness lifecycle, R1C1 column fill, complete F16/F21
+  part manifests, property proof, and desktop-Excel smoke. Its combined formal
+  reviewer approved both gates on the exact final frozen fingerprint.
 
 ## Planned evidence paths
 
 These paths are contracts, not links to completed work:
 
-- `p6-editor.md`: surgical editing and staleness behavior.
-- `part-diff-f16.json` and `part-diff-f21.json`: untouched-part fidelity.
 - `p7-mcp-cli.md`: 14-tool conformance, annotations, instructions, caps, and CLI.
 - `live-excel/index.md`: numbered live protocol, screenshots, and demo capture.
 - `success-criteria.md`: final S1-S7 evidence cross-check.

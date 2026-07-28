@@ -120,7 +120,7 @@ bounded map projection over indexed rows. See
 | P3 | Formula reference classification and R1C1 formula blocks | Verified |
 | P4 | Dependency graph, spatial edge queries, traces, paths, circular checks | Verified |
 | P5 | Formula and workbook diagnostics | Verified |
-| P6 | Surgical OOXML editing and transitive staleness | Planned |
+| P6 | Surgical OOXML editing and transitive staleness | Verified |
 | P7 | Fourteen-tool MCP server and full CLI | Planned |
 | P8 | Live Excel protocol, benchmarks, headless-Codex evaluations, charts | Planned |
 | P9 | Documentation, clean installs, CI matrix, public release and registries | Planned |
@@ -131,8 +131,28 @@ not the presence of a placeholder module.
 
 ## Security and mutation boundary
 
-P1 reads but never mutates source workbooks. P6 will be the first production
-phase allowed to change a workbook, and only through surgical OOXML edits with
-byte-identity proof for every untouched ZIP part. P7 adds the optional
+P1-P5 read but never mutate source workbooks. Verified P6 is the first
+production phase allowed to change a workbook, and only through surgical OOXML
+edits with byte-identity proof for every untouched ZIP part. It checks Excel's
+lockfile before source-hash conflict, validates a same-directory replacement
+archive before atomic installation, and recovers the derivable sidecar if a
+post-replacement direct index patch fails. P7 adds the optional
 `EXCEL_LSP_ROOT` realpath boundary around all agent-supplied paths. The complete
 pre-release threat model is in [`SECURITY.md`](../SECURITY.md).
+
+## P6 mutation flow
+
+The two core edit services first obtain the current index generation and source
+hash. Before changing bytes, the store snapshots transitive dependent formula
+blocks through the range graph. The OOXML writer then changes target worksheet
+XML, calculation properties, and—when present—the complete calc-chain triple;
+all other ZIP payloads are copied byte-for-byte. After source replacement, the
+parser revisits only touched worksheets and selects only requested or expanded
+shared-formula cells for direct SQL replacement. Region, formula-block, graph,
+part-hash, stat, stale-diagnostic, and generation updates commit atomically.
+
+Excel remains the recalculation engine. A formula write has no fabricated cache
+and is marked stale. Excel's later save clears staleness for changed sheets, or
+the caller can explicitly confirm recalculation through
+`refresh(recalculated=true)`. See the
+[verified P6 evidence](evidence/p6-editor.md).

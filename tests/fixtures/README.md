@@ -31,7 +31,7 @@ regenerate F16; the committed project blob is the deterministic input.
 
 ## Implemented generated fixtures
 
-`generate.py` currently emits the implemented P1-P5 subset into `generated/`:
+`generate.py` currently emits the implemented P1-P6 subset into `generated/`:
 
 - F01 `basic_single_table.xlsx`: a clean native table with arithmetic formula
   cells and generator-computed numeric caches.
@@ -73,6 +73,9 @@ regenerate F16; the committed project blob is the deterministic input.
   does not turn a sparse test into a dense stress test.
 - F15 `threeD_ref.xlsx`: Jan, Feb, and Mar source sheets plus the exact
   `SUM(Jan:Mar!B2)` 3-D consumer and its saved result on Summary.
+- F16 `macro_book.xlsm`: a macro-enabled worksheet with the sanctioned
+  `vbaProject.bin`, one cached arithmetic formula, and the live `Stamp` target;
+  P6 edits prove the VBA part is byte-identical afterward.
 - F18 `volatile.xlsx`: independent `NOW` and `RAND` formula blocks with stable
   saved caches, proving one `I_VOLATILE` finding per block.
 - F19 `modern_functions.xlsx`: stored `_xlfn.`/`_xlws.` functions and Excel's
@@ -84,13 +87,21 @@ regenerate F16; the committed project blob is the deterministic input.
   sheet, hidden and very-hidden sheets, and 300 global defined names split
   evenly across range, multi-range, constant, formula, and lambda kinds. Its
   generated LAMBDA names also preserve `_xlpm.` parameter spelling.
+- F21 `chart_image.xlsx`: a native bar chart and embedded deterministic PNG on
+  a small dashboard sheet; P6 part diffs freeze the chart, drawing,
+  relationship, and media parts across edits.
 
 Every OOXML member is repacked in lexical order with ZIP timestamp
 `1980-01-01 00:00:00`. Workbook document properties use `2000-01-01 00:00:00`.
 The generator never evaluates arbitrary formulas; it injects only results it
 computes directly from the values it authored. Tests lock the SHA-256 values of
 F01, F07, F19, every implemented P4 fixture, and all four P5 fixtures, and
-independently assert that two complete corpus generations are byte-identical. Shape tests and oracle
-tests share one generated corpus per module so F09b is not needlessly authored
-for every individual assertion; the byte-determinism test still performs two
-independent complete generations.
+independently assert that two complete corpus generations are byte-identical.
+Shape tests and oracle tests share one generated corpus per module so F09b is
+not needlessly authored for every individual assertion; the byte-determinism
+test still performs two independent complete generations.
+
+`render_part_diff.py F16|F21` applies the frozen P6 edit to a temporary fixture
+copy and prints the complete before/after part manifest used by
+`docs/evidence/part-diff-f16.json` and `part-diff-f21.json`. Unit tests require
+fresh renderer output to equal both committed artifacts exactly.

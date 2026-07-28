@@ -56,7 +56,7 @@ response.
 | `fblocks` | Exact R1C1 formula-block rectangles, flags, and formula count | Verified P3 |
 | `edges`, ranked source/destination mirrors, `graph_spatial_state`, `graph_rank_keys` | P3 formula destinations plus P4 exact-order spatial traversal, bounded rank identity, and mirror integrity | Verified P4 |
 | `diagnostics` | P2 large-sheet, P3 parse/name/dynamic/inconsistency, P4 circular, and P5 cached-error/link/volatile findings | Verified P5 |
-| `staleness` | Rectangles affected by surgical writes | P6 planned |
+| `staleness` | Rectangles affected by surgical writes and paired `I_STALE` diagnostics | Verified P6 |
 
 `cells` is a `WITHOUT ROWID` table keyed by `(sheet_id, row, col)`. Values cross
 the shared JSON-scalar normalization boundary before persistence. Excel numeric
@@ -429,14 +429,38 @@ notified. The RTree backend then reconnects both persistent virtual tables
 before publishing its restored live seal. Callers use `IndexStore.transaction()`
 rather than invoking those internal rollback hooks directly.
 
+## Surgical editing and staleness
+
+Verified P6 uses the existing graph before each write to plan a bounded
+transitive stale set. Each written rectangle queries incoming range edges; new
+formula blocks enter a breadth-first frontier until exhaustion or the frozen
+50,000-block cap. A written formula rectangle is included directly because its
+cached value is deliberately removed.
+
+After the surgical ZIP replacement, the parser streams each touched worksheet
+once but retains records only for requested cells and shared-formula members
+expanded by the writer. `apply_editor_patch` replaces those sparse `cells`
+rows, recomputes regions for touched sheets, records stale rectangles plus
+`I_STALE`, updates sheet/package/source metadata, increments generation once,
+and rebuilds formula analysis inside the same managed transaction. A direct
+patch failure after workbook replacement falls back to the normal incremental
+index lifecycle and restores the precomputed stale set.
+
+External worksheet saves clear stale rows and diagnostics for the reindexed
+sheet. Explicit `recalculated=true` clears the complete stale set without
+requiring workbook-byte drift and increments generation only when the clear
+changed persisted state. Exact mechanics and executable evidence are in the
+[P6 report](evidence/p6-editor.md).
+
 ## Later-phase population
 
 P3 populates `list_objects`, `list_object_columns`, `fblocks`, formula
 destination edges, and its parse/name/dynamic/inconsistency diagnostic subset.
 Verified P4 consumes those edges for graph queries and circular analysis. The
 Verified P5 completes the shared catalog, adds cached-error/link/volatile
-production, and filters by sheet/severity/code before a 100-row cap. P6
-populates staleness and invokes the already typed `I_STALE` constructor; P7
+production, and filters by sheet/severity/code before a 100-row cap. Verified
+P6 populates staleness and invokes the already typed `I_STALE`
+constructor; P7
 invokes the typed regex-timeout constructor and exposes the bounded MCP/CLI
 query.
 Until each phase gate closes, the presence of its schema table is not evidence

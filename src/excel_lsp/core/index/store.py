@@ -25,6 +25,7 @@ from excel_lsp.core.diagnostics import (
     diagnostic_sort_key,
     error_value_diagnostic,
     external_link_diagnostic,
+    stale_range_diagnostic,
     volatile_formula_diagnostic,
 )
 from excel_lsp.core.errors import ErrorCode, ExcelLSPError
@@ -62,6 +63,7 @@ from excel_lsp.core.models import (
     CellScalar,
     CellValueType,
     DataTableFormulaInfo,
+    PackageHashes,
     Rect,
     SheetDescriptor,
     SheetParseSummary,
@@ -724,6 +726,458 @@ class IndexStore:
             counts_by_code=counts_by_code,
             truncated=total > len(diagnostics),
         )
+
+    def plan_staleness(
+        self,
+        written_rectangles: Sequence[tuple[str, Rect]],
+        *,
+        formula_rectangles: Sequence[tuple[str, Rect]] = (),
+        max_blocks: int = 50_000,
+    ) -> tuple[tuple[str, Rect], ...]:
+        """Snapshot transitive dependent blocks before a workbook edit."""
+        if max_blocks < 1 or max_blocks > 50_000:
+            raise ValueError("max_blocks must be between 1 and 50,000")
+        sheet_rows = self._connection.execute("SELECT id, name FROM sheets ORDER BY id").fetchall()
+        ids_by_name = {str(row["name"]): int(row["id"]) for row in sheet_rows}
+        names_by_id = {int(row["id"]): str(row["name"]) for row in sheet_rows}
+
+        def resolve(
+            rectangles: Sequence[tuple[str, Rect]],
+        ) -> tuple[tuple[int, Rect], ...]:
+            resolved: list[tuple[int, Rect]] = []
+            for sheet_name, rect in rectangles:
+                try:
+                    sheet_id = ids_by_name[sheet_name]
+                except KeyError as exc:
+                    raise ExcelLSPError(
+                        ErrorCode.INVALID_REF,
+                        f"Unknown worksheet in edit reference: {sheet_name!r}.",
+                    ) from exc
+                resolved.append((sheet_id, rect))
+            return tuple(resolved)
+
+        frontier: list[tuple[int, Rect]] = list(resolve(written_rectangles))
+        formula_regions = resolve(formula_rectangles)
+        stale_blocks: dict[int, tuple[int, Rect]] = {}
+        with self.transaction():
+            while frontier and len(stale_blocks) < max_blocks:
+                edge_ids: set[int] = set()
+                for sheet_id, rect in frontier:
+                    edge_ids.update(self.edge_store.iter_query_range(sheet_id, rect))
+                frontier = []
+                candidate_rows: list[sqlite3.Row] = []
+                ordered_edge_ids = sorted(edge_ids)
+                for offset in range(0, len(ordered_edge_ids), 500):
+                    batch = ordered_edge_ids[offset : offset + 500]
+                    if not batch:
+                        continue
+                    placeholders = ",".join("?" for _edge_id in batch)
+                    candidate_rows.extend(
+                        cast(
+                            list[sqlite3.Row],
+                            self._connection.execute(
+                                f"""
+                            SELECT DISTINCT f.id, f.sheet_id,
+                                   f.row_min, f.row_max, f.col_min, f.col_max
+                            FROM edges AS e
+                            JOIN fblocks AS f
+                              ON e.src_kind = 'fblock'
+                             AND e.src_id = f.id
+                             AND e.src_sheet_id = f.sheet_id
+                            WHERE e.id IN ({placeholders})
+                            ORDER BY f.sheet_id, f.n
+                            """,
+                                batch,
+                            ).fetchall(),
+                        )
+                    )
+                unique_candidates: dict[int, tuple[int, Rect]] = {}
+                for row in candidate_rows:
+                    block_id = int(row["id"])
+                    unique_candidates[block_id] = (
+                        int(row["sheet_id"]),
+                        Rect(
+                            int(row["row_min"]),
+                            int(row["row_max"]),
+                            int(row["col_min"]),
+                            int(row["col_max"]),
+                        ),
+                    )
+                for block_id, region in sorted(
+                    unique_candidates.items(),
+                    key=lambda item: (
+                        item[1][0],
+                        item[1][1].row_min,
+                        item[1][1].col_min,
+                        item[1][1].row_max,
+                        item[1][1].col_max,
+                        item[0],
+                    ),
+                ):
+                    if block_id in stale_blocks:
+                        continue
+                    if len(stale_blocks) >= max_blocks:
+                        break
+                    stale_blocks[block_id] = region
+                    frontier.append(region)
+
+        combined = {*formula_regions, *stale_blocks.values()}
+        return tuple(
+            (names_by_id[sheet_id], rect)
+            for sheet_id, rect in sorted(
+                combined,
+                key=lambda item: (
+                    item[0],
+                    item[1].row_min,
+                    item[1].col_min,
+                    item[1].row_max,
+                    item[1].col_max,
+                ),
+            )
+        )
+
+    def apply_editor_patch(
+        self,
+        metadata: WorkbookMetadata,
+        sheet_patches: Mapping[
+            SheetDescriptor,
+            tuple[SheetParseSummary, Mapping[tuple[int, int], CellRecord | None]],
+        ],
+        *,
+        styles: StyleCatalog,
+        package_hashes: PackageHashes,
+        expected_workbook_hash: str,
+        mtime_ns: int,
+        size: int,
+        indexed_at: str,
+        stale_rectangles: Sequence[tuple[str, Rect]],
+        stale_since: str,
+        region_options: RegionOptions | None = None,
+    ) -> int:
+        """Patch edited cells and derived semantics without a whole-sheet reparse."""
+        selected = tuple(sorted(sheet_patches, key=lambda descriptor: descriptor.order))
+        _validate_formula_sheet_selection(metadata.sheets, selected)
+        if self.get_meta("workbook_hash") != expected_workbook_hash:
+            raise ExcelLSPError(
+                ErrorCode.CONFLICT,
+                "Index changed while the workbook edit was being applied.",
+                hint="Run refresh and retry the edit.",
+            )
+
+        with self.transaction():
+            for descriptor in selected:
+                summary, changed_cells = sheet_patches[descriptor]
+                if summary.descriptor != descriptor:
+                    raise ValueError("editor parser returned a summary for a different sheet")
+                sheet_id = self._sheet_id(descriptor)
+                for row_number, column_number in sorted(changed_cells):
+                    self._connection.execute(
+                        "DELETE FROM cells WHERE sheet_id = ? AND row = ? AND col = ?",
+                        (sheet_id, row_number, column_number),
+                    )
+                    cell = changed_cells[(row_number, column_number)]
+                    if cell is None:
+                        continue
+                    value = _sqlite_scalar(normalize_value(cell.value), ref=cell.ref)
+                    self._connection.execute(
+                        _CELL_INSERT_SQL,
+                        (
+                            sheet_id,
+                            cell.row,
+                            cell.col,
+                            cell.ref,
+                            value,
+                            cell.value_type,
+                            cell.formula,
+                            cell.style_idx,
+                            cell.formula_kind,
+                            cell.shared_index,
+                            cell.array_ref,
+                            _data_table_json(cell.data_table),
+                        ),
+                    )
+
+                self._connection.execute(
+                    "DELETE FROM columns WHERE region_id IN "
+                    "(SELECT id FROM regions WHERE sheet_id = ?)",
+                    (sheet_id,),
+                )
+                self._connection.execute("DELETE FROM regions WHERE sheet_id = ?", (sheet_id,))
+                analysis = analyze_sheet_regions(
+                    summary,
+                    styles,
+                    lambda current_sheet_id=sheet_id: self._iter_region_cells(current_sheet_id),
+                    region_options,
+                )
+                self._insert_region_analysis(sheet_id, analysis)
+                self._connection.execute(
+                    """
+                    UPDATE sheets
+                    SET part_hash = ?, max_row = ?, max_col = ?
+                    WHERE id = ?
+                    """,
+                    (summary.part_hash, summary.max_row, summary.max_col, sheet_id),
+                )
+
+            current_staleness = {
+                (
+                    int(row["sheet_id"]),
+                    int(row["row_min"]),
+                    int(row["row_max"]),
+                    int(row["col_min"]),
+                    int(row["col_max"]),
+                )
+                for row in self._connection.execute(
+                    "SELECT sheet_id, row_min, row_max, col_min, col_max FROM staleness"
+                )
+            }
+            for sheet_name, rect in stale_rectangles:
+                row = self._connection.execute(
+                    "SELECT id FROM sheets WHERE name = ?",
+                    (sheet_name,),
+                ).fetchone()
+                if row is None:
+                    raise ExcelLSPError(
+                        ErrorCode.INVALID_REF,
+                        f"Unknown worksheet in stale region: {sheet_name!r}.",
+                    )
+                identity = (
+                    int(row["id"]),
+                    rect.row_min,
+                    rect.row_max,
+                    rect.col_min,
+                    rect.col_max,
+                )
+                if identity in current_staleness:
+                    continue
+                self._connection.execute(
+                    """
+                    INSERT INTO staleness(
+                        sheet_id, row_min, row_max, col_min, col_max, since
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (*identity, stale_since),
+                )
+                self._insert_diagnostics(
+                    identity[0],
+                    (stale_range_diagnostic(sheet_name, rect, since=stale_since),),
+                )
+                current_staleness.add(identity)
+
+            part_kinds = {
+                _normalize_part_name(descriptor.xml_part): descriptor.kind
+                for descriptor in metadata.sheets
+            }
+            for descriptor in metadata.sheets:
+                for part in descriptor.related_parts:
+                    part_kinds[_normalize_part_name(part)] = "worksheet_metadata"
+            self.replace_part_hashes(package_hashes.parts, kinds=part_kinds)
+            self.set_meta_many(
+                {
+                    "workbook_hash": package_hashes.whole_file,
+                    "mtime_ns": mtime_ns,
+                    "size": size,
+                    "indexed_at": indexed_at,
+                }
+            )
+            generation = self.bump_generation()
+            # Formula replacement and its validated graph rebuild remain the
+            # final graph-affecting writes in the transaction.
+            self.replace_formula_analysis(metadata, selected)
+            return generation
+
+    def is_stale(self, sheet: str, rect: Rect) -> bool:
+        """Return whether a public value rectangle intersects stale output."""
+        row = self._connection.execute("SELECT id FROM sheets WHERE name = ?", (sheet,)).fetchone()
+        if row is None:
+            raise ExcelLSPError(ErrorCode.INVALID_REF, f"Unknown worksheet: {sheet!r}.")
+        match = self._connection.execute(
+            """
+            SELECT 1 FROM staleness
+            WHERE sheet_id = ?
+              AND row_min <= ? AND row_max >= ?
+              AND col_min <= ? AND col_max >= ?
+            LIMIT 1
+            """,
+            (int(row["id"]), rect.row_max, rect.row_min, rect.col_max, rect.col_min),
+        ).fetchone()
+        return match is not None
+
+    def clear_staleness(self, sheets: Sequence[str] | None = None) -> int:
+        """Clear recalculated staleness and bump generation only on mutation."""
+        owns_transaction = not self._connection.in_transaction
+        with self.transaction():
+            if sheets is None:
+                diagnostic_cursor = self._connection.execute(
+                    "DELETE FROM diagnostics WHERE code = 'I_STALE'"
+                )
+                cursor = self._connection.execute("DELETE FROM staleness")
+            else:
+                normalized = tuple(dict.fromkeys(sheets))
+                if not normalized:
+                    return self.generation
+                placeholders = ",".join("?" for _sheet in normalized)
+                known = {
+                    str(row["name"])
+                    for row in self._connection.execute(
+                        f"SELECT name FROM sheets WHERE name IN ({placeholders})",
+                        normalized,
+                    )
+                }
+                unknown = set(normalized) - known
+                if unknown:
+                    raise ExcelLSPError(
+                        ErrorCode.INVALID_REF,
+                        f"Unknown worksheet: {sorted(unknown)[0]!r}.",
+                    )
+                cursor = self._connection.execute(
+                    f"DELETE FROM staleness WHERE sheet_id IN "
+                    f"(SELECT id FROM sheets WHERE name IN ({placeholders}))",
+                    normalized,
+                )
+                diagnostic_cursor = self._connection.execute(
+                    f"DELETE FROM diagnostics WHERE code = 'I_STALE' "
+                    f"AND sheet_id IN "
+                    f"(SELECT id FROM sheets WHERE name IN ({placeholders}))",
+                    normalized,
+                )
+            if (cursor.rowcount > 0 or diagnostic_cursor.rowcount > 0) and owns_transaction:
+                return self.bump_generation()
+            return self.generation
+
+    def record_staleness(
+        self,
+        rectangles: Sequence[tuple[str, Rect]],
+        *,
+        since: str,
+    ) -> int:
+        """Insert missing stale rectangles and bump generation once if needed."""
+        owns_transaction = not self._connection.in_transaction
+        changed = False
+        with self.transaction():
+            current = {
+                (
+                    int(row["sheet_id"]),
+                    int(row["row_min"]),
+                    int(row["row_max"]),
+                    int(row["col_min"]),
+                    int(row["col_max"]),
+                )
+                for row in self._connection.execute(
+                    "SELECT sheet_id, row_min, row_max, col_min, col_max FROM staleness"
+                )
+            }
+            for sheet_name, rect in rectangles:
+                row = self._connection.execute(
+                    "SELECT id FROM sheets WHERE name = ?", (sheet_name,)
+                ).fetchone()
+                if row is None:
+                    raise ExcelLSPError(
+                        ErrorCode.INVALID_REF,
+                        f"Unknown worksheet in stale region: {sheet_name!r}.",
+                    )
+                identity = (
+                    int(row["id"]),
+                    rect.row_min,
+                    rect.row_max,
+                    rect.col_min,
+                    rect.col_max,
+                )
+                if identity in current:
+                    continue
+                self._connection.execute(
+                    """
+                    INSERT INTO staleness(
+                        sheet_id, row_min, row_max, col_min, col_max, since
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (*identity, since),
+                )
+                self._insert_diagnostics(
+                    identity[0],
+                    (stale_range_diagnostic(sheet_name, rect, since=since),),
+                )
+                current.add(identity)
+                changed = True
+            if changed and owns_transaction:
+                return self.bump_generation()
+            return self.generation
+
+    def resolve_column_write_target(self, symbol: str) -> tuple[str, Rect, int]:
+        """Resolve one frozen column symbol to its body and occupied-cell count."""
+        pieces = symbol.split(":", 3)
+        if len(pieces) != 4 or pieces[0] != "col" or not pieces[1] or not pieces[3]:
+            raise ExcelLSPError(
+                ErrorCode.UNKNOWN_SYMBOL,
+                f"Unknown column symbol: {symbol!r}.",
+            )
+        try:
+            region_number = int(pieces[2])
+        except ValueError as exc:
+            raise ExcelLSPError(
+                ErrorCode.UNKNOWN_SYMBOL,
+                f"Unknown column symbol: {symbol!r}.",
+            ) from exc
+        row = self._connection.execute(
+            """
+            SELECT s.id AS sheet_id, s.name, r.row_min, r.row_max,
+                   r.col_min + c.idx AS col, r.header_rows,
+                   COALESCE(lo.totals_rows, 0) AS totals_rows
+            FROM columns AS c
+            JOIN regions AS r ON r.id = c.region_id
+            JOIN sheets AS s ON s.id = r.sheet_id
+            LEFT JOIN list_objects AS lo
+              ON lo.sheet_id = r.sheet_id
+             AND lo.name = r.list_object_name
+            WHERE s.name = ? AND r.n = ? AND c.norm_header = ?
+            """,
+            (pieces[1], region_number, pieces[3]),
+        ).fetchone()
+        if row is None:
+            raise ExcelLSPError(
+                ErrorCode.UNKNOWN_SYMBOL,
+                f"Unknown column symbol: {symbol!r}.",
+            )
+        row_min = int(row["row_min"]) + int(row["header_rows"])
+        row_max = int(row["row_max"]) - int(row["totals_rows"])
+        column = int(row["col"])
+        if row_min > row_max:
+            raise ExcelLSPError(
+                ErrorCode.INVALID_REF,
+                f"Column has no writable body rows: {symbol!r}.",
+            )
+        target = Rect(row_min, row_max, column, column)
+        occupied = self._connection.execute(
+            """
+            SELECT COUNT(*) FROM cells
+            WHERE sheet_id = ? AND row BETWEEN ? AND ? AND col = ?
+            """,
+            (int(row["sheet_id"]), row_min, row_max, column),
+        ).fetchone()
+        if occupied is None:
+            raise ExcelLSPError(ErrorCode.CORRUPT, "Index could not count column cells.")
+        return str(row["name"]), target, int(occupied[0])
+
+    def formula_block_at(self, sheet: str, row: int, col: int) -> str:
+        """Return the unique formula-block symbol containing one coordinate."""
+        rows = self._connection.execute(
+            """
+            SELECT f.n FROM fblocks AS f
+            JOIN sheets AS s ON s.id = f.sheet_id
+            WHERE s.name = ?
+              AND f.row_min <= ? AND f.row_max >= ?
+              AND f.col_min <= ? AND f.col_max >= ?
+            ORDER BY f.n
+            """,
+            (sheet, row, row, col, col),
+        ).fetchall()
+        if len(rows) != 1:
+            raise ExcelLSPError(
+                ErrorCode.CORRUPT,
+                "Edited formula column does not resolve to one formula block.",
+                details={"sheet": sheet, "row": row, "col": col},
+            )
+        return formula_block_symbol_id(sheet, int(rows[0]["n"]))
 
     @property
     def generation(self) -> int:

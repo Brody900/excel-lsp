@@ -2142,3 +2142,267 @@ and independently reran the 41-test focused slice, Ruff, formatting, and
 Pyright. Both verdicts apply to one unchanged fingerprint. The only
 post-verdict edits are this append-only record, ledger/checklist accounting,
 verified-status documentation, evidence finalization, and contract assertions.
+
+## 2026-07-28 P6 — Main-agent ownership and interrupted-state reconciliation
+
+Decision: continue P6 entirely in the orchestrator under the user's simplified
+review protocol. Do not restart any completed P4/P5 reviewer, do not spawn a
+cleanup or mutation agent, and reserve exactly one combined formal reviewer for
+the frozen P6 candidate.
+
+Alternatives: revive the earlier non-formal agents, delegate the P6 audit, or
+wait for already-completed work. The live agent inventory showed only the root
+running; the named P4 preflight and P4/P5 combined reviewers were completed.
+The interrupted writer hardening patch had applied, so it was inspected and
+continued rather than replayed.
+
+Rationale: this preserves all historical work and accounting while complying
+with the immediate workflow amendment. The main agent owns implementation,
+tests, mutation reasoning, docs, evidence, and verification through freeze.
+
+## 2026-07-28 P6 — Surgical writer and direct semantic patch
+
+Decision: implement edits as a ZIP-preserving lxml patch followed by a sparse
+index transaction. The writer checks the Excel lockfile before source conflict,
+orders inserted rows/cells, preserves styles, uses inline strings, expands an
+entire shared group before member edits, rejects multi-cell arrays, updates
+calculation metadata, deletes the complete calc-chain triple, validates a
+same-directory temporary archive, and atomically replaces the source.
+
+Alternatives: an openpyxl load/save round trip; a whole-workbook reindex after
+every edit; or in-place XML/ZIP mutation. The first violates I18, the second
+discards the specified LSP-like edit path, and the third lacks an atomic source
+boundary.
+
+Rationale: touched worksheets are streamed after replacement, but only
+requested and expanded shared-formula records are retained. One store
+transaction replaces sparse cell rows, recomputes touched-sheet regions and
+formula analysis, writes stale rectangles plus `I_STALE`, updates hashes/stat,
+and increments generation. If that direct transaction fails after source
+replacement, incremental recovery rebuilds the derivable sidecar and records
+the precomputed stale set.
+
+## 2026-07-28 P6 — Column fills, I18 evidence, and Excel smoke
+
+Decision: keep the public 500-cell limit on `write_cells`, while allowing
+`set_column_formula` to fill the entire resolved column body through a private
+validated capacity and one body rectangle for graph propagation. A1 patterns
+translate from the anchor; R1C1 patterns render independently at each row.
+Reject mixed modes, boundary escapes, excessive Excel UTF-16 text/formula
+lengths, invalid Unicode/XML text, and numeric values outside the finite Excel
+domain before source replacement.
+
+Alternatives: inherit the bulk-write cap in the semantic fill tool; enumerate a
+large body as hundreds of stale seed rectangles; or trust only protected-part
+spot checks. Those choices contradict the separate tool contract, add avoidable
+graph work, or leave I18 underproved.
+
+Rationale: a 501-body-row ListObject regression protects the distinct capacity.
+F16/F21 manifests list every ZIP part's before/after SHA-256 and are reproduced
+by a committed renderer; the 50-script Hypothesis property checks untouched
+part identity and exact reparsed writes. Desktop Excel 16.0 build 19530 normally
+opened a surgically edited F03, recalculated `Summary!C10` to `2232.48`, saved
+and closed it, and explicit recalculated refresh cleared the stale state.
+
+## 2026-07-28 P6 — Post-replacement concurrency and final property audit
+
+Decision: compare the parser's post-replacement whole-file hash with the exact
+hash installed by the writer before applying a sparse sidecar patch. On a
+mismatch, rebuild the sidecar from current workbook bytes, retain the planned
+staleness, and return `E_CONFLICT` rather than success. Also require the random
+I18 property to prove the complete after-part set equals the before set minus
+declared deletions and that the actual byte-difference set equals the writer's
+declared modifications.
+
+Alternatives: let a later freshness call discover the mismatch; return success
+after index recovery; or compare only pre-existing untouched payloads in the
+property. Each alternative can hide a second writer, an undeclared added ZIP
+member, or an incomplete modification manifest.
+
+Rationale: the permanent race wraps the real atomic writer, changes a second
+worksheet before direct index application, proves `E_CONFLICT`, and proves the
+recovered index contains the second writer's value. The final semantic-fill
+audit also adds a native ListObject totals-row case: four body formulas change
+while the `SUBTOTAL` totals formula remains untouched. The branch-instrumented
+repository run passes 2,020 tests at 89.49% total core coverage; the live test
+remains deliberately deselected from automated runs.
+
+## 2026-07-28 P6 — Pre-freeze verification complete
+
+Decision: freeze only after one final uninstrumented repository run and a clean
+desktop-Excel rerun following COM ownership cleanup.
+
+Alternatives: rely on the earlier 2,019-test run before the totals-row
+regression, treat the branch-instrumented run as the only broad result, or keep
+the passing live assertion despite its teardown warning. Each would leave the
+final candidate or live harness less precisely verified than the staged tree.
+
+Rationale: the final repository passes 2,020 tests with one live test
+deliberately deselected in 194.34 seconds; the same 2,020 pass under branch
+coverage in 380.71 seconds at 89.49% core coverage. The P6-focused slice passes
+73 tests in 22.39 seconds. Excel 16.0 build 19530 passes the live smoke in 3.21
+seconds after releasing every COM proxy before apartment teardown. Fixture
+regeneration emits all 20 current IDs without tracked drift; lock validation,
+sdist/wheel build, Ruff, format, Pyright, and whitespace checks pass.
+
+## 2026-07-28 P6 — Combined formal review #1 requires schema-order remediation
+
+Decision: charge global verdicts #57/#58 as R-mech #30 and R-test #25,
+respectively, both `REVISE`, on base
+`672e91ad362dcf1d984307fe4c2fd9db89d72b04`, staged tree
+`fd797eb9796ad561899c8ab9439e44fbd45619a4`, and cached diff
+`17eba11d65fbde3e64854170c2cb9e4f4b6ca8e2` (34 files, 3,883 insertions,
+82 deletions). Keep implementation ownership in the main agent and return the
+new frozen candidate to this same reviewer.
+
+Alternatives: dismiss the findings because the ordinary F03 live smoke passed;
+add only tests; or ask a second reviewer. The exact OOXML sequences permit
+valid trailing cell extensions and several workbook children after `calcPr`,
+so ordinary generated fixtures did not exercise the defect. The user's review
+protocol requires main-agent remediation and the same combined reviewer.
+
+Rationale: replacement `<f>`, `<v>`, or `<is>` content was appended after a
+preserved cell `extLst`, and a missing `calcPr` was inserted only before
+workbook `extLst`. The fix inserts cell value content before its extension list
+and creates `calcPr` before every schema successor from `oleSize` through
+`extLst`. One unit workbook covers inline string, numeric value, and formula
+cells with extensions; another removes `calcPr` and adds `fileRecoveryPr`.
+Desktop Excel normally opens, recalculates, saves, and closes that adversarial
+combination, giving the repair-sensitive ordering a live canary as well.
+
+## 2026-07-28 P6 — Remediated candidate verification refresh
+
+Decision: freeze only after rerunning the entire verification matrix on the
+schema-order remediation. Expand the workbook-successor regression across all
+nine valid children after `calcPr`, rather than proving only the live
+`fileRecoveryPr` case.
+
+Alternatives: retain the pre-review broad results because the remediation was
+localized; or keep a single successor regression. Both would leave the formal
+review without fresh whole-repository evidence, and a missing name in the
+ordered-successor set can independently change output validity.
+
+Rationale: the P6-focused editor/R1C1/property/fixture/oracle slice passes all
+83 cases in 26.31 seconds, including 45 editor-unit cases in 5.19 seconds. The
+normal suite passes 2,030 tests with one opt-in live test deselected in 242.17
+seconds. The branch-instrumented suite passes the same 2,030 tests in 438.27
+seconds at 89.58% total core coverage. Desktop Excel 16.0 build 19530 passes
+the adversarial extension/order smoke in 2.75 seconds with clean COM teardown.
+Fixture regeneration emits all 20 IDs with no tracked drift; the 70-package
+lock check, sdist/wheel build, Ruff, format, Pyright, README contract, and
+whitespace checks pass.
+
+## 2026-07-28 P6 — Combined formal review #2 requires retry-race remediation
+
+Decision: charge global verdicts #59/#60 as R-mech #31 and R-test #26,
+respectively, both `REVISE`, on base
+`672e91ad362dcf1d984307fe4c2fd9db89d72b04`, staged tree
+`5671fbba8cf84eed0cf4a1641908e47fd29832dd`, and cached diff
+`845e1fd8a8973c718611c802482c0543c980aac9` (34 files, 4,138 insertions,
+86 deletions). Keep all remediation in the main agent and return the next
+frozen fingerprint to the same reviewer.
+
+Alternatives: rely on the service's post-install hash reconciliation; retry
+without delay; or remove the Windows permission retry. Post-install checking
+cannot recover bytes already overwritten by the editor, while removing the
+bounded retry would discard an intentional cross-platform availability path.
+
+Rationale: if the first atomic replacement raised `PermissionError`, a writer
+or Excel session could change the destination during the half-second delay.
+The second attempt then overwrote that state without repeating the ordered
+lockfile and hash preconditions. The replacement boundary now checks the Excel
+lockfile first and compares the current destination to the indexed hash before
+every attempt. Four deterministic regressions prove that external bytes survive
+as `E_CONFLICT`, an intervening lockfile wins as `E_OPEN_IN_EXCEL`, unchanged
+bytes permit retry success, and two permission failures return `E_LOCKED`
+without changing the workbook.
+
+## 2026-07-28 P6 — Retry-race candidate verification refresh
+
+Decision: repeat every broad and external verification gate after moving the
+lockfile/hash preconditions into the atomic-replacement retry boundary.
+
+Alternatives: run only the four new tests because the change is localized, or
+reuse the schema-order candidate's live and packaging evidence. The finding is
+a data-loss race at the production mutation boundary, so the next formal
+fingerprint warrants independent fresh evidence across all gates.
+
+Rationale: the editor unit module passes 49 tests in 4.95 seconds, and the
+editor/R1C1/property/fixture/oracle slice passes 87 in 24.19 seconds. The full
+repository passes 2,034 tests with one opt-in live test deselected in 229.95
+seconds; branch instrumentation passes the same 2,034 in 422.77 seconds at
+89.68% total core coverage. Desktop Excel 16.0 build 19530 passes the
+adversarial schema-order smoke in 2.33 seconds with clean COM teardown. All 20
+fixture IDs regenerate without tracked drift; the 70-package lock check,
+sdist/wheel build, Ruff, format, Pyright, README contract, and whitespace
+checks pass.
+
+## 2026-07-28 P6 — Combined formal review #4 closes the phase gate
+
+Decision: charge global verdicts #63/#64 as R-mech #33 and R-test #28,
+respectively, both clean `APPROVE`, on base
+`672e91ad362dcf1d984307fe4c2fd9db89d72b04`, staged tree
+`8c794e703c0d0a783f23095c89d920d29f3c8f10`, and cached diff
+`6587b6161e4c15cde11dfcd10077d1bd323ad266` (34 files, 4,540 insertions,
+86 deletions). Close P6 only after recording the verdicts and committing the
+milestone.
+
+Alternatives: carry only one approval because one reviewer produced both
+verdicts, or treat the post-review accounting update as a new implementation
+candidate. The user-defined protocol counts verdicts, so the combined review
+adds one to each domain; post-verdict ledger/status promotion records the gate
+without changing the approved implementation or test mechanics.
+
+Rationale: the reviewer verified the exact fingerprint unchanged at entry and
+exit, independently passed all 50 editor tests, and reported no mechanics or
+test findings. It explicitly confirmed the stable sidecar generation boundary,
+atomic-retry preconditions, OOXML schema ordering, valid second-writer recovery,
+part-preservation evidence, property proof, full suites, branch coverage,
+desktop-Excel smoke, deterministic fixtures, lint, format, types, build, and
+lock checks. P6 is verified and ready for its milestone commit.
+
+## 2026-07-28 P6 — Combined formal review #3 requires sidecar snapshot remediation
+
+Decision: charge global verdicts #61/#62 as R-mech #32 and R-test #27,
+respectively, both `REVISE`, on base
+`672e91ad362dcf1d984307fe4c2fd9db89d72b04`, staged tree
+`2f0755b91417deccb299a33662d8b11de8663106`, and cached diff
+`861802ee5ce0b477df1834409cb8a5f59a779d17` (34 files, 4,355 insertions,
+86 deletions). Preserve the prior approved remediations and return the next
+frozen candidate to the same combined reviewer.
+
+Alternatives: rely on the service's initial installed-hash comparison; persist
+the parser's stat rather than the path's later stat; or let ordinary freshness
+repair any mismatch. The parser can remain attached to an old file generation
+after a path replacement, and a sidecar containing old cells plus the new
+path's accepted stat can incorrectly pass freshness.
+
+Rationale: stable SHA-256 and `(device, inode, size, mtime_ns, ctime_ns)`
+snapshots now bracket touched-sheet collection, direct index application, and
+the transaction commit. Package hashes, parsed cells, and committed mtime/size
+therefore describe the same installed bytes. If collection itself fails after
+the path changes, the snapshot guard converts that failure to `E_CONFLICT` so
+the established recovery path rebuilds the current workbook. The deterministic
+race installs a valid workbook with `Calc!A2 = 9999` during collection and
+proves conflict return, byte preservation, recovery of that exact value, and a
+subsequent no-change refresh.
+
+## 2026-07-28 P6 — Sidecar-snapshot candidate verification refresh
+
+Decision: rerun every broad and external verification gate after introducing
+the generation-stability snapshots and mid-collection conflict recovery.
+
+Alternatives: reuse the retry-race candidate's broad evidence or run only the
+new race test. The remediation affects the production direct-index transaction
+and recovery boundary, so an exact formal fingerprint needs fresh repository,
+coverage, live, and packaging evidence.
+
+Rationale: the editor unit module passes 50 tests in 4.04 seconds, and the
+editor/R1C1/property/fixture/oracle slice passes 88 in 24.74 seconds. The full
+repository passes 2,035 tests with one opt-in live test deselected in 228.31
+seconds; branch instrumentation passes the same 2,035 in 426.04 seconds at
+89.65% total core coverage. Desktop Excel 16.0 build 19530 passes the
+adversarial schema-order smoke in 2.15 seconds with clean COM teardown. All 20
+fixture IDs regenerate without tracked drift; the 70-package lock check,
+sdist/wheel build, Ruff, format, Pyright, README contract, and whitespace
+checks pass.

@@ -144,20 +144,21 @@ def test_readme_preserves_security_scope_and_limitations() -> None:
     normalized_readme = " ".join(readme.split())
 
     required_text = (
-        "Planned v0.1.0 security boundary; P6/P7/P9 verification pending",
-        "This is not yet a verified runtime claim",
+        "Pre-release security boundary; P7/P9 verification remains pending",
+        "implemented core operates on local workbook paths and makes no runtime",
+        "network requests. MCP path confinement",
         "default will be unrestricted local-path access",
         "every OOXML part not deliberately modified stays byte-identical",
-        "Planned P6/P8",
-        "will not recalculate formulas",
-        "Verified P3; P5 catalog pending",
+        "P6 core verified; P8 live protocol pending",
+        "does not recalculate formulas",
+        "Verified P3/P5",
         "are flaggable but opaque to static dependency analysis",
         "every inferred region exposes a confidence score",
-        "Planned P6",
-        "Written strings will use OOXML inline strings",
-        "Planned P6/P7",
-        "Datetime cell writes will be rejected in v0.1.0",
-        "Writes inside multi-cell array formulas will be refused",
+        "P6 candidate",
+        "Written strings use OOXML inline strings",
+        "P6 core implemented; P7 exposure pending",
+        "Datetime cell writes are rejected in v0.1.0",
+        "Writes inside multi-cell array formulas are refused",
         "Verified P3",
         "Dynamic-array spill extents are not statically tracked",
         "Flagship v1.x item",
@@ -319,6 +320,7 @@ def test_current_claim_artifact_paths_nodes_and_anchors_resolve() -> None:
         if status not in {
             "Verified P1",
             "Verified P2",
+            "Verified P3",
             "Verified P4",
             "Verified P5",
         }:
@@ -359,7 +361,7 @@ def test_review_governance_current_state_is_consistent() -> None:
         ROOT / "CHANGELOG.md",
     )
 
-    assert "Total formal verdicts recorded: 56." in plan
+    assert "Total formal verdicts recorded: 64." in plan
     assert "0 nominal slots remain" in plan
     assert "The minimum completion path is now 30 total invocations" in plan
     assert "leaving no pooled\ncontingency slots" in plan

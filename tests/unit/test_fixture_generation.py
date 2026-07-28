@@ -35,9 +35,11 @@ EXPECTED_FIXTURE_IDS = {
     "F13",
     "F14",
     "F15",
+    "F16",
     "F18",
     "F19",
     "F20",
+    "F21",
 }
 P1_SHA256 = {
     "F01": "8d57d9143edf78a66be6c33bcede3bcc7fba8ed1ac2d816391a4139a28a41270",
@@ -58,6 +60,10 @@ P5_SHA256 = {
     "F10": "0418ee82e8d319842ede2e752350e23a1f4390a7834bd124b4ba288a50d533c6",
     "F11": "b800e80117a306bf39993ef82b328bae0d624a328051ed667ea63c577608438b",
     "F18": "5b77a7efc0d93e06355206bba1385dc14a3743f592a8864091913300e57bfc7e",
+}
+P6_SHA256 = {
+    "F16": "9f392ed6227358c5ff79a667433e79290e5acd2b6415e2ea6e80006b09cb6ae6",
+    "F21": "d8f0d32d51ce7aa864f47c1ad83a192eb650559ee6ac800e297562d3eb0212fb",
 }
 GenerateAll = Callable[[Path], dict[str, Path]]
 generate_all = cast(
@@ -169,6 +175,9 @@ def test_generation_is_byte_identical_with_stable_zip_metadata(tmp_path: Path) -
     assert {
         fixture_id: hashlib.sha256(first_bytes[fixture_id]).hexdigest() for fixture_id in P5_SHA256
     } == P5_SHA256
+    assert {
+        fixture_id: hashlib.sha256(first_bytes[fixture_id]).hexdigest() for fixture_id in P6_SHA256
+    } == P6_SHA256
 
 
 def test_f01_has_listobject_formulas_and_injected_caches(
@@ -699,3 +708,51 @@ def test_f19_has_exact_modern_formulas_names_spills_and_caches(
             )
             for area in names[1].areas
         ] == [("Modern", 1, 1, 1, 1)]
+
+
+def test_f16_has_macro_enabled_metadata_exact_vba_blob_and_formula_cache(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F16"]
+    cells = _cells(path, "MacroModel")
+    assert _formula_and_value(cells["B2"]) == ("A2*2", "42")
+    with ZipFile(path) as archive:
+        assert (
+            archive.read("xl/vbaProject.bin")
+            == (Path(__file__).parents[1] / "fixtures" / "assets" / "vbaProject.bin").read_bytes()
+        )
+        relationships = etree.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
+        content_types = etree.fromstring(archive.read("[Content_Types].xml"))
+    assert any(
+        relationship.get("Type", "").endswith("/vbaProject")
+        and relationship.get("Target") == "vbaProject.bin"
+        for relationship in relationships
+    )
+    workbook_override = next(
+        override for override in content_types if override.get("PartName") == "/xl/workbook.xml"
+    )
+    assert workbook_override.get("ContentType") == (
+        "application/vnd.ms-excel.sheet.macroEnabled.main+xml"
+    )
+    with OOXMLParser(path) as parser:
+        assert parser.metadata.has_vba is True
+
+
+def test_f21_has_native_chart_drawing_and_embedded_png(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F21"]
+    with ZipFile(path) as archive:
+        names = set(archive.namelist())
+        assert {
+            "xl/charts/chart1.xml",
+            "xl/drawings/drawing1.xml",
+            "xl/drawings/_rels/drawing1.xml.rels",
+            "xl/media/image1.png",
+        } <= names
+        assert archive.read("xl/media/image1.png").startswith(b"\x89PNG\r\n\x1a\n")
+        chart = etree.fromstring(archive.read("xl/charts/chart1.xml"))
+        drawing = etree.fromstring(archive.read("xl/drawings/drawing1.xml"))
+    assert any(local.tag.endswith("barChart") for local in chart.iter())
+    assert sum(local.tag.endswith("graphicFrame") for local in drawing.iter()) == 1
+    assert sum(local.tag.endswith("pic") for local in drawing.iter()) == 1

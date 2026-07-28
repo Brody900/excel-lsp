@@ -1,0 +1,24 @@
+{
+  "artifactVersion": 1,
+  "edit": {
+    "ref": "B2",
+    "sheet": "Inputs",
+    "value": 0.2
+  },
+  "excel": {
+    "build": "19530.0",
+    "version": "16.0"
+  },
+  "expectedSummaryC10": 2232.48,
+  "fixture": "F03 cross_sheet_model.xlsx",
+  "fullCalculation": true,
+  "normalOpen": true,
+  "observedSummaryC10": 2232.48,
+  "savedAndClosed": true,
+  "schemaOrderAdversary": {
+    "calcPrCreatedBeforeFileRecoveryPr": true,
+    "cellExtLstPreservedAfterValue": true
+  },
+  "stalenessAfterRecalculatedRefresh": false,
+  "stalenessBeforeExcelSave": true
+}

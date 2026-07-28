@@ -1,0 +1,85 @@
+{
+  "artifactVersion": 1,
+  "deletedParts": [],
+  "edit": {
+    "ref": "A2",
+    "sheet": "MacroModel",
+    "value": 99
+  },
+  "editedSha256": "b14c88d06d028016a4c085447f10bf64d7eabbad6cdc6f07cafb68cf7a43cd7b",
+  "fixture": "macro_book.xlsm",
+  "fixtureId": "F16",
+  "modifiedParts": [
+    "xl/worksheets/sheet1.xml"
+  ],
+  "partCountAfter": 10,
+  "partCountBefore": 10,
+  "parts": [
+    {
+      "afterSha256": "48a07b0d1886d7f129c0ef12b2da16ac523418e5b3912608d3ea5ff4ead48a0c",
+      "beforeSha256": "48a07b0d1886d7f129c0ef12b2da16ac523418e5b3912608d3ea5ff4ead48a0c",
+      "name": "[Content_Types].xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "c545941ba36c15fcdce4ae4568c663f3ced1a2226ad5082d3fd66b178bfac11a",
+      "beforeSha256": "c545941ba36c15fcdce4ae4568c663f3ced1a2226ad5082d3fd66b178bfac11a",
+      "name": "_rels/.rels",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "209fca6b00afe72a5029754b94be5953d8f16d96f67130325566b9366ad4ccc5",
+      "beforeSha256": "209fca6b00afe72a5029754b94be5953d8f16d96f67130325566b9366ad4ccc5",
+      "name": "docProps/app.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "39e2c2402b8b4227fadda60cdbdbbfcf3a20aeeaf04d322656a02042961dd708",
+      "beforeSha256": "39e2c2402b8b4227fadda60cdbdbbfcf3a20aeeaf04d322656a02042961dd708",
+      "name": "docProps/core.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "1dbb7611a16bc48506cf3b62fc04b5a8356744f608d8bed3accba0e90f9ee930",
+      "beforeSha256": "1dbb7611a16bc48506cf3b62fc04b5a8356744f608d8bed3accba0e90f9ee930",
+      "name": "xl/_rels/workbook.xml.rels",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "ceabc26839ae8c5285c667366bffa538562f76e219eb4f2f5188626232d96900",
+      "beforeSha256": "ceabc26839ae8c5285c667366bffa538562f76e219eb4f2f5188626232d96900",
+      "name": "xl/styles.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "d15e8ebf78ef7b9720839d7ae8fdc81a7df5bc24706d8e137df61a5683c358d9",
+      "beforeSha256": "d15e8ebf78ef7b9720839d7ae8fdc81a7df5bc24706d8e137df61a5683c358d9",
+      "name": "xl/theme/theme1.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "be05aafbb31d2de0ffd686c9cae71b97a2596132ed4443d9d656558d7089ccb1",
+      "beforeSha256": "be05aafbb31d2de0ffd686c9cae71b97a2596132ed4443d9d656558d7089ccb1",
+      "name": "xl/vbaProject.bin",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "da69b21ab19bbd86b6878b31578162711bdb5602dde201bffc3f1d5c5db767e3",
+      "beforeSha256": "da69b21ab19bbd86b6878b31578162711bdb5602dde201bffc3f1d5c5db767e3",
+      "name": "xl/workbook.xml",
+      "status": "preserved"
+    },
+    {
+      "afterSha256": "d32cd219305bcc603a4ebe46098fe7c6cc8ac1e85d760a9b228cfaac7ca635f7",
+      "beforeSha256": "36a8275a2f3f9451b8541e47f3ceefd4f709cdde6ba2a1aed3f55728062c8a0e",
+      "name": "xl/worksheets/sheet1.xml",
+      "status": "modified"
+    }
+  ],
+  "protectedParts": [
+    "xl/vbaProject.bin"
+  ],
+  "protectedPartsByteIdentical": true,
+  "sourceSha256": "9f392ed6227358c5ff79a667433e79290e5acd2b6415e2ea6e80006b09cb6ae6",
+  "untouchedPartsByteIdentical": true
+}

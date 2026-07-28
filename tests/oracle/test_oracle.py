@@ -26,9 +26,11 @@ EXPECTED_FIXTURE_IDS = {
     "F13",
     "F14",
     "F15",
+    "F16",
     "F18",
     "F19",
     "F20",
+    "F21",
 }
 GenerateAll = Callable[[Path], dict[str, Path]]
 CanonicalReader = Callable[[Path], tuple[CanonicalCell, ...]]

@@ -68,6 +68,7 @@ def index_workbook(
     *,
     index_dir: str | Path | None = None,
     gap_tol: int | None = None,
+    recalculated: bool = False,
 ) -> IndexUpdate:
     """Open or refresh a workbook index using stat and selected-part hashes."""
     requested_region_options = None if gap_tol is None else RegionOptions(gap_tol=gap_tol)
@@ -83,18 +84,27 @@ def index_workbook(
             initial_stat,
             region_options,
         ):
-            return IndexUpdate(
-                workbook_path=str(workbook),
-                index_path=str(index_path),
-                generation=store.generation,
-                changed=False,
-                reindexed_sheets=(),
+            return _clear_recalculated_staleness(
+                store,
+                IndexUpdate(
+                    workbook_path=str(workbook),
+                    index_path=str(index_path),
+                    generation=store.generation,
+                    changed=False,
+                    reindexed_sheets=(),
+                ),
+                recalculated=recalculated,
             )
 
         source_stat = initial_stat
         for attempt in range(2):
             try:
-                return _index_from_parser(workbook, source_stat, store, region_options)
+                update = _index_from_parser(workbook, source_stat, store, region_options)
+                return _clear_recalculated_staleness(
+                    store,
+                    update,
+                    recalculated=recalculated,
+                )
             except _WorkbookChangedDuringIndex as exc:
                 if attempt:
                     raise ExcelLSPError(
@@ -121,6 +131,26 @@ def ensure_fresh(
 ) -> IndexUpdate:
     """Ensure the sidecar matches the workbook before serving a core API call."""
     return index_workbook(path, index_dir=index_dir, gap_tol=gap_tol)
+
+
+def _clear_recalculated_staleness(
+    store: IndexStore,
+    update: IndexUpdate,
+    *,
+    recalculated: bool,
+) -> IndexUpdate:
+    if not recalculated:
+        return update
+    generation = store.clear_staleness()
+    if generation == update.generation:
+        return update
+    return IndexUpdate(
+        workbook_path=update.workbook_path,
+        index_path=update.index_path,
+        generation=generation,
+        changed=True,
+        reindexed_sheets=update.reindexed_sheets,
+    )
 
 
 def _index_from_parser(

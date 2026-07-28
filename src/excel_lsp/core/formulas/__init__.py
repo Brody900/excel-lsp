@@ -17,6 +17,7 @@ from excel_lsp.core.formulas.a1 import (
     resolve_reference,
 )
 from excel_lsp.core.formulas.analysis import FormulaAnalysis, ReferenceUse, analyze_formula
+from excel_lsp.core.formulas.from_r1c1 import from_r1c1
 from excel_lsp.core.formulas.functions import (
     ALWAYS_DYNAMIC_REFERENCE_FUNCTIONS,
     BUILTIN_FUNCTIONS,
@@ -72,6 +73,7 @@ __all__ = [
     "classify_ref",
     "compatibility_function_identifier",
     "extrude_reference",
+    "from_r1c1",
     "function_identifier",
     "normalize_function_name",
     "parse_a1_reference",

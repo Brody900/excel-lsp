@@ -46,10 +46,15 @@ public API is being claimed yet.
   and volatile-block findings; deterministic sheet/severity/code filtering;
   four P5 fixtures with exact golden and independent parser-oracle coverage;
   and fail-closed diagnostic-row validation.
+- Surgical OOXML cell editing with inline strings, formula-cache invalidation,
+  shared-formula expansion, array refusal, calc-chain cleanup, ordered element
+  insertion, lock/conflict checks, validated atomic replacement, direct index
+  patching, transitive `I_STALE` propagation, A1/R1C1 semantic column fills,
+  F16/F21 complete part manifests, a 50-script preservation property, and a
+  desktop-Excel recalculation smoke test.
 
 ### Planned before v0.1.0
 
-- A surgical OOXML editor with untouched-part fidelity evidence.
 - The 14-tool stdio MCP server, CLI, response-cap conformance, and Codex
   quickstart verification.
 - Live Microsoft Excel evidence, deterministic and headless-Codex benchmarks,

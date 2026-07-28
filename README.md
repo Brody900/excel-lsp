@@ -169,8 +169,8 @@ exact evidence required before this section can make numerical claims.
 | Persistent semantic index | [P1 evidence available](docs/evidence/p1-foundation.md#delivered-contracts) | Source review pending | Source review pending | P8 baseline pending |
 | Formula dependency graph | [P4 evidence available](docs/evidence/p4-graph.md#formal-phase-gate) | Source review pending | Source review pending | P8 baseline pending |
 | Incremental reindex | [P1 evidence available](docs/evidence/p1-foundation.md#invariant-evidence) | Source review pending | Source review pending | P8 baseline pending |
-| Formula diagnostics | P5 evidence pending | Source review pending | Source review pending | P8 baseline pending |
-| Edit support and untouched-part fidelity | P6 evidence pending | Source review pending | Source review pending | P8 baseline pending |
+| Formula diagnostics | [P5 evidence available](docs/evidence/p5-diagnostics.md#formal-phase-gate) | Source review pending | Source review pending | P8 baseline pending |
+| Edit support and untouched-part fidelity | [P6 candidate evidence available](docs/evidence/p6-editor.md#part-preservation); gate pending | Source review pending | Source review pending | P8 baseline pending |
 | Token discipline | P7/P8 evidence pending | Source review pending | Source review pending | P8 baseline pending |
 
 ## How it works
@@ -194,13 +194,15 @@ range into individual edges. See [index internals](docs/index-internals.md).
 
 ## Security & scope
 
-> **Planned v0.1.0 security boundary; P6/P7/P9 verification pending.** The
-> release target operates on local workbook paths and makes no runtime network
-> requests. This is not yet a verified runtime claim.
+> **Pre-release security boundary; P7/P9 verification remains pending.** The
+> implemented core operates on local workbook paths and makes no runtime
+> network requests. MCP path confinement and release verification remain later
+> gates.
 
-In P6, the two write tools will surgically modify targeted worksheet XML and
-required calculation metadata; the part-diff gate must prove that every OOXML
-part not deliberately modified stays byte-identical. In P7,
+The P6 core edit services surgically modify targeted worksheet XML and required
+calculation metadata. Complete F16/F21 part manifests and a property test prove
+that every OOXML part not deliberately modified stays byte-identical on the
+current candidate. In P7,
 `EXCEL_LSP_ROOT` will provide an optional `os.pathsep`-separated directory
 allowlist applied after realpath resolution. Its default will be unrestricted
 local-path access. See [SECURITY.md](SECURITY.md) for the current threat model
@@ -213,16 +215,18 @@ and implementation status.
 Header-confidence behavior is implemented in P2. Formula-analysis limitations
 are verified P3 behavior; later-phase bullets remain planned release behavior.
 
-- **Planned P6/P8:** Excel LSP will not recalculate formulas; it will read cached
-  values and delegate recalculation to Excel.
-- **Verified P3; P5 catalog pending:** `INDIRECT` and other
+- **P6 core verified; P8 live protocol pending:** Excel LSP does not recalculate
+  formulas; it reads cached values and delegates recalculation to Excel.
+- **Verified P3/P5:** `INDIRECT` and other
   dynamic references are flaggable but opaque to static dependency analysis.
 - Header inference is heuristic and can be wrong; every inferred region exposes
   a confidence score.
-- **Planned P6:** Written strings will use OOXML inline strings, which Excel and
+- **P6 candidate:** Written strings use OOXML inline strings, which Excel and
   LibreOffice support but some third-party tools handle poorly.
-- **Planned P6/P7:** Datetime cell writes will be rejected in v0.1.0.
-- **Planned P6/P7:** Writes inside multi-cell array formulas will be refused.
+- **P6 core implemented; P7 exposure pending:** Datetime cell writes are
+  rejected in v0.1.0.
+- **P6 core implemented; P7 exposure pending:** Writes inside multi-cell array
+  formulas are refused.
 - **Verified P3:** Dynamic-array spill extents are not statically
   tracked.
 
