@@ -345,6 +345,26 @@ def test_missing_graph_analysis_version_forces_full_semantic_refresh(
         assert store.get_meta("graph_analysis_version") == "1"
 
 
+def test_missing_diagnostic_analysis_version_forces_full_semantic_refresh(
+    tmp_path: Path,
+) -> None:
+    workbook = tmp_path / "diagnostic-version.xlsx"
+    _write_document(workbook, _document())
+    first = index_workbook(workbook, index_dir=tmp_path / "indexes")
+    with IndexStore(first.index_path) as store:
+        store.connection.execute("DELETE FROM meta WHERE key = 'diagnostic_analysis_version'")
+    FakeOOXMLParser.parse_calls.clear()
+
+    refreshed = ensure_fresh(workbook, index_dir=tmp_path / "indexes")
+
+    assert refreshed.changed is True
+    assert refreshed.generation == first.generation + 1
+    assert refreshed.reindexed_sheets == ("Alpha", "Beta", "Chart")
+    assert FakeOOXMLParser.parse_calls == ["Alpha", "Beta", "Chart"]
+    with IndexStore(refreshed.index_path) as store:
+        assert store.get_meta("diagnostic_analysis_version") == "1"
+
+
 @pytest.mark.parametrize(
     ("stored_gap_tol", "stored_path"),
     (

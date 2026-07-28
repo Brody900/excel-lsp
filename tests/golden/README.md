@@ -5,5 +5,7 @@ normalized to `<indexed_at>` before comparison; every other field is exact.
 P3 adds formula-semantic snapshots for F07/F19. P4's
 `p4-graph-semantics.json` freezes dependent/precedent traces and path results
 for F03/F04/F05/F15/F19 plus the exact F09a/F09b circular-diagnostic split.
+P5's `p5-diagnostics.json` freezes all error variants from F08, F10 link
+health, F11 dynamic/volatile findings, and F18 volatile-block findings.
 All snapshots must remain deterministic and their measured budgets must link
 to committed evidence.

@@ -5,9 +5,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
+from excel_lsp.core.diagnostics import external_link_health_snapshot
 from excel_lsp.core.errors import ErrorCode, ExcelLSPError
 from excel_lsp.core.index.store import IndexStore
 from excel_lsp.core.models import IndexUpdate, PackageHashes
@@ -36,6 +39,7 @@ _FORMULA_CONTEXT_PREFIXES = (
 _REGION_ANALYSIS_VERSION = "1"
 _FORMULA_ANALYSIS_VERSION = "1"
 _GRAPH_ANALYSIS_VERSION = "1"
+_DIAGNOSTIC_ANALYSIS_VERSION = "1"
 
 
 class _WorkbookChangedDuringIndex(RuntimeError):
@@ -128,6 +132,7 @@ def _index_from_parser(
     with OOXMLParser(workbook) as parser:
         metadata = parser.metadata
         hashes = parser.hashes
+        external_link_health = _external_link_health_json(workbook, metadata.external_links)
         old_parts = store.get_part_hashes()
         old_workbook_hash = store.get_meta("workbook_hash")
         stored_path = store.get_meta("workbook_path")
@@ -139,24 +144,30 @@ def _index_from_parser(
             or store.get_meta("analysis_version") != _REGION_ANALYSIS_VERSION
             or store.get_meta("formula_analysis_version") != _FORMULA_ANALYSIS_VERSION
             or store.get_meta("graph_analysis_version") != _GRAPH_ANALYSIS_VERSION
+            or store.get_meta("diagnostic_analysis_version") != _DIAGNOSTIC_ANALYSIS_VERSION
             or store.get_meta("region_gap_tol") != str(region_options.gap_tol)
         )
         if not full_rebuild and old_workbook_hash == hashes.whole_file:
             ending_stat = _stat_workbook(workbook)
             if not _same_stat(source_stat, ending_stat):
                 raise _WorkbookChangedDuringIndex
+            health_changed = store.get_meta("external_link_health") != external_link_health
             with store.transaction():
+                if health_changed:
+                    store.refresh_external_link_diagnostics(metadata)
                 store.set_meta_many(
                     {
                         "mtime_ns": ending_stat.st_mtime_ns,
                         "size": ending_stat.st_size,
+                        "external_link_health": external_link_health,
                     }
                 )
+                generation = store.bump_generation() if health_changed else store.generation
             return IndexUpdate(
                 workbook_path=str(workbook),
                 index_path=str(store.path),
-                generation=store.generation,
-                changed=False,
+                generation=generation,
+                changed=health_changed,
                 reindexed_sheets=(),
             )
         changed_parts = _changed_parts(old_parts, hashes)
@@ -224,9 +235,11 @@ def _index_from_parser(
                         ensure_ascii=False,
                         separators=(",", ":"),
                     ),
+                    "external_link_health": external_link_health,
                     "analysis_version": _REGION_ANALYSIS_VERSION,
                     "formula_analysis_version": _FORMULA_ANALYSIS_VERSION,
                     "graph_analysis_version": _GRAPH_ANALYSIS_VERSION,
+                    "diagnostic_analysis_version": _DIAGNOSTIC_ANALYSIS_VERSION,
                     "region_gap_tol": region_options.gap_tol,
                 }
             )
@@ -250,6 +263,10 @@ def _fast_path_matches(
     stored_path = store.get_meta("workbook_path")
     if stored_path is None or not _paths_equal(stored_path, workbook):
         return False
+    external_links = _stored_external_links(store)
+    if external_links is None:
+        return False
+    external_link_health = _external_link_health_json(workbook, external_links)
     try:
         return (
             int(store.get_meta("mtime_ns", "-1") or "-1") == file_stat.st_mtime_ns
@@ -258,6 +275,8 @@ def _fast_path_matches(
             and store.get_meta("analysis_version") == _REGION_ANALYSIS_VERSION
             and store.get_meta("formula_analysis_version") == _FORMULA_ANALYSIS_VERSION
             and store.get_meta("graph_analysis_version") == _GRAPH_ANALYSIS_VERSION
+            and store.get_meta("diagnostic_analysis_version") == _DIAGNOSTIC_ANALYSIS_VERSION
+            and store.get_meta("external_link_health") == external_link_health
             and store.get_meta("region_gap_tol") == str(region_options.gap_tol)
         )
     except ValueError:
@@ -268,6 +287,38 @@ def _changed_parts(old_parts: dict[str, str], hashes: PackageHashes) -> set[str]
     new_parts = {_normalize_part_name(name): part_hash for name, part_hash in hashes.parts.items()}
     names = old_parts.keys() | new_parts.keys()
     return {name for name in names if old_parts.get(name) != new_parts.get(name)}
+
+
+def _stored_external_links(store: IndexStore) -> dict[int, str] | None:
+    raw = store.get_meta("external_links")
+    if raw is None:
+        return None
+    try:
+        decoded: object = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(decoded, dict):
+        return None
+    result: dict[int, str] = {}
+    for key, target in cast(dict[object, object], decoded).items():
+        if not isinstance(key, str) or not key.isascii() or not key.isdigit():
+            return None
+        index = int(key)
+        if index < 1 or not isinstance(target, str) or not target:
+            return None
+        result[index] = target
+    return result
+
+
+def _external_link_health_json(
+    workbook: Path,
+    external_links: dict[int, str] | Mapping[int, str],
+) -> str:
+    return json.dumps(
+        external_link_health_snapshot(workbook, external_links),
+        ensure_ascii=True,
+        separators=(",", ":"),
+    )
 
 
 def _stat_workbook(workbook: Path) -> os.stat_result:

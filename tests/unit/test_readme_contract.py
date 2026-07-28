@@ -316,7 +316,12 @@ def test_current_claim_artifact_paths_nodes_and_anchors_resolve() -> None:
             continue
         cells = tuple(cell.strip() for cell in line.strip("|").split("|"))
         status = cells[3]
-        if status not in {"Verified P1", "Verified P2", "Verified P4"}:
+        if status not in {
+            "Verified P1",
+            "Verified P2",
+            "Verified P4",
+            "Verified P5",
+        }:
             continue
         for reference in re.findall(r"`([^`]+)`", cells[4]):
             _assert_exact_reference(reference)
@@ -354,7 +359,7 @@ def test_review_governance_current_state_is_consistent() -> None:
         ROOT / "CHANGELOG.md",
     )
 
-    assert "Total formal verdicts recorded: 50." in plan
+    assert "Total formal verdicts recorded: 56." in plan
     assert "0 nominal slots remain" in plan
     assert "The minimum completion path is now 30 total invocations" in plan
     assert "leaving no pooled\ncontingency slots" in plan

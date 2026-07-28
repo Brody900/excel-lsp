@@ -6,8 +6,9 @@ freshness lifecycle are verified. P2's region, column, symbol, and compact-map
 contracts are also verified. Verified P3 populates formula blocks, reference
 edges, ListObject context, and its bounded subset of formula diagnostics.
 Verified P4 adds ranked spatial graph navigation and bounded circular
-analysis. Complete diagnostics and editor tables remain reserved schema, not
-evidence that those later features already exist.
+analysis. Verified P5 completes the typed diagnostic catalog, persisted
+cached-error/link/volatility findings, and filtered query. Editor tables remain
+reserved schema, not evidence that those later features exist.
 
 ## Sidecar placement
 
@@ -54,7 +55,7 @@ response.
 | `list_objects`, `list_object_columns` | Durable ListObject aliases, bounds, header/totals counts, and ordered column names used by structured-reference analysis | Verified P3 |
 | `fblocks` | Exact R1C1 formula-block rectangles, flags, and formula count | Verified P3 |
 | `edges`, ranked source/destination mirrors, `graph_spatial_state`, `graph_rank_keys` | P3 formula destinations plus P4 exact-order spatial traversal, bounded rank identity, and mirror integrity | Verified P4 |
-| `diagnostics` | P3 parse/name/dynamic/inconsistency findings; the complete diagnostic catalog remains P5 | P3 subset verified; P5 completion planned |
+| `diagnostics` | P2 large-sheet, P3 parse/name/dynamic/inconsistency, P4 circular, and P5 cached-error/link/volatile findings | Verified P5 |
 | `staleness` | Rectangles affected by surgical writes | P6 planned |
 
 `cells` is a `WITHOUT ROWID` table keyed by `(sheet_id, row, col)`. Values cross
@@ -432,8 +433,11 @@ rather than invoking those internal rollback hooks directly.
 
 P3 populates `list_objects`, `list_object_columns`, `fblocks`, formula
 destination edges, and its parse/name/dynamic/inconsistency diagnostic subset.
-Verified P4 consumes those edges for graph queries and circular analysis.
-P5 completes the diagnostics catalog. P6 populates staleness and applies direct
-post-write index patches. P7 exposes these through bounded MCP and CLI calls.
+Verified P4 consumes those edges for graph queries and circular analysis. The
+Verified P5 completes the shared catalog, adds cached-error/link/volatile
+production, and filters by sheet/severity/code before a 100-row cap. P6
+populates staleness and invokes the already typed `I_STALE` constructor; P7
+invokes the typed regex-timeout constructor and exposes the bounded MCP/CLI
+query.
 Until each phase gate closes, the presence of its schema table is not evidence
 for a later phase's behavior.

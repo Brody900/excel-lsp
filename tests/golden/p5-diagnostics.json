@@ -1,0 +1,27 @@
+{
+  "F08": [
+    {"severity":"error","code":"E_ERRVAL","sheet":"Errors","row":2,"col":2,"ref":"cell:Errors!B2","message":"Cell contains #REF!: invalid cell or range reference.","related":{"errorValue":"#REF!"}},
+    {"severity":"error","code":"E_ERRVAL","sheet":"Errors","row":3,"col":2,"ref":"cell:Errors!B3","message":"Cell contains #DIV/0!: division by zero.","related":{"errorValue":"#DIV/0!"}},
+    {"severity":"error","code":"E_ERRVAL","sheet":"Errors","row":4,"col":2,"ref":"cell:Errors!B4","message":"Cell contains #N/A: value is not available.","related":{"errorValue":"#N/A"}},
+    {"severity":"error","code":"E_ERRVAL","sheet":"Errors","row":5,"col":2,"ref":"cell:Errors!B5","message":"Cell contains #VALUE!: invalid value or operand type.","related":{"errorValue":"#VALUE!"}},
+    {"severity":"error","code":"E_ERRVAL","sheet":"Errors","row":6,"col":2,"ref":"cell:Errors!B6","message":"Cell contains #NAME?: unrecognized formula name.","related":{"errorValue":"#NAME?"}},
+    {"severity":"error","code":"E_ERRVAL","sheet":"Errors","row":7,"col":2,"ref":"cell:Errors!B7","message":"Cell contains #NUM!: invalid numeric result.","related":{"errorValue":"#NUM!"}},
+    {"severity":"error","code":"E_ERRVAL","sheet":"Errors","row":8,"col":2,"ref":"cell:Errors!B8","message":"Cell contains #SPILL!: dynamic-array result cannot spill.","related":{"errorValue":"#SPILL!"}},
+    {"severity":"error","code":"E_ERRVAL","sheet":"Errors","row":9,"col":2,"ref":"cell:Errors!B9","message":"Cell contains #CALC!: calculation engine error.","related":{"errorValue":"#CALC!"}},
+    {"severity":"error","code":"E_ERRVAL","sheet":"Errors","row":10,"col":2,"ref":"cell:Errors!B10","message":"Cell contains #BLOCKED!: calculation was blocked.","related":{"errorValue":"#BLOCKED!"}},
+    {"severity":"error","code":"E_ERRVAL","sheet":"Errors","row":11,"col":2,"ref":"cell:Errors!B11","message":"Cell contains an Excel error value (#FIELD!).","related":{"errorValue":"#FIELD!"}}
+  ],
+  "F10": [
+    {"severity":"error","code":"E_BROKEN_XLINK","sheet":"External","row":null,"col":null,"ref":"external:[linked-budget.xlsx]","message":"External workbook [linked-budget.xlsx] was not found on disk.","related":{"linkIndex":1,"reason":"local-file","status":"missing","target":"[linked-budget.xlsx]"}}
+  ],
+  "F11": [
+    {"severity":"info","code":"I_DYNAMIC_REF","sheet":"DynamicRefs","row":2,"col":2,"ref":"cell:DynamicRefs!B2","message":"Function INDIRECT returns a dynamic reference.","related":{"block":"fblock:DynamicRefs:0","function":"INDIRECT"}},
+    {"severity":"info","code":"I_VOLATILE","sheet":"DynamicRefs","row":2,"col":2,"ref":"cell:DynamicRefs!B2","message":"Formula block contains a volatile function and recalculates with Excel.","related":{"block":"fblock:DynamicRefs:0"}},
+    {"severity":"info","code":"I_DYNAMIC_REF","sheet":"DynamicRefs","row":2,"col":3,"ref":"cell:DynamicRefs!C2","message":"Function OFFSET returns a dynamic reference.","related":{"block":"fblock:DynamicRefs:1","function":"OFFSET"}},
+    {"severity":"info","code":"I_VOLATILE","sheet":"DynamicRefs","row":2,"col":3,"ref":"cell:DynamicRefs!C2","message":"Formula block contains a volatile function and recalculates with Excel.","related":{"block":"fblock:DynamicRefs:1"}}
+  ],
+  "F18": [
+    {"severity":"info","code":"I_VOLATILE","sheet":"Volatile","row":2,"col":2,"ref":"cell:Volatile!B2","message":"Formula block contains a volatile function and recalculates with Excel.","related":{"block":"fblock:Volatile:0"}},
+    {"severity":"info","code":"I_VOLATILE","sheet":"Volatile","row":3,"col":2,"ref":"cell:Volatile!B3","message":"Formula block contains a volatile function and recalculates with Excel.","related":{"block":"fblock:Volatile:1"}}
+  ]
+}

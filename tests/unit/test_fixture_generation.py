@@ -26,12 +26,16 @@ EXPECTED_FIXTURE_IDS = {
     "F04",
     "F05",
     "F07",
+    "F08",
     "F09a",
     "F09b",
+    "F10",
+    "F11",
     "F12",
     "F13",
     "F14",
     "F15",
+    "F18",
     "F19",
     "F20",
 }
@@ -48,6 +52,12 @@ P4_SHA256 = {
     "F09a": "b18a88c6e1c92a25ef0c3de851bd5675278f03d04518f80db6f501416fbf1234",
     "F09b": "0998132a470b1258aa2b2c1a68162f5c7c16b59e56d8848b6110cbd2f8917675",
     "F15": "96496cf60b8990e4d97c857cfe00b4593c856e3bb687ec376cdc00fe830a788f",
+}
+P5_SHA256 = {
+    "F08": "9e54d1d9f93947fcecfd6c90994beba91b50b63127f229897a132b39236876b4",
+    "F10": "0418ee82e8d319842ede2e752350e23a1f4390a7834bd124b4ba288a50d533c6",
+    "F11": "b800e80117a306bf39993ef82b328bae0d624a328051ed667ea63c577608438b",
+    "F18": "5b77a7efc0d93e06355206bba1385dc14a3743f592a8864091913300e57bfc7e",
 }
 GenerateAll = Callable[[Path], dict[str, Path]]
 generate_all = cast(
@@ -156,6 +166,9 @@ def test_generation_is_byte_identical_with_stable_zip_metadata(tmp_path: Path) -
     assert {
         fixture_id: hashlib.sha256(first_bytes[fixture_id]).hexdigest() for fixture_id in P4_SHA256
     } == P4_SHA256
+    assert {
+        fixture_id: hashlib.sha256(first_bytes[fixture_id]).hexdigest() for fixture_id in P5_SHA256
+    } == P5_SHA256
 
 
 def test_f01_has_listobject_formulas_and_injected_caches(
@@ -255,6 +268,57 @@ def test_f07_has_shared_groups_tamper_caches_table_and_merge(
     merge = worksheet.find(f".//{{{MAIN_NS}}}mergeCell")
     assert merge is not None
     assert merge.get("ref") == "E1:F1"
+
+
+def test_f08_has_every_specified_error_cache_plus_unknown_typed_error(
+    generated_paths: dict[str, Path],
+) -> None:
+    cells = _cells(generated_paths["F08"], "Errors")
+    expected = (
+        "#REF!",
+        "#DIV/0!",
+        "#N/A",
+        "#VALUE!",
+        "#NAME?",
+        "#NUM!",
+        "#SPILL!",
+        "#CALC!",
+        "#BLOCKED!",
+        "#FIELD!",
+    )
+    assert tuple(_formula_and_value(cells[f"B{row}"]) for row in range(2, 12)) == tuple(
+        ("NA()", value) for value in expected
+    )
+    assert {cells[f"B{row}"].get("t") for row in range(2, 12)} == {"e"}
+
+
+def test_f10_has_numeric_external_link_map_and_missing_local_target(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F10"]
+    assert _formula_and_value(_cells(path, "External")["A2"]) == ("[1]Data!A1", "0")
+    with OOXMLParser(path) as parser:
+        assert dict(parser.metadata.external_links) == {1: "missing/linked-budget.xlsx"}
+
+
+def test_f11_has_dynamic_indirect_offset_formulas_and_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    cells = _cells(generated_paths["F11"], "DynamicRefs")
+    assert {ref: _formula_and_value(cells[ref]) for ref in ("B2", "C2")} == {
+        "B2": ('INDIRECT("A2")', "10"),
+        "C2": ("OFFSET(A2,1,0)", "20"),
+    }
+
+
+def test_f18_has_now_and_rand_volatile_formulas_and_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    cells = _cells(generated_paths["F18"], "Volatile")
+    assert {ref: _formula_and_value(cells[ref]) for ref in ("B2", "B3")} == {
+        "B2": ("NOW()", "45292.5"),
+        "B3": ("RAND()", "0.25"),
+    }
 
 
 def test_f02_has_three_islands_and_one_intentional_blank_row(

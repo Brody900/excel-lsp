@@ -1979,3 +1979,166 @@ also clean. Both verdicts apply to the same unchanged fingerprint; the only
 post-verdict edits are this append-only verdict record, PLAN ledger/checklist
 accounting, gate and current-status documentation, and their contract
 assertions.
+
+## 2026-07-28 P5 — One catalog, phase-owned producers
+
+Decision: centralize all 13 HANDOFF section 5.6 identities and public records in
+`core/diagnostics.py`; preserve the existing P2/P3/P4 producers; persist P5's
+cached-error, link-health, and volatile-block findings; and provide typed
+constructors for the P6 `I_STALE` and P7 `W_REGEX_TIMEOUT` producers without
+persisting placeholder rows.
+
+Alternatives: move every historical producer into one new analyzer (large
+regression surface); defer the two later-phase codes entirely (an incomplete
+catalog); or manufacture rows without their owning runtime state (dishonest
+evidence). The selected boundary keeps proven behavior stable while making
+severity, shape, filtering, and future construction uniform.
+
+Rationale: F08 now proves `E_ERRVAL` keys only on OOXML `t="e"`, including an
+unrecognized value; F10 resolves a genuine numeric external-link map relative
+to the workbook directory without disclosing its target; F11/F18 prove dynamic
+and one-per-block volatile findings. The filtered query counts before limiting,
+fails closed on corrupt rows, and a diagnostics-analysis version forces old
+sidecars through a complete semantic refresh. The full repository currently
+passes 1,964 tests in 176.52 seconds; formal review is still pending.
+
+## 2026-07-28 P5 — Main-agent quality loop and freeze readiness
+
+Decision: keep P5 remediation and mutation reasoning in the main agent, add
+only serialization-bound and aggregate-integrity regressions, and stop the
+author loop once the complete verification matrix was green rather than
+expanding into a synthetic combinatorial test grid.
+
+Alternatives: retain the earlier 80% focused diagnostics coverage; add tests
+for every operating-system path parser branch; or delegate additional cleanup
+and mutation passes. The selected checks cover behavior that can change the
+public response: arbitrary OOXML error text is bounded, nested `related` data
+is immutable and JSON-shaped, and severity/code aggregate counts cannot claim
+an internally inconsistent total.
+
+Rationale: the focused diagnostics module passes 24 tests at 90.43% branch
+coverage. The complete repository passes all 1,968 tests in 218.88 seconds and
+again under branch instrumentation in 496.61 seconds at 90.11% total core
+coverage (`core/diagnostics.py` rounds to 90%). Ruff, format, Pyright, fixture
+regeneration, `uv lock --check`, sdist/wheel construction, and `git diff
+--check` all pass. Formal review remains pending until this exact candidate is
+staged and fingerprinted.
+
+## 2026-07-28 P5 — First combined formal review reproduces four boundary failures
+
+Decision: charge global verdicts #51/#52 as R-mech #27 and R-test #22,
+respectively, both `REVISE`, on base
+`2024813fc6b34264212a5f89903b5f8391b2030b`, staged tree
+`ce38f057ff807a5c753807ad990dfb3784ded1c8`, and cached diff
+`8d373ca58622c3d8718d7e3aa6655ef7e4e679fa` (23 files, 1,613 insertions,
+33 deletions). The same combined reviewer will receive the remediated frozen
+candidate.
+
+Alternatives: treat external-link findings as a workbook-only snapshot; accept
+redacted basenames as internal identity; validate only returned rows; or defer
+network-path handling to the server. Each would leave a reproduced P5
+correctness or security failure, so all findings are in scope for main-agent
+remediation.
+
+Rationale: the reviewer independently reproduced a missing-link diagnostic
+remaining after the target appeared while workbook bytes stayed unchanged, and
+a malformed 101st matching row escaping validation behind the 100-row limit.
+It also proved from the code that UNC and authority-bearing file URIs can reach
+filesystem I/O, and that distinct numeric M1 links sharing a redacted basename
+can acquire the wrong source sheet. The associated test verdict requires exact
+toggle, no-network-I/O, numeric-ownership, post-cap corruption, and non-finite
+JSON regressions. The reviewer changed no files and verified the frozen
+fingerprint at entry and exit.
+
+## 2026-07-28 P5 — External-health and full-filter remediation closes reproduced failures
+
+Decision: persist a path-free external-health snapshot in lifecycle metadata;
+recompute external diagnostics and bump generation when that snapshot changes;
+classify network forms before filesystem access; recover exact numeric link
+ownership by reanalyzing only external-edge source blocks; and stream-validate
+every filtered diagnostic before materializing the public page.
+
+Alternatives: force a full workbook reindex for target health; add an external
+link index column to the P4 edge schema; or validate a second uncapped SQL query
+before the existing capped query. The selected design avoids rewriting
+unchanged sheets and the approved graph schema, retains numeric identity from
+the already persisted anchor formulas, and validates/counts in one bounded-
+memory pass.
+
+Rationale: permanent regressions reproduce both missing→present and
+present→missing target transitions with unchanged workbook bytes, three
+network-path forms with `Path.is_file` replaced by a trap, two numeric links
+whose public basenames collide, corrupt JSON at matching row 101, and all three
+non-finite floats. The focused diagnostics module passes 28 tests at 92%
+branch coverage; the combined remediated regression set passes 127 tests in
+31.53 seconds. The complete repository passes 1,972 tests in 199.86 seconds
+and again under branch instrumentation in 386.02 seconds at 90.06% total core
+coverage. Final reproducibility checks and the replacement freeze remain.
+
+## 2026-07-28 P5 — Second combined review finds excessive-related-depth escape
+
+Decision: charge global verdicts #53/#54 as R-mech #28 and R-test #23,
+respectively, both `REVISE`, on base
+`2024813fc6b34264212a5f89903b5f8391b2030b`, staged tree
+`7a2fae24cb069931da2c82ccdef3f619b63380d4`, and cached diff
+`460332170b554351dc4b258eb7df1f6513f49685` (24 files, 1,936 insertions,
+39 deletions).
+
+Alternatives: catch only the observed `RecursionError`; rely on the response cap
+to make deep structures harmless; or replace recursive freezing with a new
+iterative object builder. The selected remediation combines a documented small
+depth limit with defensive recursion shaping at the persisted-data boundary,
+preserving the simple immutable representation while preventing traceback
+escape even if the JSON decoder itself exhausts recursion first.
+
+Rationale: the reviewer confirmed all five first-review findings were fixed,
+then inserted a syntactically valid roughly 2,000-level `related` object beyond
+ordinary public expectations. `json.loads` reached recursive freezing, which
+leaked `RecursionError` instead of `E_CORRUPT`. The same reviewer will receive a
+new frozen fingerprint after a permanent beyond-page nested-payload regression
+and broad main-agent verification.
+
+## 2026-07-28 P5 — Related-depth remediation passes the complete author gate
+
+Decision: cap diagnostic `related` containers at 64 nested levels, raise a
+typed shape error before recursive construction can exhaust Python, and also
+catch `RecursionError` at the persisted row boundary in case JSON decoding
+fails first.
+
+Alternatives: only lower Python's global recursion limit; accept arbitrary
+depth and implement an iterative freezer; or catch the exception without a
+public constructor invariant. The selected local bound is deterministic,
+doesn't alter process-global behavior, and keeps both direct and persisted
+diagnostics fail closed.
+
+Rationale: the permanent test stores a valid 2,000-level object in matching row
+101, proving both full-filter validation and recursion shaping while the public
+constructor separately crosses the 64-container limit. The focused diagnostics
+and ledger slice passes 41 tests. The complete repository passes 1,973 tests in
+203.94 seconds and again under branch instrumentation in 374.51 seconds at
+90.01% total core coverage (`core/diagnostics.py` 92%). Final lint, type,
+fixture, lock, package, contract, and whitespace checks remain before the new
+freeze.
+
+## 2026-07-28 P5 — Combined formal approval closes the phase
+
+Decision: charge global verdicts #55/#56 as R-mech #29 and R-test #24,
+respectively, both clean `APPROVE`, on base
+`2024813fc6b34264212a5f89903b5f8391b2030b`, staged tree
+`bf7e9f2787df2110ae7b59f7aee7b82300dddc88`, and cached diff
+`da558fb07f4320cbca1bd8876b35792baca46ce8` (24 files, 2,027 insertions,
+39 deletions). Close every P5 checklist item and proceed to its milestone
+commit before beginning P6.
+
+Alternatives: carry either prior approval across a changed candidate; ask a
+second reviewer to repeat the combined gate; or change implementation after
+approval. The exact-fingerprint protocol requires neither: the same combined
+reviewer returned both verdicts for the unchanged third tree with no findings.
+
+Rationale: the reviewer verified the base, staged tree, and cached-diff hash at
+entry and exit; confirmed all earlier external-health, no-network-I/O, numeric
+ownership, post-cap corruption, finite-JSON, and nested-related remediations;
+and independently reran the 41-test focused slice, Ruff, formatting, and
+Pyright. Both verdicts apply to one unchanged fingerprint. The only
+post-verdict edits are this append-only record, ledger/checklist accounting,
+verified-status documentation, evidence finalization, and contract assertions.

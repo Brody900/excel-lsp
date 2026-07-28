@@ -5,9 +5,10 @@ The verified P1 implementation streams workbook packages into a per-workbook
 SQLite sidecar and refreshes that index from package hashes. Verified P2 adds
 sparse regions, stable symbols, and the compact workbook map. Verified P3 adds
 formula reference extraction and R1C1 blocks. Verified P4 adds ranked
-dependency navigation and bounded circular analysis. Editing, MCP, benchmarks,
-and release behavior remain planned in their
-ordered phases.
+dependency navigation and bounded circular analysis. Verified P5 completes the
+typed diagnostic catalog, persisted cached-error/link/volatility findings, and
+filtered core query. Editing, MCP, benchmarks, and release behavior remain
+planned in their ordered phases.
 
 ## Layer boundaries
 
@@ -118,7 +119,7 @@ bounded map projection over indexed rows. See
 | P2 | Regions, headers, stable symbols, compact workbook map | Verified |
 | P3 | Formula reference classification and R1C1 formula blocks | Verified |
 | P4 | Dependency graph, spatial edge queries, traces, paths, circular checks | Verified |
-| P5 | Formula and workbook diagnostics | Planned |
+| P5 | Formula and workbook diagnostics | Verified |
 | P6 | Surgical OOXML editing and transitive staleness | Planned |
 | P7 | Fourteen-tool MCP server and full CLI | Planned |
 | P8 | Live Excel protocol, benchmarks, headless-Codex evaluations, charts | Planned |

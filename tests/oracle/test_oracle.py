@@ -17,12 +17,16 @@ EXPECTED_FIXTURE_IDS = {
     "F04",
     "F05",
     "F07",
+    "F08",
     "F09a",
     "F09b",
+    "F10",
+    "F11",
     "F12",
     "F13",
     "F14",
     "F15",
+    "F18",
     "F19",
     "F20",
 }
@@ -159,6 +163,31 @@ def test_openpyxl_observes_p4_names_structured_cycle_and_3d_caches(
         },
         "F15": {
             ("Summary", "B2"): (60, "=SUM(Jan:Mar!B2)"),
+        },
+    }
+    for fixture_id, expected_cells in expected.items():
+        canonical = openpyxl_canonical_cells(generated_paths[fixture_id])
+        by_ref = {(sheet, ref): (value, formula) for sheet, ref, value, formula in canonical}
+        assert {ref: by_ref[ref] for ref in expected_cells} == expected_cells
+
+
+def test_openpyxl_observes_p5_error_dynamic_external_and_volatile_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    expected = {
+        "F08": {
+            ("Errors", "B2"): ("#REF!", "=NA()"),
+            ("Errors", "B10"): ("#BLOCKED!", "=NA()"),
+            ("Errors", "B11"): ("#FIELD!", "=NA()"),
+        },
+        "F10": {("External", "A2"): (0, "=[1]Data!A1")},
+        "F11": {
+            ("DynamicRefs", "B2"): (10, '=INDIRECT("A2")'),
+            ("DynamicRefs", "C2"): (20, "=OFFSET(A2,1,0)"),
+        },
+        "F18": {
+            ("Volatile", "B2"): (45292.5, "=NOW()"),
+            ("Volatile", "B3"): (0.25, "=RAND()"),
         },
     }
     for fixture_id, expected_cells in expected.items():

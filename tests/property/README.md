@@ -26,7 +26,11 @@ fallback and compared with an independent brute-force overlap scan. The cases
 cover point and range lookups, keyset page sizes, Excel row/column boundaries,
 and explicit whole-column rectangles.
 
-Later phases add formula/reference, R1C1, graph, diagnostics, and surgical-edit
-properties with their corresponding production modules. A property counts as
-evidence only when it asserts the named invariant rather than merely proving
-that random input does not crash.
+P3's formula/reference, structured-context, and R1C1 properties live in their
+corresponding files. P5's central non-whitelist error contract is instead
+protected by the exact F08 OOXML fixture: all specified errors plus an
+unrecognized `t="e"` value are asserted end to end, so a synthetic random-text
+property would add no independent semantic dimension. Later phases add the
+surgical-edit properties required for I18. A property counts as evidence only
+when it asserts the named invariant rather than merely proving that random
+input does not crash.

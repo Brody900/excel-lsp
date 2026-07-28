@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import sqlite3
 import tempfile
 import time
@@ -15,6 +16,17 @@ from pathlib import Path
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self, cast
 
+from excel_lsp.core.diagnostics import (
+    DIAGNOSTIC_SEVERITIES,
+    P5_PERSISTED_CODES,
+    Diagnostic,
+    DiagnosticReport,
+    DiagnosticSeverity,
+    diagnostic_sort_key,
+    error_value_diagnostic,
+    external_link_diagnostic,
+    volatile_formula_diagnostic,
+)
 from excel_lsp.core.errors import ErrorCode, ExcelLSPError
 from excel_lsp.core.exception_evidence import (
     normalize_exception_graph,
@@ -92,6 +104,8 @@ _P3_DIAGNOSTIC_CODES = (
     "W_UNKNOWN_NAME",
 )
 _P4_DIAGNOSTIC_CODES = ("E_CIRCULAR", "W_POSSIBLE_CIRCULAR")
+_P5_SHEET_DIAGNOSTIC_CODES = tuple(sorted(P5_PERSISTED_CODES - {"E_BROKEN_XLINK"}))
+_NUMERIC_EXTERNAL_BOOK = re.compile(r"\[([1-9][0-9]*)\]")
 _PACKED_CELL_FACTOR = 1 << 16
 _PSEUDO_CELL_BLOCK_BASE = 1 << 48
 
@@ -600,6 +614,116 @@ class IndexStore:
         from excel_lsp.core.graph.queries import DependencyGraph
 
         return DependencyGraph(self._connection, self.edge_store)
+
+    def get_diagnostics(
+        self,
+        *,
+        sheet: str | None = None,
+        severity: DiagnosticSeverity | None = None,
+        code: str | None = None,
+        max_results: int = 100,
+    ) -> DiagnosticReport:
+        """Return deterministic P5 diagnostics filtered before the result cap."""
+        if self._closed:
+            raise RuntimeError("index store is closed")
+        if sheet is not None and not sheet:
+            raise ValueError("diagnostic sheet filter must be a nonempty string")
+        if severity is not None and severity not in {"error", "warn", "info"}:
+            raise ValueError("diagnostic severity filter must be error, warn, or info")
+        if code is not None and code not in DIAGNOSTIC_SEVERITIES:
+            raise ValueError(f"unknown diagnostic code filter: {code}")
+        if type(max_results) is not int or not 1 <= max_results <= 100:
+            raise ValueError("diagnostic max_results must be an integer from 1 through 100")
+
+        clauses: list[str] = []
+        parameters: list[object] = []
+        if sheet is not None:
+            clauses.append("s.name = ?")
+            parameters.append(sheet)
+        if severity is not None:
+            clauses.append("d.severity = ?")
+            parameters.append(severity)
+        if code is not None:
+            clauses.append("d.code = ?")
+            parameters.append(code)
+        where = "" if not clauses else f" WHERE {' AND '.join(clauses)}"
+
+        try:
+            counts_by_severity = {"error": 0, "warn": 0, "info": 0}
+            counts_by_code: dict[str, int] = {}
+            rows = self._connection.execute(
+                "SELECT d.severity, d.code, s.name AS sheet, d.row, d.col, "
+                "d.ref, d.message, d.related "
+                "FROM diagnostics AS d LEFT JOIN sheets AS s ON s.id = d.sheet_id"
+                f"{where} ORDER BY CASE d.severity "
+                "WHEN 'error' THEN 0 WHEN 'warn' THEN 1 WHEN 'info' THEN 2 ELSE 3 END, "
+                "s.id, COALESCE(d.row, -1), COALESCE(d.col, -1), d.code, d.ref, d.message",
+                parameters,
+            )
+            diagnostics: list[Diagnostic] = []
+            for row in rows:
+                severity_value = row["severity"]
+                code_value = row["code"]
+                sheet_value = row["sheet"]
+                ref_value = row["ref"]
+                message_value = row["message"]
+                related_value = row["related"]
+                if not all(
+                    isinstance(value, str) and value
+                    for value in (
+                        severity_value,
+                        code_value,
+                        sheet_value,
+                        ref_value,
+                        message_value,
+                        related_value,
+                    )
+                ):
+                    raise TypeError("diagnostic required strings are missing")
+                row_value = row["row"]
+                col_value = row["col"]
+                if row_value is not None and type(row_value) is not int:
+                    raise TypeError("diagnostic row is not an integer")
+                if col_value is not None and type(col_value) is not int:
+                    raise TypeError("diagnostic column is not an integer")
+                decoded: object = json.loads(related_value)
+                if not isinstance(decoded, dict):
+                    raise TypeError("diagnostic related payload is not an object")
+                related = cast(dict[str, object], decoded)
+                diagnostic = Diagnostic(
+                    severity=cast(DiagnosticSeverity, severity_value),
+                    code=code_value,
+                    sheet=sheet_value,
+                    row=row_value,
+                    col=col_value,
+                    ref=ref_value,
+                    message=message_value,
+                    related=related,
+                )
+                counts_by_severity[diagnostic.severity] += 1
+                counts_by_code[diagnostic.code] = counts_by_code.get(diagnostic.code, 0) + 1
+                if len(diagnostics) < max_results:
+                    diagnostics.append(diagnostic)
+        except (
+            json.JSONDecodeError,
+            sqlite3.DatabaseError,
+            RecursionError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            raise ExcelLSPError(
+                ErrorCode.CORRUPT,
+                "Index diagnostic rows are corrupt.",
+            ) from exc
+
+        total = sum(counts_by_severity.values())
+        return DiagnosticReport(
+            diagnostics=tuple(diagnostics),
+            total=total,
+            counts_by_severity=counts_by_severity,
+            counts_by_code=counts_by_code,
+            truncated=total > len(diagnostics),
+        )
 
     @property
     def generation(self) -> int:
@@ -1197,7 +1321,9 @@ class IndexStore:
                     context,
                 )
                 self._replace_sheet_formula_analysis(sheet_id, analysis)
+                self._replace_sheet_p5_diagnostics(sheet_id, descriptor)
                 analyzed.append(descriptor.name)
+            self._replace_external_link_diagnostics(metadata, context)
             self._replace_circular_diagnostics(metadata, context)
             if owns_transaction:
                 self.bump_generation()
@@ -1206,6 +1332,159 @@ class IndexStore:
             # over later writes at commit time.
             self._rebuild_graph_spatial_index()
             return tuple(analyzed)
+
+    def refresh_external_link_diagnostics(self, metadata: WorkbookMetadata) -> None:
+        """Refresh target-health rows without rebuilding unchanged formula semantics."""
+        owns_transaction = not self._connection.in_transaction
+        with self.transaction():
+            context = self._formula_reference_context(metadata)
+            self._replace_external_link_diagnostics(metadata, context)
+            if owns_transaction:
+                self.bump_generation()
+
+    def _replace_sheet_p5_diagnostics(
+        self,
+        sheet_id: int,
+        descriptor: SheetDescriptor,
+    ) -> None:
+        """Replace cached-error and volatile findings for one refreshed sheet."""
+        placeholders = ",".join("?" for _code in _P5_SHEET_DIAGNOSTIC_CODES)
+        self._connection.execute(
+            f"DELETE FROM diagnostics WHERE sheet_id = ? AND code IN ({placeholders})",
+            (sheet_id, *_P5_SHEET_DIAGNOSTIC_CODES),
+        )
+        diagnostics = [
+            error_value_diagnostic(
+                descriptor.name,
+                int(row["row"]),
+                int(row["col"]),
+                str(row["ref"]),
+                row["value"],
+            )
+            for row in self._connection.execute(
+                "SELECT row, col, ref, value FROM cells "
+                "WHERE sheet_id = ? AND value_type = 'error' ORDER BY row, col",
+                (sheet_id,),
+            )
+        ]
+        diagnostics.extend(
+            volatile_formula_diagnostic(
+                descriptor.name,
+                int(row["n"]),
+                int(row["row_min"]),
+                int(row["col_min"]),
+                make_cell_ref(int(row["row_min"]), int(row["col_min"])),
+            )
+            for row in self._connection.execute(
+                "SELECT n, row_min, col_min FROM fblocks "
+                "WHERE sheet_id = ? AND volatile = 1 ORDER BY n",
+                (sheet_id,),
+            )
+        )
+        self._insert_diagnostics(sheet_id, diagnostics)
+
+    def _replace_external_link_diagnostics(
+        self,
+        metadata: WorkbookMetadata,
+        context: ReferenceContext,
+    ) -> None:
+        """Replace workbook-link health findings and bind them to source sheets."""
+        self._connection.execute("DELETE FROM diagnostics WHERE code = 'E_BROKEN_XLINK'")
+        if not metadata.external_links or not metadata.sheets:
+            return
+
+        default_descriptor = min(metadata.sheets, key=lambda descriptor: descriptor.order)
+        owners_by_index = self._external_link_owners_by_index(metadata, context)
+        rows_by_sheet: dict[int, list[Diagnostic]] = {}
+        for link_index, target in sorted(metadata.external_links.items()):
+            owners = owners_by_index.get(link_index, (default_descriptor,))
+            for descriptor in owners:
+                diagnostic = external_link_diagnostic(
+                    metadata.path,
+                    descriptor.name,
+                    link_index,
+                    target,
+                )
+                if diagnostic is not None:
+                    rows_by_sheet.setdefault(descriptor.order + 1, []).append(diagnostic)
+        for sheet_id, diagnostics in sorted(rows_by_sheet.items()):
+            self._insert_diagnostics(sheet_id, diagnostics)
+
+    def _external_link_owners_by_index(
+        self,
+        metadata: WorkbookMetadata,
+        context: ReferenceContext,
+    ) -> dict[int, tuple[SheetDescriptor, ...]]:
+        """Recover exact M1 numeric link ownership from external-edge source blocks."""
+        descriptors_by_id = {descriptor.order + 1: descriptor for descriptor in metadata.sheets}
+        owners: dict[int, dict[int, SheetDescriptor]] = {}
+        for row in self._connection.execute(
+            "SELECT DISTINCT f.id, f.sheet_id, f.row_min, f.col_min, c.formula "
+            "FROM fblocks AS f "
+            "JOIN edges AS e ON e.src_kind = 'fblock' AND e.src_id = f.id "
+            "AND e.src_sheet_id = f.sheet_id "
+            "LEFT JOIN cells AS c ON c.sheet_id = f.sheet_id "
+            "AND c.row = f.row_min AND c.col = f.col_min "
+            "WHERE e.via LIKE 'external:%' ORDER BY f.sheet_id, f.n"
+        ):
+            descriptor = descriptors_by_id.get(int(row["sheet_id"]))
+            formula = row["formula"]
+            if descriptor is None or not isinstance(formula, str) or not formula:
+                raise ExcelLSPError(
+                    ErrorCode.CORRUPT,
+                    "External dependency edge has no valid source formula block.",
+                )
+            analysis = analyze_formula(
+                formula,
+                anchor=FormulaAnchor(
+                    descriptor.order,
+                    descriptor.name,
+                    int(row["row_min"]),
+                    int(row["col_min"]),
+                ),
+                context=context,
+            )
+            for reference in analysis.references:
+                if not reference.via.startswith("external:"):
+                    continue
+                for match in _NUMERIC_EXTERNAL_BOOK.finditer(reference.token):
+                    link_index = int(match.group(1))
+                    if link_index in metadata.external_links:
+                        owners.setdefault(link_index, {})[descriptor.order] = descriptor
+        return {
+            link_index: tuple(by_order[order] for order in sorted(by_order))
+            for link_index, by_order in owners.items()
+        }
+
+    def _insert_diagnostics(
+        self,
+        sheet_id: int,
+        diagnostics: Sequence[Diagnostic],
+    ) -> None:
+        self._connection.executemany(
+            """
+            INSERT INTO diagnostics(
+                severity, code, sheet_id, row, col, ref, message, related
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                (
+                    diagnostic.severity,
+                    diagnostic.code,
+                    sheet_id,
+                    diagnostic.row,
+                    diagnostic.col,
+                    diagnostic.ref,
+                    diagnostic.message,
+                    json.dumps(
+                        dict(sorted(diagnostic.related.items())),
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                )
+                for diagnostic in sorted(diagnostics, key=diagnostic_sort_key)
+            ),
+        )
 
     def rebuild_graph_spatial_index(self) -> None:
         """Rebuild both ranked graph mirrors from the relational edge catalog."""

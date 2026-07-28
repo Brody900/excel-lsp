@@ -34,7 +34,9 @@ _ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 _MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 _OFFICE_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 _PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
+_CONTENT_TYPES_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
 _DCTERMS_NS = "http://purl.org/dc/terms/"
+_REL_TYPE_BASE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 
 CachedValueKind = Literal["number", "string", "error", "boolean"]
 
@@ -242,6 +244,78 @@ def convert_shared_formula_groups(
             follower.text = None
 
     members[part] = etree.tostring(worksheet, encoding="utf-8")
+    _write_deterministic_archive(workbook_path, members)
+
+
+def inject_external_link(
+    workbook_path: Path,
+    *,
+    target: str,
+    relationship_id: str = "rIdExternalLink1",
+) -> None:
+    """Add one genuine [1] external-link map and relationship target."""
+    members = _read_archive(workbook_path)
+    workbook = etree.fromstring(members["xl/workbook.xml"])
+    sheets = workbook.find(f"{{{_MAIN_NS}}}sheets")
+    if sheets is None:
+        raise ValueError("workbook is missing its sheet catalog")
+    external_references = etree.Element(f"{{{_MAIN_NS}}}externalReferences")
+    external_reference = etree.SubElement(
+        external_references,
+        f"{{{_MAIN_NS}}}externalReference",
+    )
+    external_reference.set(f"{{{_OFFICE_REL_NS}}}id", relationship_id)
+    workbook.insert(workbook.index(sheets) + 1, external_references)
+
+    relationships = etree.fromstring(members["xl/_rels/workbook.xml.rels"])
+    etree.SubElement(
+        relationships,
+        f"{{{_PACKAGE_REL_NS}}}Relationship",
+        Id=relationship_id,
+        Type=f"{_REL_TYPE_BASE}/externalLink",
+        Target="externalLinks/externalLink1.xml",
+    )
+
+    external_link = etree.Element(
+        f"{{{_MAIN_NS}}}externalLink",
+        nsmap={"r": _OFFICE_REL_NS},
+    )
+    external_book = etree.SubElement(external_link, f"{{{_MAIN_NS}}}externalBook")
+    external_book.set(f"{{{_OFFICE_REL_NS}}}id", "rIdExternalBook1")
+    external_relationships = etree.Element(f"{{{_PACKAGE_REL_NS}}}Relationships")
+    etree.SubElement(
+        external_relationships,
+        f"{{{_PACKAGE_REL_NS}}}Relationship",
+        Id="rIdExternalBook1",
+        Type=f"{_REL_TYPE_BASE}/externalLinkPath",
+        Target=target,
+        TargetMode="External",
+    )
+
+    content_types = etree.fromstring(members["[Content_Types].xml"])
+    etree.SubElement(
+        content_types,
+        f"{{{_CONTENT_TYPES_NS}}}Override",
+        PartName="/xl/externalLinks/externalLink1.xml",
+        ContentType=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.externalLink+xml"
+        ),
+    )
+
+    members["xl/workbook.xml"] = etree.tostring(workbook, encoding="utf-8")
+    members["xl/_rels/workbook.xml.rels"] = etree.tostring(
+        relationships,
+        encoding="utf-8",
+    )
+    members["xl/externalLinks/externalLink1.xml"] = etree.tostring(
+        external_link,
+        encoding="utf-8",
+    )
+    members["xl/externalLinks/_rels/externalLink1.xml.rels"] = etree.tostring(
+        external_relationships,
+        encoding="utf-8",
+    )
+    members["[Content_Types].xml"] = etree.tostring(content_types, encoding="utf-8")
     _write_deterministic_archive(workbook_path, members)
 
 
@@ -542,6 +616,86 @@ def _generate_f07(output_dir: Path) -> Path:
     return path
 
 
+def _generate_f08(output_dir: Path) -> Path:
+    path = output_dir / "errors.xlsx"
+    workbook, worksheet = _new_workbook("Errors")
+    worksheet.append(("ExpectedError", "FormulaResult"))
+    errors = (
+        "#REF!",
+        "#DIV/0!",
+        "#N/A",
+        "#VALUE!",
+        "#NAME?",
+        "#NUM!",
+        "#SPILL!",
+        "#CALC!",
+        "#BLOCKED!",
+        "#FIELD!",
+    )
+    cached_values: dict[str, CachedValue] = {}
+    for row_number, error_value in enumerate(errors, start=2):
+        worksheet.append((f"Expected {error_value}", "=NA()"))
+        cached_values[f"B{row_number}"] = CachedValue(error_value, "error")
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(path, "Errors", cached_values)
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f10(output_dir: Path) -> Path:
+    path = output_dir / "external_link.xlsx"
+    workbook, worksheet = _new_workbook("External")
+    worksheet.append(("LinkedValue",))
+    worksheet["A2"] = "=[1]Data!A1"
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(path, "External", {"A2": CachedValue(0)})
+    inject_external_link(path, target="missing/linked-budget.xlsx")
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f11(output_dir: Path) -> Path:
+    path = output_dir / "indirect_offset.xlsx"
+    workbook, worksheet = _new_workbook("DynamicRefs")
+    worksheet.append(("Input", "Indirect", "Offset"))
+    worksheet.append((10, '=INDIRECT("A2")', "=OFFSET(A2,1,0)"))
+    worksheet.append((20, None, None))
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(
+        path,
+        "DynamicRefs",
+        {
+            "B2": CachedValue(10),
+            "C2": CachedValue(20),
+        },
+    )
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f18(output_dir: Path) -> Path:
+    path = output_dir / "volatile.xlsx"
+    workbook, worksheet = _new_workbook("Volatile")
+    worksheet.append(("Function", "Value"))
+    worksheet.append(("NOW", "=NOW()"))
+    worksheet.append(("RAND", "=RAND()"))
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(
+        path,
+        "Volatile",
+        {
+            "B2": CachedValue(45292.5),
+            "B3": CachedValue(0.25),
+        },
+    )
+    repack_deterministic(path)
+    return path
+
+
 def _generate_f09a(output_dir: Path) -> Path:
     path = output_dir / "circular.xlsx"
     workbook, worksheet = _new_workbook("Circular")
@@ -809,7 +963,7 @@ def generate_all(output_dir: Path = GENERATED_DIR) -> dict[str, Path]:
     # perturb their byte-for-byte golden archives through library global state.
     f01 = _generate_f01(output_dir)
     f07 = _generate_f07(output_dir)
-    return {
+    existing = {
         "F01": f01,
         "F02": _generate_f02(output_dir),
         "F03": _generate_f03(output_dir),
@@ -825,6 +979,17 @@ def generate_all(output_dir: Path = GENERATED_DIR) -> dict[str, Path]:
         "F20": _generate_f20(output_dir),
         "F19": _generate_f19(output_dir),
     }
+    # New phase fixtures are authored only after the historical corpus so their
+    # library activity cannot perturb the frozen hashes above.
+    existing.update(
+        {
+            "F08": _generate_f08(output_dir),
+            "F10": _generate_f10(output_dir),
+            "F11": _generate_f11(output_dir),
+            "F18": _generate_f18(output_dir),
+        }
+    )
+    return existing
 
 
 def main() -> None:

@@ -42,10 +42,13 @@ public API is being claimed yet.
   precedents, dependents, bounded traces and shortest paths; R*Tree/interval
   parity; two-stage circular analysis; corruption-resistant live seals and
   capability-isolated SQLite tracking; and approved P4 mechanics/test evidence.
+- A complete typed diagnostics catalog; persisted cached-error, external-link,
+  and volatile-block findings; deterministic sheet/severity/code filtering;
+  four P5 fixtures with exact golden and independent parser-oracle coverage;
+  and fail-closed diagnostic-row validation.
 
 ### Planned before v0.1.0
 
-- The complete diagnostics catalog.
 - A surgical OOXML editor with untouched-part fidelity evidence.
 - The 14-tool stdio MCP server, CLI, response-cap conformance, and Codex
   quickstart verification.

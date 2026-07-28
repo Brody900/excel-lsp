@@ -362,7 +362,10 @@ def test_p3_replacement_preserves_large_sheet_and_sanitizes_external_targets(
         "opaque:name",
     )
     assert tuple(row[0] for row in diagnostics) == (
+        "E_BROKEN_XLINK",
         "I_DYNAMIC_REF",
+        "I_VOLATILE",
+        "I_VOLATILE",
         "W_LARGE_SHEET",
         "W_UNKNOWN_NAME",
     )
@@ -481,6 +484,10 @@ def test_external_target_only_refresh_updates_raw_context_and_persisted_edge(
                 "external:[first-budget.xlsx]",
             ),
         )
+        assert [
+            diagnostic.ref
+            for diagnostic in store.get_diagnostics(code="E_BROKEN_XLINK").diagnostics
+        ] == ["external:[first-budget.xlsx]"]
 
     _write_package(
         workbook,
@@ -496,6 +503,10 @@ def test_external_target_only_refresh_updates_raw_context_and_persisted_edge(
             "1": "../second-budget.xlsx"
         }
         assert store.canonical_export()["edges"][-1][-1] == ("external:[second-budget.xlsx]")
+        assert [
+            diagnostic.ref
+            for diagnostic in store.get_diagnostics(code="E_BROKEN_XLINK").diagnostics
+        ] == ["external:[second-budget.xlsx]"]
 
     assert second.changed is True
     assert second.reindexed_sheets == ()
