@@ -4,18 +4,19 @@ Excel LSP is a local, derived semantic index for modern Excel OOXML workbooks.
 The verified P1 implementation streams workbook packages into a per-workbook
 SQLite sidecar and refreshes that index from package hashes. Verified P2 adds
 sparse regions, stable symbols, and the compact workbook map. Verified P3 adds
-formula reference extraction and R1C1 blocks. Graph navigation, editing, MCP,
-benchmarks, and release behavior
-remain planned in their ordered phases.
+formula reference extraction and R1C1 blocks. Verified P4 adds ranked
+dependency navigation and bounded circular analysis. Editing, MCP, benchmarks,
+and release behavior remain planned in their
+ordered phases.
 
 ## Layer boundaries
 
 The package has three one-way layers:
 
 - `excel_lsp.core` owns OOXML parsing, normalized values, index persistence,
-  freshness, regions, symbols, and workbook maps, plus the future graph,
-  diagnostics, and surgical editor. It has no MCP dependency and remains
-  independently embeddable.
+  freshness, regions, symbols, workbook maps, dependency navigation, and
+  circular analysis, plus the future complete diagnostics catalog and surgical
+  editor. It has no MCP dependency and remains independently embeddable.
 - `excel_lsp.server` will wrap core with stdio MCP schemas, response shaping,
   pagination, annotations, progress, path confinement, and sanitized errors in
   P7. It is currently only a package boundary.
@@ -61,8 +62,17 @@ SQLite mutations use immediate transactions. Schema initialization and rebuild
 are concurrency-safe, and an obsolete schema is replaced because the index is
 always derivable. R*Tree capability is selected when available; an interval
 table provides the same inclusive point/range interface when it is not. P1
-initializes that storage abstraction, but P4 will populate and query the
-semantic dependency graph.
+initializes that storage abstraction. Verified P4 adds globally ranked
+source and destination mirrors, exact semantic-prefix traces and paths, and a
+dirty gate that rejects stale or corrupt derived mirrors. Its cached facade also
+seals graph-specific same-handle writes, other-handle commits, DDL identity, and
+canonical rank keys process-locally. Constructor validation and seal capture
+share one immediate snapshot, so coordinated raw SQL restoration cannot revive
+stale topology or land between validation and sealing. Authoritative graph SQL
+is explicitly `main`-qualified; protected TEMP shadows and direct schema-catalog
+mutation fail closed. Cleanup evidence passes through one returning,
+metadata-preserving sanitizer at constructor, query, transaction, close, and
+post-commit boundaries.
 
 Fresh P1 commands, oracle results, invariants, concurrency probes, coverage, and
 review accounting are recorded in
@@ -107,7 +117,7 @@ bounded map projection over indexed rows. See
 | P1 | OOXML parser, SQLite store, spatial abstraction, freshness lifecycle | Verified |
 | P2 | Regions, headers, stable symbols, compact workbook map | Verified |
 | P3 | Formula reference classification and R1C1 formula blocks | Verified |
-| P4 | Dependency graph, spatial edge queries, traces, paths, circular checks | Planned |
+| P4 | Dependency graph, spatial edge queries, traces, paths, circular checks | Verified |
 | P5 | Formula and workbook diagnostics | Planned |
 | P6 | Surgical OOXML editing and transitive staleness | Planned |
 | P7 | Fourteen-tool MCP server and full CLI | Planned |

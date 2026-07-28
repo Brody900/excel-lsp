@@ -20,6 +20,12 @@ bounding-box closure, applies tables in fixed rectangle order, and recomputes
 each directional child separately. Randomized cells, non-overlapping merges,
 both table metadata orders, and gap tolerances 0–3 are covered.
 
+P4 adds `test_edge_store_properties.py`: random dependency-edge rectangles on
+multiple sheets are queried through both the R*Tree and documented interval
+fallback and compared with an independent brute-force overlap scan. The cases
+cover point and range lookups, keyset page sizes, Excel row/column boundaries,
+and explicit whole-column rectangles.
+
 Later phases add formula/reference, R1C1, graph, diagnostics, and surgical-edit
 properties with their corresponding production modules. A property counts as
 evidence only when it asserts the named invariant rather than merely proving

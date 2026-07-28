@@ -10,6 +10,7 @@ from typing import Any, cast
 from zipfile import ZipFile
 
 import lxml.etree as etree
+import pytest
 from openpyxl.utils.cell import get_column_letter
 
 from excel_lsp.core.parse import OOXMLParser
@@ -18,7 +19,22 @@ MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 OFFICE_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
-EXPECTED_FIXTURE_IDS = {"F01", "F02", "F03", "F07", "F12", "F13", "F14", "F19", "F20"}
+EXPECTED_FIXTURE_IDS = {
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F07",
+    "F09a",
+    "F09b",
+    "F12",
+    "F13",
+    "F14",
+    "F15",
+    "F19",
+    "F20",
+}
 P1_SHA256 = {
     "F01": "8d57d9143edf78a66be6c33bcede3bcc7fba8ed1ac2d816391a4139a28a41270",
     "F07": "50015028edc75a4bab5cd13af9b4576f520d8c1f4cf0e3b223bab54c3476c871",
@@ -26,11 +42,24 @@ P1_SHA256 = {
 P3_SHA256 = {
     "F19": "db6ab279299ff1ed28d120fdc4ba6b057227867fc92e98caba50ca4ce761dcdf",
 }
+P4_SHA256 = {
+    "F04": "9844b879673deae1455054aca03f20168e10121d61f23e3204235b8ce3574a0c",
+    "F05": "1132fe9ddd6cca3d0a4e4af4a38e4a56d8b1ebbf1f9526e19c6dec053fc1d397",
+    "F09a": "b18a88c6e1c92a25ef0c3de851bd5675278f03d04518f80db6f501416fbf1234",
+    "F09b": "0998132a470b1258aa2b2c1a68162f5c7c16b59e56d8848b6110cbd2f8917675",
+    "F15": "96496cf60b8990e4d97c857cfe00b4593c856e3bb687ec376cdc00fe830a788f",
+}
 GenerateAll = Callable[[Path], dict[str, Path]]
 generate_all = cast(
     GenerateAll,
     runpy.run_path(str(Path(__file__).parents[1] / "fixtures" / "generate.py"))["generate_all"],
 )
+
+
+@pytest.fixture(scope="module")
+def generated_paths(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
+    """Generate the full corpus once for shape tests, including the 50k fixture."""
+    return generate_all(tmp_path_factory.mktemp("fixture-corpus"))
 
 
 def _xml_member(path: Path, member: str):
@@ -124,10 +153,15 @@ def test_generation_is_byte_identical_with_stable_zip_metadata(tmp_path: Path) -
     assert {
         fixture_id: hashlib.sha256(first_bytes[fixture_id]).hexdigest() for fixture_id in P3_SHA256
     } == P3_SHA256
+    assert {
+        fixture_id: hashlib.sha256(first_bytes[fixture_id]).hexdigest() for fixture_id in P4_SHA256
+    } == P4_SHA256
 
 
-def test_f01_has_listobject_formulas_and_injected_caches(tmp_path: Path) -> None:
-    path = generate_all(tmp_path)["F01"]
+def test_f01_has_listobject_formulas_and_injected_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F01"]
     cells = _cells(path, "Sales")
     expected_caches = {
         "D2": 7.0,
@@ -157,8 +191,10 @@ def test_f01_has_listobject_formulas_and_injected_caches(tmp_path: Path) -> None
     ]
 
 
-def test_f07_has_shared_groups_tamper_caches_table_and_merge(tmp_path: Path) -> None:
-    path = generate_all(tmp_path)["F07"]
+def test_f07_has_shared_groups_tamper_caches_table_and_merge(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F07"]
     cells = _cells(path, "FormulaBlocks")
 
     first_master = cells["C2"].find(f"{{{MAIN_NS}}}f")
@@ -221,8 +257,10 @@ def test_f07_has_shared_groups_tamper_caches_table_and_merge(tmp_path: Path) -> 
     assert merge.get("ref") == "E1:F1"
 
 
-def test_f02_has_three_islands_and_one_intentional_blank_row(tmp_path: Path) -> None:
-    path = generate_all(tmp_path)["F02"]
+def test_f02_has_three_islands_and_one_intentional_blank_row(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F02"]
     cells = _cells(path, "Islands")
     expected_refs = (
         _rect_refs(1, 1, 3, 3)
@@ -241,8 +279,10 @@ def test_f02_has_three_islands_and_one_intentional_blank_row(tmp_path: Path) -> 
     assert all(cells[ref].get("s") is not None for ref in ("A1", "F2", "B10"))
 
 
-def test_f03_has_exact_cross_sheet_chains_tables_and_caches(tmp_path: Path) -> None:
-    path = generate_all(tmp_path)["F03"]
+def test_f03_has_exact_cross_sheet_chains_tables_and_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F03"]
     workbook = _xml_member(path, "xl/workbook.xml")
     assert [sheet.get("name") for sheet in workbook.findall(f".//{{{MAIN_NS}}}sheet")] == [
         "Inputs",
@@ -296,8 +336,114 @@ def test_f03_has_exact_cross_sheet_chains_tables_and_caches(tmp_path: Path) -> N
     }
 
 
-def test_f12_has_two_row_merged_header_hierarchy(tmp_path: Path) -> None:
-    path = generate_all(tmp_path)["F12"]
+def test_f04_has_global_and_sheet_scoped_names_used_by_formulas(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F04"]
+    workbook = _xml_member(path, "xl/workbook.xml")
+    defined_names = workbook.findall(f".//{{{MAIN_NS}}}definedName")
+    assert [
+        (name.get("name"), name.get("localSheetId"), "".join(name.itertext()))
+        for name in defined_names
+    ] == [
+        ("BaseAmount", None, "'Inputs'!$B$2"),
+        ("GlobalRate", None, "'Inputs'!$B$3"),
+        ("ScopedRate", "1", "'Calc'!$B$2"),
+    ]
+
+    assert _formula_and_value(_cells(path, "Inputs")["B4"]) == (
+        "BaseAmount*(1+GlobalRate)",
+        "110",
+    )
+    assert {ref: _formula_and_value(_cells(path, "Calc")[ref]) for ref in ("B3", "B4")} == {
+        "B3": ("BaseAmount", "100"),
+        "B4": ("BaseAmount*(1+ScopedRate)", "105"),
+    }
+
+    with OOXMLParser(path) as parser:
+        assert [
+            (name.name, name.scope_sheet_order, name.refers_to, name.kind)
+            for name in parser.metadata.defined_names
+        ] == [
+            ("BaseAmount", None, "'Inputs'!$B$2", "range"),
+            ("GlobalRate", None, "'Inputs'!$B$3", "range"),
+            ("ScopedRate", 1, "'Calc'!$B$2", "range"),
+        ]
+
+
+def test_f05_has_current_row_table_column_and_totals_row_formulas(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F05"]
+    cells = _cells(path, "Structured")
+    assert set(cells) == (_rect_refs(1, 1, 4, 6) - {"C6"} | {"F1", "F2"})
+    assert {ref: _formula_and_value(cells[ref]) for ref in ("D2", "D3", "D4", "D5")} == {
+        "D2": ("[@Qty]*[@Price]", "7.0"),
+        "D3": ("[@Qty]*[@Price]", "6.25"),
+        "D4": ("[@Qty]*[@Price]", "14.0"),
+        "D5": ("[@Qty]*[@Price]", "27.0"),
+    }
+    assert {ref: _formula_and_value(cells[ref]) for ref in ("B6", "D6", "F2")} == {
+        "B6": ("SUBTOTAL(109,Table1[Qty])", "18"),
+        "D6": ("SUBTOTAL(109,Table1[LineTotal])", "54.25"),
+        "F2": ("SUM(Table1[LineTotal])", "54.25"),
+    }
+
+    table = _xml_member(path, "xl/tables/table1.xml")
+    assert table.get("name") == table.get("displayName") == "Table1"
+    assert table.get("ref") == "A1:D6"
+    assert table.get("headerRowCount") == "1"
+    assert table.get("totalsRowCount") == "1"
+    assert [
+        (
+            column.get("name"),
+            column.get("totalsRowLabel"),
+            column.get("totalsRowFunction"),
+        )
+        for column in table.findall(f".//{{{MAIN_NS}}}tableColumn")
+    ] == [
+        ("Product", "Totals", None),
+        ("Qty", None, "sum"),
+        ("Price", None, None),
+        ("LineTotal", None, "sum"),
+    ]
+
+
+def test_f09a_has_one_small_two_cell_cycle_with_zero_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F09a"]
+    cells = _cells(path, "Circular")
+    assert set(cells) == _rect_refs(1, 1, 2, 3)
+    assert {ref: _formula_and_value(cells[ref]) for ref in ("B2", "B3")} == {
+        "B2": ("B3+1", "0"),
+        "B3": ("B2+1", "0"),
+    }
+
+
+def test_f09b_has_50000_running_total_formulas_with_zero_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F09b"]
+    cells = _cells(path, "RunningTotal")
+    assert len(cells) == 100_004
+    assert set(cells) == _rect_refs(1, 1, 2, 50_002)
+    assert _formula_and_value(cells["B2"]) == (None, "0")
+    assert {ref: _formula_and_value(cells[ref]) for ref in ("B3", "B25002", "B50002")} == {
+        "B3": ("SUM($B$2:B2)", "0"),
+        "B25002": ("SUM($B$2:B25001)", "0"),
+        "B50002": ("SUM($B$2:B50001)", "0"),
+    }
+    assert all(
+        _formula_and_value(cells[f"B{row}"]) == (f"SUM($B$2:B{row - 1})", "0")
+        for row in range(3, 50_003)
+    )
+
+
+def test_f12_has_two_row_merged_header_hierarchy(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F12"]
     worksheet = _worksheet(path, "MergedHeaders")
     cells = _cells(path, "MergedHeaders")
     merges = {merge.get("ref") for merge in worksheet.findall(f".//{{{MAIN_NS}}}mergeCell")}
@@ -318,8 +464,10 @@ def test_f12_has_two_row_merged_header_hierarchy(tmp_path: Path) -> None:
     assert len(cells) == 32
 
 
-def test_f13_stores_raw_date_serials_and_all_mixed_type_styles(tmp_path: Path) -> None:
-    path = generate_all(tmp_path)["F13"]
+def test_f13_stores_raw_date_serials_and_all_mixed_type_styles(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F13"]
     cells = _cells(path, "MixedTypes")
     styles = _xml_member(path, "xl/styles.xml")
     cell_xfs = styles.find(f"{{{MAIN_NS}}}cellXfs")
@@ -353,8 +501,10 @@ def test_f13_stores_raw_date_serials_and_all_mixed_type_styles(tmp_path: Path) -
     assert _tables(path) == {("MixedTypesTable", "A1:G7")}
 
 
-def test_f14_has_empty_sheets_and_two_sparse_singletons(tmp_path: Path) -> None:
-    path = generate_all(tmp_path)["F14"]
+def test_f14_has_empty_sheets_and_two_sparse_singletons(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F14"]
     workbook = _xml_member(path, "xl/workbook.xml")
     assert [sheet.get("name") for sheet in workbook.findall(f".//{{{MAIN_NS}}}sheet")] == [
         "EmptyBefore",
@@ -369,8 +519,30 @@ def test_f14_has_empty_sheets_and_two_sparse_singletons(tmp_path: Path) -> None:
     assert dimension.get("ref") == "B2:X100"
 
 
-def test_f20_has_40_sheets_12_islands_and_300_typed_names(tmp_path: Path) -> None:
-    path = generate_all(tmp_path)["F20"]
+def test_f15_has_exact_three_dimensional_formula_span_and_cache(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F15"]
+    workbook = _xml_member(path, "xl/workbook.xml")
+    assert [sheet.get("name") for sheet in workbook.findall(f".//{{{MAIN_NS}}}sheet")] == [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Summary",
+    ]
+    assert {
+        sheet: _formula_and_value(_cells(path, sheet)["B2"])[1] for sheet in ("Jan", "Feb", "Mar")
+    } == {"Jan": "10", "Feb": "20", "Mar": "30"}
+    assert _formula_and_value(_cells(path, "Summary")["B2"]) == (
+        "SUM(Jan:Mar!B2)",
+        "60",
+    )
+
+
+def test_f20_has_40_sheets_12_islands_and_300_typed_names(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F20"]
     workbook = _xml_member(path, "xl/workbook.xml")
     sheets = workbook.findall(f".//{{{MAIN_NS}}}sheet")
     defined_names = workbook.findall(f".//{{{MAIN_NS}}}definedName")
@@ -417,8 +589,10 @@ def test_f20_has_40_sheets_12_islands_and_300_typed_names(tmp_path: Path) -> Non
         }
 
 
-def test_f19_has_exact_modern_formulas_names_spills_and_caches(tmp_path: Path) -> None:
-    path = generate_all(tmp_path)["F19"]
+def test_f19_has_exact_modern_formulas_names_spills_and_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F19"]
     cells = _cells(path, "Modern")
 
     assert {

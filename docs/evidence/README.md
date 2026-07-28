@@ -30,12 +30,20 @@ or other secrets.
 - [P3 desktop-Excel declaration oracle](p3-excel-declaration-oracle.csv)
   preserves the exact 49 worksheet-entry probes behind the raw LET/LAMBDA name
   grammar decision (26 calculated, 23 rejected on Excel 16.0 build 19530).
+- [Phase 4 dependency graph and traces](p4-graph.md) records the implemented
+  graph, trace, path, circular, fixture, golden, and bounded-work evidence.
+  Its combined formal reviewer cleanly approved both R-mech and R-test on one
+  exact frozen fingerprint.
+
+## Active phase evidence
+
+Phase 5 diagnostics is now the active implementation phase; its evidence report
+will be created with that phase's first verified candidate results.
 
 ## Planned evidence paths
 
 These paths are contracts, not links to completed work:
 
-- `p4-graph.md`: rectangle edges, graph traces, paths, and circular detection.
 - `p5-diagnostics.md`: complete diagnostics matrix.
 - `p6-editor.md`: surgical editing and staleness behavior.
 - `part-diff-f16.json` and `part-diff-f21.json`: untouched-part fidelity.

@@ -1,0 +1,608 @@
+{
+  "traces": {
+    "F03": {
+      "dependents": {
+        "direction": "dependents",
+        "nodeCount": 10,
+        "edgeCount": 9,
+        "truncated": false,
+        "root": {
+          "kind": "cell",
+          "symbol": "cell:Inputs!B2",
+          "ref": "Inputs!B2",
+          "via": null,
+          "childCount": 1,
+          "children": [
+            {
+              "kind": "fblock",
+              "symbol": "fblock:Calc:3",
+              "ref": "Calc!B3:B6",
+              "via": "ref",
+              "childCount": 4,
+              "children": [
+                {
+                  "kind": "fblock",
+                  "symbol": "fblock:Calc:1",
+                  "ref": "Calc!C2:C6",
+                  "via": "ref",
+                  "childCount": 2,
+                  "children": [
+                    {
+                      "kind": "fblock",
+                      "symbol": "fblock:Calc:2",
+                      "ref": "Calc!D2:D6",
+                      "via": "ref",
+                      "childCount": 0,
+                      "children": []
+                    },
+                    {
+                      "kind": "fblock",
+                      "symbol": "fblock:Summary:3",
+                      "ref": "Summary!C9",
+                      "via": "ref",
+                      "childCount": 0,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "kind": "fblock",
+                  "symbol": "fblock:Calc:2",
+                  "ref": "Calc!D2:D6",
+                  "via": "ref",
+                  "childCount": 2,
+                  "children": [
+                    {
+                      "kind": "fblock",
+                      "symbol": "fblock:Summary:0",
+                      "ref": "Summary!C2:C6",
+                      "via": "ref",
+                      "childCount": 0,
+                      "children": []
+                    },
+                    {
+                      "kind": "fblock",
+                      "symbol": "fblock:Summary:4",
+                      "ref": "Summary!C10",
+                      "via": "ref",
+                      "childCount": 0,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "kind": "fblock",
+                  "symbol": "fblock:Calc:3",
+                  "ref": "Calc!B3:B6",
+                  "via": "ref",
+                  "childCount": 0,
+                  "children": []
+                },
+                {
+                  "kind": "fblock",
+                  "symbol": "fblock:Summary:2",
+                  "ref": "Summary!C8",
+                  "via": "ref",
+                  "childCount": 0,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "precedents": {
+        "direction": "precedents",
+        "nodeCount": 10,
+        "edgeCount": 9,
+        "truncated": false,
+        "root": {
+          "kind": "cell",
+          "symbol": "cell:Summary!C10",
+          "ref": "Summary!C10",
+          "via": null,
+          "childCount": 1,
+          "children": [
+            {
+              "kind": "range",
+              "symbol": null,
+              "ref": "Calc!D2:D6",
+              "via": "ref",
+              "childCount": 3,
+              "children": [
+                {
+                  "kind": "range",
+                  "symbol": null,
+                  "ref": "Calc!B2:B6",
+                  "via": "ref",
+                  "childCount": 3,
+                  "children": [
+                    {
+                      "kind": "range",
+                      "symbol": null,
+                      "ref": "Calc!B2:B5",
+                      "via": "ref",
+                      "childCount": 0,
+                      "children": []
+                    },
+                    {
+                      "kind": "cell",
+                      "symbol": "cell:Inputs!B2",
+                      "ref": "Inputs!B2",
+                      "via": "ref",
+                      "childCount": 0,
+                      "children": []
+                    },
+                    {
+                      "kind": "cell",
+                      "symbol": "cell:Inputs!B3",
+                      "ref": "Inputs!B3",
+                      "via": "ref",
+                      "childCount": 0,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "kind": "range",
+                  "symbol": null,
+                  "ref": "Calc!C2:C6",
+                  "via": "ref",
+                  "childCount": 2,
+                  "children": [
+                    {
+                      "kind": "range",
+                      "symbol": null,
+                      "ref": "Calc!B2:B6",
+                      "via": "ref",
+                      "childCount": 0,
+                      "children": []
+                    },
+                    {
+                      "kind": "cell",
+                      "symbol": "cell:Inputs!B4",
+                      "ref": "Inputs!B4",
+                      "via": "ref",
+                      "childCount": 0,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "kind": "cell",
+                  "symbol": "cell:Inputs!B5",
+                  "ref": "Inputs!B5",
+                  "via": "ref",
+                  "childCount": 0,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "path": {
+        "connected": true,
+        "truncated": false,
+        "paths": [
+          [
+            {
+              "symbol": "cell:Inputs!B2",
+              "via": null
+            },
+            {
+              "symbol": "fblock:Calc:3",
+              "via": "ref"
+            },
+            {
+              "symbol": "fblock:Calc:2",
+              "via": "ref"
+            },
+            {
+              "symbol": "fblock:Summary:4",
+              "via": "ref"
+            }
+          ]
+        ]
+      }
+    },
+    "F04": {
+      "dependents": {
+        "direction": "dependents",
+        "nodeCount": 4,
+        "edgeCount": 3,
+        "truncated": false,
+        "root": {
+          "kind": "cell",
+          "symbol": "cell:Inputs!B2",
+          "ref": "Inputs!B2",
+          "via": null,
+          "childCount": 3,
+          "children": [
+            {
+              "kind": "fblock",
+              "symbol": "fblock:Calc:0",
+              "ref": "Calc!B3",
+              "via": "name:BaseAmount",
+              "childCount": 0,
+              "children": []
+            },
+            {
+              "kind": "fblock",
+              "symbol": "fblock:Calc:1",
+              "ref": "Calc!B4",
+              "via": "name:BaseAmount",
+              "childCount": 0,
+              "children": []
+            },
+            {
+              "kind": "fblock",
+              "symbol": "fblock:Inputs:0",
+              "ref": "Inputs!B4",
+              "via": "name:BaseAmount",
+              "childCount": 0,
+              "children": []
+            }
+          ]
+        }
+      },
+      "precedents": {
+        "direction": "precedents",
+        "nodeCount": 3,
+        "edgeCount": 2,
+        "truncated": false,
+        "root": {
+          "kind": "cell",
+          "symbol": "cell:Calc!B4",
+          "ref": "Calc!B4",
+          "via": null,
+          "childCount": 2,
+          "children": [
+            {
+              "kind": "cell",
+              "symbol": "cell:Calc!B2",
+              "ref": "Calc!B2",
+              "via": "name:ScopedRate",
+              "childCount": 0,
+              "children": []
+            },
+            {
+              "kind": "cell",
+              "symbol": "cell:Inputs!B2",
+              "ref": "Inputs!B2",
+              "via": "name:BaseAmount",
+              "childCount": 0,
+              "children": []
+            }
+          ]
+        }
+      },
+      "path": {
+        "connected": true,
+        "truncated": false,
+        "paths": [
+          [
+            {
+              "symbol": "cell:Inputs!B2",
+              "via": null
+            },
+            {
+              "symbol": "fblock:Calc:1",
+              "via": "name:BaseAmount"
+            }
+          ]
+        ]
+      }
+    },
+    "F05": {
+      "dependents": {
+        "direction": "dependents",
+        "nodeCount": 5,
+        "edgeCount": 4,
+        "truncated": false,
+        "root": {
+          "kind": "cell",
+          "symbol": "cell:Structured!B2",
+          "ref": "Structured!B2",
+          "via": null,
+          "childCount": 2,
+          "children": [
+            {
+              "kind": "fblock",
+              "symbol": "fblock:Structured:0",
+              "ref": "Structured!D2:D5",
+              "via": "structured:Table1[Qty]",
+              "childCount": 2,
+              "children": [
+                {
+                  "kind": "fblock",
+                  "symbol": "fblock:Structured:1",
+                  "ref": "Structured!F2",
+                  "via": "structured:Table1[LineTotal]",
+                  "childCount": 0,
+                  "children": []
+                },
+                {
+                  "kind": "fblock",
+                  "symbol": "fblock:Structured:3",
+                  "ref": "Structured!D6",
+                  "via": "structured:Table1[LineTotal]",
+                  "childCount": 0,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "kind": "fblock",
+              "symbol": "fblock:Structured:2",
+              "ref": "Structured!B6",
+              "via": "structured:Table1[Qty]",
+              "childCount": 0,
+              "children": []
+            }
+          ]
+        }
+      },
+      "precedents": {
+        "direction": "precedents",
+        "nodeCount": 4,
+        "edgeCount": 3,
+        "truncated": false,
+        "root": {
+          "kind": "cell",
+          "symbol": "cell:Structured!F2",
+          "ref": "Structured!F2",
+          "via": null,
+          "childCount": 1,
+          "children": [
+            {
+              "kind": "range",
+              "symbol": null,
+              "ref": "Structured!D2:D5",
+              "via": "structured:Table1[LineTotal]",
+              "childCount": 2,
+              "children": [
+                {
+                  "kind": "range",
+                  "symbol": null,
+                  "ref": "Structured!B2:B5",
+                  "via": "structured:Table1[Qty]",
+                  "childCount": 0,
+                  "children": []
+                },
+                {
+                  "kind": "range",
+                  "symbol": null,
+                  "ref": "Structured!C2:C5",
+                  "via": "structured:Table1[Price]",
+                  "childCount": 0,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "path": {
+        "connected": true,
+        "truncated": false,
+        "paths": [
+          [
+            {
+              "symbol": "cell:Structured!B2",
+              "via": null
+            },
+            {
+              "symbol": "fblock:Structured:0",
+              "via": "structured:Table1[Qty]"
+            },
+            {
+              "symbol": "fblock:Structured:1",
+              "via": "structured:Table1[LineTotal]"
+            }
+          ]
+        ]
+      }
+    },
+    "F15": {
+      "dependents": {
+        "direction": "dependents",
+        "nodeCount": 2,
+        "edgeCount": 1,
+        "truncated": false,
+        "root": {
+          "kind": "cell",
+          "symbol": "cell:Jan!B2",
+          "ref": "Jan!B2",
+          "via": null,
+          "childCount": 1,
+          "children": [
+            {
+              "kind": "fblock",
+              "symbol": "fblock:Summary:0",
+              "ref": "Summary!B2",
+              "via": "3d",
+              "childCount": 0,
+              "children": []
+            }
+          ]
+        }
+      },
+      "precedents": {
+        "direction": "precedents",
+        "nodeCount": 4,
+        "edgeCount": 3,
+        "truncated": false,
+        "root": {
+          "kind": "cell",
+          "symbol": "cell:Summary!B2",
+          "ref": "Summary!B2",
+          "via": null,
+          "childCount": 3,
+          "children": [
+            {
+              "kind": "cell",
+              "symbol": "cell:Feb!B2",
+              "ref": "Feb!B2",
+              "via": "3d",
+              "childCount": 0,
+              "children": []
+            },
+            {
+              "kind": "cell",
+              "symbol": "cell:Jan!B2",
+              "ref": "Jan!B2",
+              "via": "3d",
+              "childCount": 0,
+              "children": []
+            },
+            {
+              "kind": "cell",
+              "symbol": "cell:Mar!B2",
+              "ref": "Mar!B2",
+              "via": "3d",
+              "childCount": 0,
+              "children": []
+            }
+          ]
+        }
+      },
+      "path": {
+        "connected": true,
+        "truncated": false,
+        "paths": [
+          [
+            {
+              "symbol": "cell:Jan!B2",
+              "via": null
+            },
+            {
+              "symbol": "fblock:Summary:0",
+              "via": "3d"
+            }
+          ]
+        ]
+      }
+    },
+    "F19": {
+      "dependents": {
+        "direction": "dependents",
+        "nodeCount": 7,
+        "edgeCount": 6,
+        "truncated": false,
+        "root": {
+          "kind": "cell",
+          "symbol": "cell:Modern!I2",
+          "ref": "Modern!I2",
+          "via": null,
+          "childCount": 4,
+          "children": [
+            {
+              "kind": "fblock",
+              "symbol": "fblock:Modern:0",
+              "ref": "Modern!A1",
+              "via": "ref",
+              "childCount": 2,
+              "children": [
+                {
+                  "kind": "fblock",
+                  "symbol": "fblock:Modern:1",
+                  "ref": "Modern!B1",
+                  "via": "spill",
+                  "childCount": 0,
+                  "children": []
+                },
+                {
+                  "kind": "fblock",
+                  "symbol": "fblock:Modern:2",
+                  "ref": "Modern!C1",
+                  "via": "spill",
+                  "childCount": 0,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "kind": "fblock",
+              "symbol": "fblock:Modern:3",
+              "ref": "Modern!D1",
+              "via": "ref",
+              "childCount": 0,
+              "children": []
+            },
+            {
+              "kind": "fblock",
+              "symbol": "fblock:Modern:5",
+              "ref": "Modern!F1",
+              "via": "ref",
+              "childCount": 0,
+              "children": []
+            },
+            {
+              "kind": "fblock",
+              "symbol": "fblock:Modern:6",
+              "ref": "Modern!G2",
+              "via": "ref",
+              "childCount": 0,
+              "children": []
+            }
+          ]
+        }
+      },
+      "precedents": {
+        "direction": "precedents",
+        "nodeCount": 2,
+        "edgeCount": 1,
+        "truncated": false,
+        "root": {
+          "kind": "cell",
+          "symbol": "cell:Modern!A1",
+          "ref": "Modern!A1",
+          "via": null,
+          "childCount": 1,
+          "children": [
+            {
+              "kind": "range",
+              "symbol": null,
+              "ref": "Modern!I2:I4",
+              "via": "ref",
+              "childCount": 0,
+              "children": []
+            }
+          ]
+        }
+      },
+      "path": {
+        "connected": true,
+        "truncated": false,
+        "paths": [
+          [
+            {
+              "symbol": "cell:Modern!I2",
+              "via": null
+            },
+            {
+              "symbol": "fblock:Modern:0",
+              "via": "ref"
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "circular": {
+    "F09a": [
+      [
+        "error",
+        "E_CIRCULAR",
+        "Circular",
+        2,
+        2,
+        "cell:Circular!B2",
+        "Circular reference detected.",
+        "{\"candidate_blocks\":[\"fblock:Circular:0\",\"fblock:Circular:1\"],\"path\":[\"cell:Circular!B2\",\"cell:Circular!B3\",\"cell:Circular!B2\"]}"
+      ]
+    ],
+    "F09b": []
+  }
+}

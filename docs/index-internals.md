@@ -5,9 +5,9 @@ schema, persistence, spatial-backend abstraction, canonical export, and
 freshness lifecycle are verified. P2's region, column, symbol, and compact-map
 contracts are also verified. Verified P3 populates formula blocks, reference
 edges, ListObject context, and its bounded subset of formula diagnostics.
-Tables for later graph, complete
-diagnostics, and editor phases remain reserved schema, not evidence that those
-features already exist.
+Verified P4 adds ranked spatial graph navigation and bounded circular
+analysis. Complete diagnostics and editor tables remain reserved schema, not
+evidence that those later features already exist.
 
 ## Sidecar placement
 
@@ -53,7 +53,7 @@ response.
 | `regions`, `columns` | Region bounds, headers, type summaries and confidence | Verified P2 |
 | `list_objects`, `list_object_columns` | Durable ListObject aliases, bounds, header/totals counts, and ordered column names used by structured-reference analysis | Verified P3 |
 | `fblocks` | Exact R1C1 formula-block rectangles, flags, and formula count | Verified P3 |
-| `edges` plus spatial table | P3 formula destinations and overlap storage; graph traversal remains P4 | P3 population verified; P4 queries planned |
+| `edges`, ranked source/destination mirrors, `graph_spatial_state`, `graph_rank_keys` | P3 formula destinations plus P4 exact-order spatial traversal, bounded rank identity, and mirror integrity | Verified P4 |
 | `diagnostics` | P3 parse/name/dynamic/inconsistency findings; the complete diagnostic catalog remains P5 | P3 subset verified; P5 completion planned |
 | `staleness` | Rectangles affected by surgical writes | P6 planned |
 
@@ -68,16 +68,152 @@ edges from other sheets are retained because their formulas did not change.
 
 ## Spatial range backend
 
-The `EdgeStore` exposes one inclusive rectangle interface for both physical
-backends:
+The `EdgeStore` exposes inclusive point/range overlap and ranked graph traversal
+through equivalent physical backends:
 
-- preferred `edge_rtree(edge_id, sheet_min, sheet_max, row_min, row_max,
-  col_min, col_max)`;
-- fallback `edge_intervals(edge_id, sheet_id, row_min, row_max, col_min,
-  col_max)` with an overlap index.
+- preferred destination `edge_rtree` and source `edge_source_rtree` virtual
+  tables use `rtree_i32`; each indexes sheet, row, column, and one dense public
+  hop rank;
+- fallback `edge_intervals` and `edge_source_intervals` tables retain the same
+  rectangles and ranks with ordinary overlap indexes.
 
-Point containment and range overlap return ordered edge IDs with the same
-semantics. R*Tree initialization falls back only when SQLite explicitly reports
+Point containment and range overlap retain ordered edge-ID compatibility for
+the P1/P3 storage API. Bounded P4 queries instead binary-probe the RTree rank
+dimension to find successive intersecting public hops. This returns the exact
+semantic prefix without sorting or materializing all matches. The interval
+fallback builds a deterministic, revision-guarded rectangle BVH from the
+ranked tables and uses minimum-rank branch-and-bound traversal. It therefore
+retains exact parity and bounded irrelevant-edge work without relying on an
+ordinary B-tree's first matching rank.
+
+Every formula refresh recomputes dense dependent and precedent ranks over unique
+public hops and atomically rebuilds both mirrors. Edge, block, sheet, or mirror
+mutation marks `graph_spatial_state` dirty and increments `mutation_epoch`; a
+successful rebuild seals the same value in `clean_epoch`. Graph calls require
+the clean bit and equal epochs, so flipping one persisted bit cannot conceal a
+missing mirror row. Current-schema opening validates the exact state-table
+shape, exact rank-key catalog identity, complete canonical SQL for all 18 dirty
+triggers, and rejects any extra
+persistent trigger on protected graph tables or one that references graph trust
+state. One shared projector both builds ranks and rederives every persisted
+fblock/cell/range/opaque semantic key at open, proving exact case-aware dense
+order rather than only rank density. Opening also compares the complete source
+and destination mirrors in both directions, validates exact physical DDL, and
+checks active RTree node/rowid storage. A process-local immutable trust tuple
+seals all seven persisted state fields: singleton, dirty, both rank maxima,
+revision, mutation epoch, and clean epoch. A second process-local live seal
+records a graph-specific monotonic write epoch, other-connection `data_version`,
+and `schema_version`; the complete canonical rank-key map is cached as immutable
+selected-rank identity. `IndexStore` uses a private SQLite connection subclass
+whose authorizer dispatcher increments that epoch for every allowed graph-table,
+mirror, trigger, or relevant schema mutation while still honoring caller
+authorizers. `IndexStore.connection` exposes a narrow SQL capability rather than
+that native handle. It wraps every returned cursor, keeps `cursor.connection`
+inside the same capability, routes caller authorizers through the tracker, and
+rejects custom cursor factories and row-factory callbacks that would receive a
+native cursor. Native SQLite base descriptors therefore cannot displace the
+tracker through the supported public connection surface. Statement caching is
+disabled so repeated SQL, cursor calls, and `executemany` cannot bypass the
+dispatcher. Live query validation compares the
+constant-size tokens in O(1) and consumes the already-validated maximum without
+a second mutable read. A successful managed rebuild publishes its captured
+state, catalog, and live seals verbatim after commit; it never rebases the epoch
+over later graph writes. Rollback may rebase only after SQLite restores state.
+For RTree, rollback first reconnects both virtual tables before that rebase;
+SQLite can otherwise replay write-shaped authorizer callbacks while lazily
+reloading a rolled-back TEMP schema even though `total_changes`, graph state,
+and the rank catalog did not change.
+One `graph_rank_keys` row stores the canonical serialized hop key for each dense
+`(direction, rank)`. Its composite primary key makes selected-rank validation
+O(1). Rebuild populates it after all active mirrors; edge, fblock, sheet,
+catalog, RTree-shadow, and interval-mirror triggers invalidate the affected
+rank or direction. Consequently, restoring the seven state fields, catalog
+rows, and relational data still cannot make a split duplicate rank trustworthy:
+same-handle restoration advances the private graph epoch, cross-handle
+restoration changes `data_version`, and trigger replacement changes
+`schema_version`. Non-graph metadata, diagnostics, and staleness writes leave the
+graph epoch untouched. Open validation compares the complete catalog with
+independently rederived canonical records, while bounded queries compare their
+representative hop with the cached selected identity. Validation, seal capture,
+and interval-cache warming occur inside one constructor-owned `BEGIN IMMEDIATE`
+snapshot, preventing a writer commit from landing between those steps in WAL or
+DELETE mode. Valid duplicate edges retain one catalog row and one public hop.
+Each complete public graph operation also owns one deferred SQLite read
+snapshot when the caller has not already opened a transaction. Trust
+validation is the snapshot's first read, so later relational and spatial reads
+cannot mix generations if another process commits concurrently. Graph-owned
+snapshots are released on success and every exception through rollback-state
+inspection and direct-SQL fallback. Snapshot `BEGIN` itself is inside this
+cleanup boundary, because a native connection subclass may take effect and then
+raise. If release remains unverifiable, the graph is poisoned and the supported
+native SQLite descriptor is conclusively closed, including an emergency
+base-descriptor path that bypasses failing subclass overrides. Native closure
+state is read through the base `sqlite3.Connection.in_transaction` descriptor,
+not a subclass-overridable property, so neither a false closed-style error nor
+a false open-style error can misclassify the physical handle. Raw and
+store-managed caller transactions remain entirely caller-owned.
+
+Managed and constructor-owned `BEGIN IMMEDIATE` acquisition have the same
+after-effect protection.
+Failed transaction cleanup proves rollback or conclusively closes the supported
+native descriptor, always finalizes process-local graph bookkeeping, preserves
+the exact primary error, and retains earlier cause/context plus cleanup evidence
+without causal cycles or repeated exception identities, including when the
+primary is nested in an immutable cleanup group or two members share one
+external causal chain. Group normalization rebuilds membership only when
+needed, claims every recursively nested member first, assigns each external
+causal identity one deterministic owner, and removes later cause/context
+aliases, including suppressed contexts. The same closure-aware composition is
+applied to successful snapshot multi-cleanup, direct close aggregation, and
+post-commit hook/finalizer failures.
+The normalizer is a returning sanitizer: immutable exception groups are derived
+when duplicate or excluded members must be removed, and every caller installs
+the returned root. It preserves message/subclass identity, notes, traceback,
+cause, context, and the explicit suppression flag while assigning every member
+or external causal object one owner. This applies equally when one group is the
+only successful-query cleanup, close, post-commit hook, or constructor-release
+failure.
+`IndexStore.close()`
+applies the same fallback discipline,
+runs the no-I/O graph finalizer unconditionally, retries virtual close, bypasses
+a failing native subclass override through `sqlite3.Connection.close`, and
+marks the store closed only after physical closure is proven. Context exit keeps
+the body error primary under the same causal-evidence rules. Constructor and
+connection-configuration failures use the same native rollback/close proof even
+before `edge_store` exists. Constructor cleanup owns the handle before the
+public capability is allocated; early and final configuration-step failures,
+virtual cleanup failures, and failures before or after rollback/close takes
+effect all retain the exact initialization primary and unique causal evidence.
+The native descriptor is closed unconditionally so an acquired writer lock
+cannot leak.
+Caller-owned raw SQLite transactions cannot be adopted for graph rebuilds
+and are refused before mutation; use `IndexStore.transaction()` for managed
+commit, rollback, and nesting.
+
+Invalid state rebuilds the disposable sidecar monotonically. If corrupt virtual
+storage prevents valid DDL teardown, the store builds and checkpoints a complete
+same-directory temporary database, removes stale WAL/SHM files, and installs it
+with atomic `os.replace`. Failed replacement preserves the original sidecar and
+error and cleans temporary artifacts. Both the old and completed-replacement
+handles use native rollback/closure proof, including post-commit virtual-close
+failures. The `mkstemp` descriptor is cleanup-owned from acquisition, so a
+close failure before or after native effect cannot leak the descriptor or its
+`.rebuild` artifact. Graph calls otherwise return structured
+`E_CORRUPT` rather than stale topology. Every authoritative graph read, write,
+mirror join, catalog lookup, state check, and schema PRAGMA is explicitly bound
+to `main`. Construction, schema setup, and managed mutation also reject any
+TEMP object whose name or target can shadow protected graph storage; creating
+one after facade construction changes either the tracked same-handle epoch or
+the constant-size `temp.schema_version` seal, so tracked and plain-connection
+facades both fail closed. Canonical export binds every projected table to
+`main` and rejects protected TEMP shadows without requiring an otherwise-clean
+intermediate graph. Direct writable-schema updates to `sqlite_master` and its
+aliases are graph-authoritative too. The caller authorizer runs first, so a
+denied graph write neither mutates SQLite nor advances the epoch. A caller
+`SQLITE_IGNORE` verdict can let SQLite continue a write with altered semantics,
+so graph-affecting ignored actions advance the private epoch before that
+verdict is returned. R*Tree
+initialization falls back only when SQLite explicitly reports
 that the module is unavailable; corruption or SQL errors are not hidden as a
 portability fallback.
 
@@ -278,16 +414,26 @@ references. Dynamic/external/unresolved destinations retain a deliberate
 `via` label and may have no destination rectangle. The R*Tree and interval
 fallback persist equal natural-key semantics.
 
-P4 still owns graph construction over these rows, precedent/dependent
-traversal, paths, pagination/truncation, and bounded circular detection. A
-populated `edges` table therefore proves P3 extraction, not P4 query behavior.
+Verified P4 consumes these rows for direct precedents/dependents, bounded
+breadth-first traces, shortest dependent paths, and two-stage circular
+analysis. Candidate tests prove exact semantic-prefix ordering independently of
+edge IDs, whole-column overlap, mirror corruption handling, and bounded work on
+50,000 irrelevant edges through both spatial backends. A populated `edges`
+table alone still proves only P3 extraction unless the verified graph schema,
+mirrors, seals, and bounded query contracts are also present.
+
+Transaction rollback bookkeeping is an internal `IndexStore`/`EdgeStore`
+coordination boundary: SQLite rollback completes before the graph facade is
+notified. The RTree backend then reconnects both persistent virtual tables
+before publishing its restored live seal. Callers use `IndexStore.transaction()`
+rather than invoking those internal rollback hooks directly.
 
 ## Later-phase population
 
 P3 populates `list_objects`, `list_object_columns`, `fblocks`, formula
 destination edges, and its parse/name/dynamic/inconsistency diagnostic subset.
-P4 consumes those edges for graph queries and circular analysis. P5 completes
-the diagnostics catalog. P6 populates staleness and applies direct post-write
-index patches. P7 exposes these through bounded MCP and CLI calls. Until each
-phase gate closes, the presence of its schema table is not evidence for a later
-phase's behavior.
+Verified P4 consumes those edges for graph queries and circular analysis.
+P5 completes the diagnostics catalog. P6 populates staleness and applies direct
+post-write index patches. P7 exposes these through bounded MCP and CLI calls.
+Until each phase gate closes, the presence of its schema table is not evidence
+for a later phase's behavior.

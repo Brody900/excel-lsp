@@ -279,8 +279,32 @@ def test_incremental_and_fresh_full_indexes_have_equal_canonical_exports(
 
     with IndexStore(incremental.index_path) as incremental_store:
         incremental_export = incremental_store.canonical_export()
+        incremental_source_key = (
+            "edge_source_rtree"
+            if incremental_store.edge_store.backend == "rtree"
+            else "edge_source_intervals"
+        )
+        incremental_trust = incremental_store.connection.execute(
+            """
+            SELECT dirty, mutation_epoch, clean_epoch
+            FROM graph_spatial_state WHERE singleton = 1
+            """
+        ).fetchone()
     with IndexStore(full.index_path) as full_store:
         full_export = full_store.canonical_export()
+        full_source_key = (
+            "edge_source_rtree"
+            if full_store.edge_store.backend == "rtree"
+            else "edge_source_intervals"
+        )
+
+    assert incremental_source_key == full_source_key
+    assert incremental_export["edge_ranks"]
+    assert incremental_export[incremental_source_key]
+    assert incremental_export["graph_spatial_state"][0][0] == 0
+    assert incremental_trust is not None
+    assert int(incremental_trust[0]) == 0
+    assert int(incremental_trust[1]) == int(incremental_trust[2])
     assert incremental_export == full_export
 
 
@@ -299,6 +323,26 @@ def test_schema_version_rebuild_forces_full_index_even_when_stat_is_fresh(
     assert rebuilt.reindexed_sheets == ("Alpha", "Beta", "Chart")
     assert rebuilt.generation > first.generation
     assert FakeOOXMLParser.parse_calls == ["Alpha", "Beta", "Chart"]
+
+
+def test_missing_graph_analysis_version_forces_full_semantic_refresh(
+    tmp_path: Path,
+) -> None:
+    workbook = tmp_path / "graph-version.xlsx"
+    _write_document(workbook, _document())
+    first = index_workbook(workbook, index_dir=tmp_path / "indexes")
+    with IndexStore(first.index_path) as store:
+        store.connection.execute("DELETE FROM meta WHERE key = 'graph_analysis_version'")
+    FakeOOXMLParser.parse_calls.clear()
+
+    refreshed = ensure_fresh(workbook, index_dir=tmp_path / "indexes")
+
+    assert refreshed.changed is True
+    assert refreshed.generation == first.generation + 1
+    assert refreshed.reindexed_sheets == ("Alpha", "Beta", "Chart")
+    assert FakeOOXMLParser.parse_calls == ["Alpha", "Beta", "Chart"]
+    with IndexStore(refreshed.index_path) as store:
+        assert store.get_meta("graph_analysis_version") == "1"
 
 
 @pytest.mark.parametrize(

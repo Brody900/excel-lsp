@@ -4,10 +4,16 @@
 read-only mode: once for formulas and once for cached values. It emits canonical
 `(sheet, ref, normalized_value, formula)` tuples and compares them with the
 production `OOXMLParser` stream. The comparison covers every fixture currently
-emitted by `generate_all` (F01, F02, F03, F07, F12, F13, F14, F19, and F20),
-including F03's injected cross-sheet formula caches, F13's style-driven dates,
-and F19's stored modern-function syntax, `_xlpm.` lexical locals, and cached
-results.
+emitted by `generate_all` (F01, F02, F03, F04, F05, F07, F09a, F09b, F12,
+F13, F14, F15, F19, and F20), including F03's cross-sheet caches; F04's
+scoped/global-name consumers; F05's structured and totals-row formulas; all
+50,000 F09b running-total formula caches; F13's style-driven dates; F15's 3-D
+formula; and F19's stored modern-function syntax, `_xlpm.` lexical locals, and
+cached results.
+
+The oracle module authors the complete corpus once and reuses it across tests.
+This keeps the 50,000-row F09b contract fully covered without regenerating the
+large workbook for each separate oracle assertion.
 
 Run the pinned read-only behavior probe with:
 

@@ -31,7 +31,7 @@ regenerate F16; the committed project blob is the deterministic input.
 
 ## Implemented generated fixtures
 
-`generate.py` currently emits the implemented P1-P3 subset into `generated/`:
+`generate.py` currently emits the implemented P1-P4 subset into `generated/`:
 
 - F01 `basic_single_table.xlsx`: a clean native table with arithmetic formula
   cells and generator-computed numeric caches.
@@ -41,9 +41,20 @@ regenerate F16; the committed project blob is the deterministic input.
 - F03 `cross_sheet_model.xlsx`: the compact reference model, with native tables
   on Inputs, Calc, and Summary and fully injected caches for the
   Inputs-to-Calc-to-Summary chains ending at `Summary!C10`.
+- F04 `named_ranges.xlsx`: two global range names plus one Calc-scoped range
+  name, with formulas that consume all three names and deterministic caches.
+- F05 `structured_table.xlsx`: native `Table1`, four `[@Qty]*[@Price]`
+  current-row formulas, explicit `Table1[Col]` consumers, and a totals row
+  whose table metadata and formula caches are locked by exact assertions.
 - F07 `formula_blocks.xlsx`: two genuine shared-formula groups around a single
   explicit formula tamper, plus caches, a native table, and the harmless
   `E1:F1` merge used by the openpyxl read-only probe.
+- F09a `circular.xlsx`: a minimal two-cell true cycle with saved zero caches.
+- F09b `running_total.xlsx`: a zero seed in `B2` followed by 50,000 formulas in
+  `B3:B50002`, each referencing the expanding strictly-earlier range
+  `$B$2:B<previous-row>` and carrying a saved zero cache. The block's coarse
+  destination overlaps its source even though no concrete cell depends on
+  itself, making it the large false-circular and bounded-verification guard.
 - F12 `merged_headers.xlsx`: a heuristic region with two header rows and three
   merged parent headings.
 - F13 `mixed_types.xlsx`: a native table containing integers, numFmt-derived
@@ -52,6 +63,8 @@ regenerate F16; the committed project blob is the deterministic input.
 - F14 `sparse.xlsx`: two empty sheets surrounding a sheet with two distant
   singleton cells. Its bounds stay moderate so the independent openpyxl oracle
   does not turn a sparse test into a dense stress test.
+- F15 `threeD_ref.xlsx`: Jan, Feb, and Mar source sheets plus the exact
+  `SUM(Jan:Mar!B2)` 3-D consumer and its saved result on Summary.
 - F19 `modern_functions.xlsx`: stored `_xlfn.`/`_xlws.` functions and Excel's
   `_xlpm.` lexical-local spelling, multiple LET bindings, a LAMBDA defined name
   invoked as a function, XLOOKUP, literal `A1#`
@@ -65,6 +78,9 @@ regenerate F16; the committed project blob is the deterministic input.
 Every OOXML member is repacked in lexical order with ZIP timestamp
 `1980-01-01 00:00:00`. Workbook document properties use `2000-01-01 00:00:00`.
 The generator never evaluates arbitrary formulas; it injects only results it
-computes directly from the values it authored. Extending the corpus preserves
-the P1 fixture archives byte-for-byte; tests lock their SHA-256 values as well
-as checking that two complete generations are identical.
+computes directly from the values it authored. Tests lock the SHA-256 values of
+F01, F07, F19, and every implemented P4 fixture, and independently assert that
+two complete corpus generations are byte-identical. Shape tests and oracle
+tests share one generated corpus per module so F09b is not needlessly authored
+for every individual assertion; the byte-determinism test still performs two
+independent complete generations.

@@ -46,11 +46,11 @@ Authoritative specification: `HANDOFF.md` (v1.1). Work phases execute in order; 
 
 ### P4 — Graph and traces
 
-- [ ] Implement EdgeStore range queries and graph construction.
-- [ ] Implement precedents, dependents, path queries, pagination/truncation, and depth caps.
-- [ ] Implement bounded two-stage circular detection.
-- [ ] Verify exact graph behavior on F03/F04/F05/F15/F19 and circular behavior on F09a/F09b.
-- [ ] Pass R-mech and R-test gates.
+- [x] Implement EdgeStore range queries and graph construction.
+- [x] Implement precedents, dependents, path queries, pagination/truncation, and depth caps.
+- [x] Implement bounded two-stage circular detection.
+- [x] Verify exact graph behavior on F03/F04/F05/F15/F19 and circular behavior on F09a/F09b.
+- [x] Pass R-mech and R-test gates.
 
 ### P5 — Diagnostics
 
@@ -109,14 +109,15 @@ release aims for a clean APPROVE in every domain.
 
 | Domain | Used | Nominal remaining | Latest verdict | Notes |
 |---|---:|---:|---|---|
-| R-mech | 12 | 0 nominal; unbounded retries authorized | APPROVE | P1 used three REVISE verdicts, then a finding-free APPROVE. P2 reviews #1–#4 found and remediated map/configuration and region-scaling majors; #5 approved. P3 #10 and #11 reopened two candidates; #12 cleanly approved the final fingerprint after independently passing a 605-case contextual differential. |
-| R-test | 7 | 3 nominal; unbounded retries authorized | APPROVE | P1 used one REVISE and one APPROVE-with-minor. P2 used one REVISE and one clean APPROVE. P3 #5 and #6 approved superseded trees; #7 cleanly approved the same final fingerprint as R-mech #12 with 501 focused and 771 full-suite passes. |
+| R-mech | 26 | 0 nominal; unbounded retries authorized | APPROVE | P1 used three REVISE verdicts, then a finding-free APPROVE. P2 reviews #1–#4 found and remediated map/configuration and region-scaling majors; #5 approved. P3 #10 and #11 reopened two candidates; #12 approved. P4 #13/#14 found mirror/state/schema gaps; #15 found failed-commit/live-storage errors; #16 found an incomplete live trust seal; #17 found unsnapshotted cross-connection retrieval; #18 found snapshot-release lock leakage; #19 found unprotected acquisition, native-store close, and cyclic causality; #20 found virtual closure-state spoofing and aliased evidence; #21 found recursively nested evidence aliasing and a cached duplicate-rank semantic split; #22 found three unnormalized cleanup compositions and a live cached-facade seal gap; #23 found TEMP shadowing, writable-schema epoch bypass, incomplete standalone group normalization, and constructor-cleanup causal aliasing; #24 found base-descriptor authorizer displacement and incomplete `IndexStore` constructor cleanup; #25 found caller-authorizer `SQLITE_IGNORE` could allow graph mutation without advancing private authority; #26 cleanly approved the remediated frozen candidate. |
+| R-test | 21 | 0 nominal; unbounded retries authorized | APPROVE | P1 used one REVISE and one APPROVE-with-minor. P2 used one REVISE and one clean APPROVE. P3 #5 and #6 approved superseded trees; #7 approved. P4 #8/#9 found incomplete edge oracles; #10/#12/#13/#15 approved candidates later rejected by mechanics; #11 found incomplete F09b traversal proof; #14 reproduced the native-subclass store-close lock leak; #16 cleanly approved a candidate later rejected by mechanics; #17 found missing permanent kill-proof for exact rank-catalog DDL, content, trigger validation, and current-sidecar reconstruction; #18 found a selectively omissible fixture round-trip oracle, missing graph-write authorizer-denial proof, and WAL-only constructor acquisition-failure coverage; #19 cleanly approved a candidate rejected by R-mech #24; #20 found no both-backend `SQLITE_IGNORE` mutation/invalidation regression; #21 cleanly approved the remediated frozen candidate. |
 | R-repo | 3 | 7 | APPROVE | The first two P2 invocations remain charged as `REVISE`. Fresh review #3 returned `APPROVE` with one architecture-status minor: it still implied that R-test and all three P2 approvals were pending. This current-state update corrects that wording. Reserve at least 3 R-repo invocations for P9. |
 
-Total verdict-bearing invocations recorded: 22. Against the historical
-allocation, 8 nominal slots remain, including at least 3 R-repo invocations
-reserved for P9. The later user authorization permits additional fresh
-invocations whenever a `REVISE` or changed candidate requires them.
+Total formal verdicts recorded: 50. Against the historical
+allocation, 0 nominal slots remain. At least 3 future R-repo invocations remain
+reserved for P9 under the later unbounded-review authorization. Additional fresh
+invocations are likewise authorized whenever a `REVISE` or changed candidate
+requires them.
 
 ### User-authorized review-governance amendment
 
@@ -145,6 +146,23 @@ Every invocation remains stateless, fingerprint-bound, and charged in this
 ledger; a changed candidate always receives fresh reviews. No approval is
 carried across a code change, no gate is combined, and phase ordering remains
 unchanged.
+
+### 2026-07-28 single-reviewer amendment
+
+Effective with the next P4 candidate freeze, the user moved all implementation,
+debugging, test design, mutation reasoning, documentation, evidence refresh,
+formatting, typing, and verification back to the orchestrator. Non-formal
+preflight agents and parallel gate reviewers are no longer used. Historical
+reviews and their accounting remain unchanged.
+
+For each newly frozen candidate, exactly one independent reviewer evaluates
+both domains on the same fingerprint and returns two explicit verdicts:
+`R-mech: APPROVE|REVISE` and `R-test: APPROVE|REVISE`. The ledger still charges
+one verdict in each domain, so a combined review adds two to the total verdict
+count. If either verdict revises, the orchestrator alone remediates and verifies
+the new candidate, then returns its new fingerprint to that same reviewer by
+follow-up. The unbounded quality loop, exact-fingerprint rule, phase ordering,
+and requirement that both verdicts approve one unchanged tree remain intact.
 
 ## Definition of Done
 

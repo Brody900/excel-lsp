@@ -22,7 +22,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils.cell import get_column_letter, range_boundaries
 from openpyxl.workbook.defined_name import DefinedName
-from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl.worksheet.filters import AutoFilter
+from openpyxl.worksheet.table import Table, TableColumn, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
 GENERATED_DIR = Path(__file__).resolve().parent / "generated"
@@ -419,6 +420,93 @@ def _generate_f03(output_dir: Path) -> Path:
     return path
 
 
+def _generate_f04(output_dir: Path) -> Path:
+    path = output_dir / "named_ranges.xlsx"
+    workbook, inputs = _new_workbook("Inputs")
+    calc = workbook.create_sheet("Calc")
+
+    inputs.append(("Input", "Value"))
+    inputs.append(("BaseAmount", 100))
+    inputs.append(("GlobalRate", 0.10))
+    inputs.append(("Global projection", "=BaseAmount*(1+GlobalRate)"))
+
+    calc.append(("Input", "Value"))
+    calc.append(("ScopedRate", 0.05))
+    calc.append(("Base amount", "=BaseAmount"))
+    calc.append(("Scoped projection", "=BaseAmount*(1+ScopedRate)"))
+
+    workbook.defined_names.add(DefinedName("BaseAmount", attr_text="'Inputs'!$B$2"))
+    workbook.defined_names.add(DefinedName("GlobalRate", attr_text="'Inputs'!$B$3"))
+    workbook.defined_names.add(DefinedName("ScopedRate", attr_text="'Calc'!$B$2", localSheetId=1))
+
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(path, "Inputs", {"B4": CachedValue(110)})
+    inject_cached_values(
+        path,
+        "Calc",
+        {
+            "B3": CachedValue(100),
+            "B4": CachedValue(105),
+        },
+    )
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f05(output_dir: Path) -> Path:
+    path = output_dir / "structured_table.xlsx"
+    workbook, worksheet = _new_workbook("Structured")
+    worksheet.append(("Product", "Qty", "Price", "LineTotal", None, "GrandTotal"))
+
+    rows = (
+        ("Widget", 2, 3.5),
+        ("Gadget", 5, 1.25),
+        ("Cable", 7, 2.0),
+        ("Adapter", 4, 6.75),
+    )
+    caches: dict[str, CachedValue] = {}
+    for row_number, (product, quantity, price) in enumerate(rows, start=2):
+        worksheet.cell(row=row_number, column=1, value=product)
+        worksheet.cell(row=row_number, column=2, value=quantity)
+        worksheet.cell(row=row_number, column=3, value=price)
+        worksheet.cell(row=row_number, column=4, value="=[@Qty]*[@Price]")
+        caches[f"D{row_number}"] = CachedValue(quantity * price)
+
+    worksheet["A6"] = "Totals"
+    worksheet["B6"] = "=SUBTOTAL(109,Table1[Qty])"
+    worksheet["D6"] = "=SUBTOTAL(109,Table1[LineTotal])"
+    worksheet["F2"] = "=SUM(Table1[LineTotal])"
+    caches.update(
+        {
+            "B6": CachedValue(18),
+            "D6": CachedValue(54.25),
+            "F2": CachedValue(54.25),
+        }
+    )
+
+    table = _table("Table1", "A1:D6")
+    table.totalsRowCount = 1
+    table.autoFilter = AutoFilter(ref=table.ref)
+    table.tableColumns = [
+        TableColumn(id=column_id, name=name)
+        for column_id, name in enumerate(
+            ("Product", "Qty", "Price", "LineTotal"),
+            start=1,
+        )
+    ]
+    table.tableColumns[0].totalsRowLabel = "Totals"
+    table.tableColumns[1].totalsRowFunction = "sum"
+    table.tableColumns[3].totalsRowFunction = "sum"
+    worksheet.add_table(table)
+
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(path, "Structured", caches)
+    repack_deterministic(path)
+    return path
+
+
 def _generate_f07(output_dir: Path) -> Path:
     path = output_dir / "formula_blocks.xlsx"
     workbook, worksheet = _new_workbook("FormulaBlocks")
@@ -450,6 +538,49 @@ def _generate_f07(output_dir: Path) -> Path:
             SharedFormulaGroup("C13:C21", "C13", 1),
         ),
     )
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f09a(output_dir: Path) -> Path:
+    path = output_dir / "circular.xlsx"
+    workbook, worksheet = _new_workbook("Circular")
+    worksheet.append(("Node", "Value"))
+    worksheet.append(("A", "=B3+1"))
+    worksheet.append(("B", "=B2+1"))
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(
+        path,
+        "Circular",
+        {
+            "B2": CachedValue(0),
+            "B3": CachedValue(0),
+        },
+    )
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f09b(output_dir: Path) -> Path:
+    path = output_dir / "running_total.xlsx"
+    workbook, worksheet = _new_workbook("RunningTotal")
+    worksheet.append(("Row", "RunningTotal"))
+    worksheet.append((0, 0))
+
+    caches: dict[str, CachedValue] = {}
+    for row_number in range(3, 50_003):
+        worksheet.cell(row=row_number, column=1, value=row_number - 2)
+        worksheet.cell(
+            row=row_number,
+            column=2,
+            value=f"=SUM($B$2:B{row_number - 1})",
+        )
+        caches[f"B{row_number}"] = CachedValue(0)
+
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(path, "RunningTotal", caches)
     repack_deterministic(path)
     return path
 
@@ -539,6 +670,35 @@ def _generate_f14(output_dir: Path) -> Path:
     lone_cells["X100"] = 2
     workbook.save(path)
     workbook.close()
+    repack_deterministic(path)
+    return path
+
+
+def _generate_f15(output_dir: Path) -> Path:
+    path = output_dir / "threeD_ref.xlsx"
+    workbook, january = _new_workbook("Jan")
+    february = workbook.create_sheet("Feb")
+    march = workbook.create_sheet("Mar")
+    summary = workbook.create_sheet("Summary")
+
+    for worksheet, value in (
+        (january, 10),
+        (february, 20),
+        (march, 30),
+    ):
+        worksheet["A1"] = "Metric"
+        worksheet["B1"] = "Value"
+        worksheet["A2"] = "Revenue"
+        worksheet["B2"] = value
+
+    summary["A1"] = "Metric"
+    summary["B1"] = "Value"
+    summary["A2"] = "Quarter revenue"
+    summary["B2"] = "=SUM(Jan:Mar!B2)"
+
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(path, "Summary", {"B2": CachedValue(60)})
     repack_deterministic(path)
     return path
 
@@ -653,10 +813,15 @@ def generate_all(output_dir: Path = GENERATED_DIR) -> dict[str, Path]:
         "F01": f01,
         "F02": _generate_f02(output_dir),
         "F03": _generate_f03(output_dir),
+        "F04": _generate_f04(output_dir),
+        "F05": _generate_f05(output_dir),
         "F07": f07,
+        "F09a": _generate_f09a(output_dir),
+        "F09b": _generate_f09b(output_dir),
         "F12": _generate_f12(output_dir),
         "F13": _generate_f13(output_dir),
         "F14": _generate_f14(output_dir),
+        "F15": _generate_f15(output_dir),
         "F20": _generate_f20(output_dir),
         "F19": _generate_f19(output_dir),
     }

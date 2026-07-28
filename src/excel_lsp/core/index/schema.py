@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-SCHEMA_VERSION = "3"
+SCHEMA_VERSION = "5"
 
 BASE_SCHEMA_SQL = """
 CREATE TABLE meta (
@@ -143,9 +143,117 @@ CREATE TABLE edges (
     dst_col_min INTEGER,
     dst_col_max INTEGER,
     via TEXT NOT NULL,
+    dependent_rank INTEGER,
+    precedent_rank INTEGER,
     FOREIGN KEY (src_sheet_id) REFERENCES sheets(id) ON DELETE CASCADE,
     FOREIGN KEY (dst_sheet_id) REFERENCES sheets(id) ON DELETE CASCADE
 );
+
+-- Ranked spatial mirrors are a derived graph index.  Mutations to any table
+-- contributing public graph labels or source geometry make them unavailable
+-- until the store atomically rebuilds and validates both directions.
+CREATE TABLE graph_spatial_state (
+    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+    dirty INTEGER NOT NULL CHECK (dirty IN (0, 1)),
+    dependent_rank_max INTEGER NOT NULL,
+    precedent_rank_max INTEGER NOT NULL,
+    revision INTEGER NOT NULL,
+    mutation_epoch INTEGER NOT NULL,
+    clean_epoch INTEGER NOT NULL
+);
+INSERT INTO graph_spatial_state VALUES (1, 1, 0, 0, 0, 0, 0);
+
+-- Canonical public-hop identity for every dense rank in both directions.
+-- Graph-affecting mutations delete impacted identities, so restoring only
+-- the seven-field graph seal cannot make a split rank trustworthy again.
+CREATE TABLE graph_rank_keys (
+    direction TEXT NOT NULL CHECK (direction IN ('dependents', 'precedents')),
+    rank INTEGER NOT NULL CHECK (rank > 0),
+    key_text TEXT NOT NULL,
+    PRIMARY KEY (direction, rank)
+) WITHOUT ROWID;
+
+CREATE TRIGGER edges_graph_spatial_dirty_insert AFTER INSERT ON edges BEGIN
+    DELETE FROM graph_rank_keys
+    WHERE (direction = 'dependents' AND rank = NEW.dependent_rank)
+       OR (direction = 'precedents' AND rank = NEW.precedent_rank);
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
+CREATE TRIGGER edges_graph_spatial_dirty_update AFTER UPDATE ON edges BEGIN
+    DELETE FROM graph_rank_keys
+    WHERE (direction = 'dependents'
+           AND rank IN (OLD.dependent_rank, NEW.dependent_rank))
+       OR (direction = 'precedents'
+           AND rank IN (OLD.precedent_rank, NEW.precedent_rank));
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
+CREATE TRIGGER edges_graph_spatial_dirty_delete AFTER DELETE ON edges BEGIN
+    DELETE FROM graph_rank_keys
+    WHERE (direction = 'dependents' AND rank = OLD.dependent_rank)
+       OR (direction = 'precedents' AND rank = OLD.precedent_rank);
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
+CREATE TRIGGER fblocks_graph_spatial_dirty_insert AFTER INSERT ON fblocks BEGIN
+    DELETE FROM graph_rank_keys;
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
+CREATE TRIGGER fblocks_graph_spatial_dirty_update AFTER UPDATE ON fblocks BEGIN
+    DELETE FROM graph_rank_keys;
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
+CREATE TRIGGER fblocks_graph_spatial_dirty_delete AFTER DELETE ON fblocks BEGIN
+    DELETE FROM graph_rank_keys;
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
+CREATE TRIGGER sheets_graph_spatial_dirty_insert AFTER INSERT ON sheets BEGIN
+    DELETE FROM graph_rank_keys;
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
+CREATE TRIGGER sheets_graph_spatial_dirty_update AFTER UPDATE ON sheets BEGIN
+    DELETE FROM graph_rank_keys;
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
+CREATE TRIGGER sheets_graph_spatial_dirty_delete AFTER DELETE ON sheets BEGIN
+    DELETE FROM graph_rank_keys;
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
+
+CREATE TRIGGER graph_rank_keys_graph_spatial_dirty_insert
+AFTER INSERT ON graph_rank_keys BEGIN
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
+CREATE TRIGGER graph_rank_keys_graph_spatial_dirty_update
+AFTER UPDATE ON graph_rank_keys BEGIN
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
+CREATE TRIGGER graph_rank_keys_graph_spatial_dirty_delete
+AFTER DELETE ON graph_rank_keys BEGIN
+    UPDATE graph_spatial_state
+    SET dirty = 1, mutation_epoch = mutation_epoch + 1
+    WHERE singleton = 1;
+END;
 
 CREATE TABLE diagnostics (
     id INTEGER PRIMARY KEY,
@@ -202,6 +310,15 @@ CREATE INDEX list_objects_bounds
     ON list_objects(sheet_id, row_min, row_max, col_min, col_max);
 CREATE INDEX fblocks_bounds
     ON fblocks(sheet_id, row_min, row_max, col_min, col_max);
+CREATE INDEX edges_source ON edges(src_sheet_id, src_kind, src_id, via);
+CREATE INDEX edges_dependent_rank ON edges(dependent_rank);
+CREATE INDEX edges_precedent_rank ON edges(precedent_rank);
+CREATE INDEX edges_precedent_semantic
+    ON edges(
+        dst_sheet_id, src_sheet_id,
+        dst_row_min, dst_col_min, dst_row_max, dst_col_max,
+        via, src_kind, src_id
+    );
 CREATE INDEX name_areas_bounds
     ON name_areas(sheet_id, row_min, row_max, col_min, col_max);
 CREATE INDEX validations_bounds

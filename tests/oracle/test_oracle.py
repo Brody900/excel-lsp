@@ -5,10 +5,27 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
+import pytest
+
 from excel_lsp.core.values import JsonScalar
 
 CanonicalCell = tuple[str, str, JsonScalar, str | None]
-EXPECTED_FIXTURE_IDS = {"F01", "F02", "F03", "F07", "F12", "F13", "F14", "F19", "F20"}
+EXPECTED_FIXTURE_IDS = {
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F07",
+    "F09a",
+    "F09b",
+    "F12",
+    "F13",
+    "F14",
+    "F15",
+    "F19",
+    "F20",
+}
 GenerateAll = Callable[[Path], dict[str, Path]]
 CanonicalReader = Callable[[Path], tuple[CanonicalCell, ...]]
 Probe = Callable[[Path], dict[str, object]]
@@ -26,8 +43,16 @@ probe_read_only = cast(
 )
 
 
-def test_openpyxl_dual_load_observes_f01_formula_caches(tmp_path: Path) -> None:
-    canonical = openpyxl_canonical_cells(generate_all(tmp_path)["F01"])
+@pytest.fixture(scope="module")
+def generated_paths(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
+    """Share the complete corpus so the 50k-row oracle fixture is authored once."""
+    return generate_all(tmp_path_factory.mktemp("oracle-corpus"))
+
+
+def test_openpyxl_dual_load_observes_f01_formula_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    canonical = openpyxl_canonical_cells(generated_paths["F01"])
     by_ref = {(sheet, ref): (value, formula) for sheet, ref, value, formula in canonical}
 
     assert by_ref[("Sales", "D2")] == (7, "=B2*C2")
@@ -35,8 +60,10 @@ def test_openpyxl_dual_load_observes_f01_formula_caches(tmp_path: Path) -> None:
     assert by_ref[("Sales", "D6")] == (27, "=B6*C6")
 
 
-def test_openpyxl_dual_load_observes_f03_cross_sheet_caches(tmp_path: Path) -> None:
-    canonical = openpyxl_canonical_cells(generate_all(tmp_path)["F03"])
+def test_openpyxl_dual_load_observes_f03_cross_sheet_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    canonical = openpyxl_canonical_cells(generated_paths["F03"])
     by_ref = {(sheet, ref): (value, formula) for sheet, ref, value, formula in canonical}
 
     assert by_ref[("Calc", "B3")] == (1100, "=B2*(1+Inputs!$B$2)")
@@ -45,8 +72,10 @@ def test_openpyxl_dual_load_observes_f03_cross_sheet_caches(tmp_path: Path) -> N
     assert by_ref[("Summary", "C10")] == (1831.53, "=SUM(Calc!D2:D6)")
 
 
-def test_openpyxl_315_read_only_probe_matches_recorded_behavior(tmp_path: Path) -> None:
-    result = probe_read_only(generate_all(tmp_path)["F07"])
+def test_openpyxl_315_read_only_probe_matches_recorded_behavior(
+    generated_paths: dict[str, Path],
+) -> None:
+    result = probe_read_only(generated_paths["F07"])
 
     assert result == {
         "openpyxl_version": "3.1.5",
@@ -81,8 +110,10 @@ def test_openpyxl_315_read_only_probe_matches_recorded_behavior(tmp_path: Path) 
     }
 
 
-def test_openpyxl_dual_load_observes_f19_modern_formulas_and_caches(tmp_path: Path) -> None:
-    canonical = openpyxl_canonical_cells(generate_all(tmp_path)["F19"])
+def test_openpyxl_dual_load_observes_f19_modern_formulas_and_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    canonical = openpyxl_canonical_cells(generated_paths["F19"])
     by_ref = {(sheet, ref): (value, formula) for sheet, ref, value, formula in canonical}
 
     assert by_ref[("Modern", "A1")] == (
@@ -104,8 +135,41 @@ def test_openpyxl_dual_load_observes_f19_modern_formulas_and_caches(tmp_path: Pa
     assert by_ref[("Modern", "G2")] == (10, "=@I2:I4")
 
 
-def test_every_emitted_fixture_matches_production_ooxml_parser(tmp_path: Path) -> None:
-    paths = generate_all(tmp_path)
-    assert paths.keys() == EXPECTED_FIXTURE_IDS
-    for fixture_id, path in paths.items():
+def test_openpyxl_observes_p4_names_structured_cycle_and_3d_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    expected = {
+        "F04": {
+            ("Inputs", "B4"): (110, "=BaseAmount*(1+GlobalRate)"),
+            ("Calc", "B4"): (105, "=BaseAmount*(1+ScopedRate)"),
+        },
+        "F05": {
+            ("Structured", "D2"): (7, "=[@Qty]*[@Price]"),
+            ("Structured", "D6"): (54.25, "=SUBTOTAL(109,Table1[LineTotal])"),
+            ("Structured", "F2"): (54.25, "=SUM(Table1[LineTotal])"),
+        },
+        "F09a": {
+            ("Circular", "B2"): (0, "=B3+1"),
+            ("Circular", "B3"): (0, "=B2+1"),
+        },
+        "F09b": {
+            ("RunningTotal", "B2"): (0, None),
+            ("RunningTotal", "B3"): (0, "=SUM($B$2:B2)"),
+            ("RunningTotal", "B50002"): (0, "=SUM($B$2:B50001)"),
+        },
+        "F15": {
+            ("Summary", "B2"): (60, "=SUM(Jan:Mar!B2)"),
+        },
+    }
+    for fixture_id, expected_cells in expected.items():
+        canonical = openpyxl_canonical_cells(generated_paths[fixture_id])
+        by_ref = {(sheet, ref): (value, formula) for sheet, ref, value, formula in canonical}
+        assert {ref: by_ref[ref] for ref in expected_cells} == expected_cells
+
+
+def test_every_emitted_fixture_matches_production_ooxml_parser(
+    generated_paths: dict[str, Path],
+) -> None:
+    assert generated_paths.keys() == EXPECTED_FIXTURE_IDS
+    for fixture_id, path in generated_paths.items():
         assert ooxml_canonical_cells(path) == openpyxl_canonical_cells(path), fixture_id

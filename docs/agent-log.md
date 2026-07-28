@@ -699,3 +699,1283 @@ structured composites with zero failures. Each reviewer confirmed the stage
 tree and cached-diff blob before and after inspection and found no unstaged or
 untracked changes. The review ledger now records 12 R-mech, 7 R-test, and 3
 R-repo invocations; P4 may begin only after the P3 milestone commit.
+
+## 2026-07-27 P4 — Exact circular verification over block condensation
+
+Decision: retain formula blocks as the persisted graph granularity and run an
+iterative Tarjan pass over that condensed graph. Reanalyze only candidate SCCs
+at concrete-cell anchors. Treat a singleton candidate as proven acyclic only
+when every internal dependency has one strict row-major direction; otherwise
+apply the same bounded exact fallback used for multi-block SCCs. Index coarse
+block intersections and exact source ownership with balanced per-sheet
+rectangle trees.
+
+Alternatives considered: report every coarse self-overlap as circular; stop
+after a singleton self-inclusion scan; allocate a complete 50,000-cell graph;
+resolve every exact dependency by scanning all blocks; or trust anchor-only
+geometry for structured, spill, and composite references.
+
+Rationale: the F09b running total has one coarse self-overlapping block but is a
+strict DAG, while a homogeneous singleton block can still contain an indirect
+two-cell cycle. The monotonic proof separates these without quadratic work;
+ambiguous cases retain the handoff's 64-seed/100,000-cell bounds and emit
+`W_POSSIBLE_CIRCULAR` when proof is incomplete. Exact reanalysis preserves
+current-row structured context, coordinate spill anchors, and composite hulls.
+F09a emits one canonical `E_CIRCULAR`; Stage 2a visits all 50,000 F09b formula
+cells exactly once and proves the strictly earlier dependency direction without
+entering Stage 2b.
+
+## 2026-07-27 P4 — Ranked bidirectional spatial traversal
+
+Decision: assign dense ranks to unique public `GraphHop` ordering keys and
+persist those ranks in both destination and source spatial mirrors. Use an
+`rtree_i32` rank dimension with range-existence binary probes. For the interval
+fallback, cache a deterministic revision-bound rectangle BVH and use
+minimum-rank branch-and-bound search. Rebuild both mirrors atomically after any
+formula refresh and reject dirty, partial, mixed, missing, orphaned, or
+mismatched state as `E_CORRUPT`.
+
+Alternatives considered: scan edge IDs until a cap is filled; sort all matching
+fan-out in memory; assume internal edge-ID order matches public casefold order;
+index destinations only; permit equal ranks without proving equal public hops;
+or use the fallback B-tree's first matching rank scan.
+
+Rationale: initial preflights reproduced linear work over irrelevant edges,
+wrong capped prefixes after reversed edge IDs, a source-mirror blind spot, and
+duplicate ranks that represented distinct public hops. Required dependent and
+precedent semantic keys now enforce a rank/key bijection while still allowing
+duplicate physical edges for the same public hop. RTree progress callbacks at
+1,000/10,000/50,000 irrelevant edges remained 3/5/8 for dependents and 4/8/11
+for precedents. The interval BVH's independent final-rank adversary visited
+39/63/75 nodes. Both directions preserve their exact semantic prefix across
+1,200 reversed physical IDs.
+
+## 2026-07-27 P4 — Preflight hardening before the formal gate
+
+Decision: keep all review findings as preflight until one staged fingerprint is
+frozen. Export relational ranks, graph state, and both mirrors through natural
+keys so full-versus-incremental canonical equality cannot pass vacuously. Add a
+deterministic Hypothesis RTree/interval differential, a pinned 4,000-token graph
+golden budget, an authorizer covering all five graph surfaces, and a persisted
+clean-corruption matrix over both directions and backends.
+
+Alternatives considered: count the first green 112-test slice as sufficient;
+exercise mirror corruption only through the dirty gate; treat a byte-identical
+golden as its own token-budget proof; retain a fixed three-edge spatial parity
+example instead of §8.2 randomized coverage; or charge changing preflight trees
+as formal verdicts.
+
+Rationale: independent mutation probes showed the lifecycle export could omit
+all new ranked state, the F09b test could pass with circular detection disabled,
+and dirty-gate tests did not execute deeper mirror validation. The remediated
+tests require exactly 50,000 Stage 2a resolutions, reject Stage 2b allocation,
+compare 80 deterministic random edge sets with a brute oracle, and independently
+kill source-only, rank-blind, missing-row, and relational-cross-check mutants.
+The current focused P4 slice passes 141 tests. Fresh mechanics preflight returned
+`APPROVE`; the test preflight finding is remediated and awaiting its final
+closure message. No formal review invocation has yet been charged for P4.
+
+## 2026-07-27 P4 — Preflight closure and freeze readiness
+
+Decision: accept the remediated preflight candidate for fingerprinting only
+after the test reviewer reran the exact surviving mutations and returned clean
+`APPROVE`. Keep the formal phase gate open until two new stateless reviewers
+inspect one unchanged staged fingerprint.
+
+Rationale: the 16 clean-state mirror cases killed the complete-validator,
+source-only, rank-blind, and relational-cross-check mutants exactly as intended.
+The post-remediation focused slice passed 141 tests; the full repository passed
+877 tests in 367.54 seconds at 90.15% branch coverage. Ruff, formatting,
+Pyright, fixture generation, the parser oracle, lock validation, and package
+build were also clean. These remain implementation evidence, not formal review
+credits.
+
+## 2026-07-27 P4 — First formal split exposes completeness and fixture-oracle gaps
+
+Decision: charge global invocation #23 / R-mech #13 and global invocation #24 /
+R-test #8 as `REVISE` on the first frozen P4 candidate. Bind that rejected
+candidate to base `6eb092b12c1c0398ac76a6153c52096f08904d7a`, stage tree
+`cab97b4fcd15f23b772b9ca2cc56978d44defd43`, and cached-diff blob
+`cce5c2a7c1a449e4a6bafad2a81dc8fb1de6759e` (30 files, 7,544 insertions,
+121 deletions). Reopen both formal domains after any correction.
+
+Alternatives considered: carry the clean preflight verdicts into the formal
+gate; treat trigger-maintained `dirty` as sufficient after an external writer
+manually restores it to clean; perform a full relational edge scan before every
+bounded query; accept F03's one golden path plus I12 round trips as proof that
+no required edge is missing; or charge only the mechanics rejection.
+
+Rationale: R-mech #13 deleted the queried-direction mirror row, restored only
+the persisted clean bit, reopened the spatial facade, and obtained successful
+empty precedent/dependent traces on both backends. It also removed
+`graph_spatial_state` from a schema-v5 sidecar and reproduced a raw
+`OperationalError` instead of rebuild or structured corruption. Any fix must
+retain the demonstrated irrelevant-edge bound, so query-time relational scans
+are not acceptable. R-test #8 independently deleted the required
+`Summary!C7 -> Calc!B2` dependency; both the staged F03 golden and I12 loop
+survived because neither enumerated an independently authored complete F03
+edge set. Both reviewers rechecked the exact fingerprint after their probes and
+left the worktree/index unchanged.
+
+## 2026-07-27 P4 — Formal #13/#8 remediation
+
+Decision: add persistent `mutation_epoch` and `clean_epoch` trust state rather
+than scanning relational edges before bounded queries. Every edge, block,
+sheet, destination-mirror, and source-mirror trigger increments the mutation
+epoch and marks the graph dirty; a successful atomic rebuild alone seals the
+current epoch. Validate the exact state-table columns and all 15 required dirty
+triggers before accepting a current-version sidecar. Separately freeze F03 with
+an independently authored 13-edge semantic projection keyed by source and
+destination geometry plus `via`.
+
+Alternatives considered: query-time `COUNT(*)` or relational overlap scans;
+process-local trust only; trust the caller-restored dirty bit; add a second full
+spatial mirror solely for verification; catch the missing table only at query
+time; or expand the F03 trace golden without enumerating every semantic edge.
+
+Rationale: epoch equality is an O(1) prerequisite and survives reopening, while
+all expensive validation remains on mutation/rebuild boundaries. The deeper
+per-returned-edge validators remain independently tested by forging both trust
+fields. Missing or malformed state columns/triggers now cause a monotonic
+disposable-sidecar rebuild; live database-shape/value errors are converted to
+structured `E_CORRUPT`. The F03 oracle contains the eight Calc edges and five
+Summary edges implied directly by generator-authored formulas, explicitly
+including `Summary!C7 -> Calc!B2`; `Counter` equality rejects duplicates as well
+as missing or extra edges. The remediated focused P4 slice passes 155 tests.
+
+## 2026-07-27 P4 — Closure-preflight trust-state hardening
+
+Decision: require complete canonical SQL equality for every persistent dirty
+trigger, reject additional persistent triggers that can affect protected graph
+tables or trust state, and validate relational rank aggregates once whenever a
+current sidecar is opened. Both rank directions must be non-null, dense from
+one, and match their persisted maxima. Shape direct `DependencyGraph`
+construction failures as `E_CORRUPT`.
+
+Alternatives considered: retain substring-based trigger inspection; accept a
+stored maximum without comparing relational ranks; scan the complete graph
+before every bounded trace; reject all connection-local TEMP triggers; or
+recompute every semantic ordering key to defend against a caller that
+coherently rewrites the relational catalog, both mirrors, and trust markers.
+
+Rationale: an independent mechanics preflight used comments, `WHEN 0`, undo
+statements, and extra persistent triggers to keep stale mirrors falsely clean;
+it also lowered each stored maximum so bounded traces silently suppressed valid
+edges. Exact trigger definitions and open-time aggregate validation close those
+persisted-sidecar failures without changing trace work. Connection-local TEMP
+triggers and a fully self-consistent malicious rerank remain outside the frozen
+sidecar-corruption contract because they require a caller already controlling
+the live internal connection or an integrity root outside the same database.
+The closure reviewer explicitly reproduced and accepted that boundary, then
+returned `APPROVE`. Fresh author verification passed the 173-test focused P4
+slice in 84.49 seconds. This approval is preflight evidence only; the changed
+candidate still requires new stateless formal R-mech and R-test verdicts.
+
+## 2026-07-27 P4 — Second formal split finds bounded-integrity and oracle gaps
+
+Decision: charge global invocation #25 / R-mech #14 and global invocation #26 /
+R-test #9 as `REVISE`. Bind the rejected candidate to base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, stage tree
+`dd616019ff38c4946aed8773b106225f2f16c673`, and cached-diff blob
+`8dd7ff01c0188e5f210b04d1adf7dce497ee1193` (31 files, 8,346 insertions,
+128 deletions). Reopen both formal domains after remediation.
+
+Alternatives considered: treat the prior preflight approval as closing the
+stronger forged-epoch case; rely on trigger state without detecting an absent
+queried mirror; allow raw `OperationalError` for malformed interval columns;
+call set equality an exact edge oracle; or charge only the mechanics verdict.
+
+Rationale: R-mech #14 deleted the destination mirror for a real whole-column
+edge, forged both the clean bit and epoch, and obtained a successful empty
+bounded dependent trace on both backends. The same retrieval structure affects
+precedent traces and paths. It also removed the interval `rank` column while
+preserving canonical triggers; current-schema validation accepted the sidecar
+and opening leaked `no such column: rank`. R-test #9 independently duplicated
+every F05 structured-reference edge and added a valid unexpected singleton-cell
+edge; all 20 real-fixture tests survived because the F04/F05/F15/F19 projection
+used a set and an inner fblock join. Both reviewers confirmed the unchanged
+fingerprint at exit. The rejected tree nevertheless passed 909 tests and
+90.09% branch coverage; green evidence does not override surviving mutations.
+
+## 2026-07-27 P4 — Formal #14/#9 remediation and adversarial closure
+
+Decision: validate both complete mirrors and exact physical storage whenever a
+persisted sidecar opens, then seal the accepted mutation epoch in process for
+O(1) live checks. Share one canonical rank projector between rebuild and open
+validation so persisted ranks must match the exact public semantic order. When
+corrupt RTree shadow storage prevents valid DDL teardown, build and checkpoint a
+same-directory replacement and install it atomically. Require graph rebuilds to
+run in store-owned transactions. Replace every graph-fixture set oracle with an
+independently authored lossless multiset.
+
+Alternatives considered: scan relational edges before every bounded query; add
+more caller-forgeable persisted counters; validate only mirror row counts;
+duplicate canonical rank logic in the validator; use `writable_schema` to excise
+corrupt RTree objects; delete and recreate the database with a no-file window;
+attempt to adopt raw SQLite transactions without commit/rollback callbacks; or
+retain set-based fixture projections after fixing only F03.
+
+Rationale: the first closure preflight proved that a forged clean epoch could
+hide missing or displaced queried mirrors. Full open-time bidirectional mirror
+comparison closes persisted damage, while a process seal detects post-open
+mutation without changing trace work. Subsequent adversarial passes changed
+only `via`, coherently swapped relational and dual-mirror ranks, deleted RTree
+node/rowid storage, forced atomic-replacement failures, and rolled back a raw
+outer transaction. The shared projector now rejects noncanonical semantic ranks;
+RTree integrity probes enter a generation-preserving atomic recreation path;
+replacement failures preserve the original file and error; and raw transaction
+adoption is refused before context entry or record consumption. Managed commit,
+rollback, nesting, seal publication, and interval-cache restoration remain
+green. Independently authored F03/F04/F05/F15/F19 Counters reject missing,
+duplicate, opaque, malformed, and unexpected singleton-cell edges. Final
+non-formal mechanics and test closure checks returned `APPROVE`; they do not
+count as formal invocations. Fresh author verification passes the 214-test P4
+slice in 71.80 seconds. A new unchanged fingerprint still requires fresh
+stateless R-mech and R-test formal verdicts.
+
+## 2026-07-27 P4 — Third formal split finds failed-commit and live-error gaps
+
+Decision: charge global invocation #27 / R-mech #15 as `REVISE` and global
+invocation #28 / R-test #10 as `APPROVE` on the third frozen candidate. Bind the
+rejected candidate to base `6eb092b12c1c0398ac76a6153c52096f08904d7a`, stage
+tree `c5d870a081a3c67a87b2462fd5ae763be2625a77`, and cached-diff blob
+`261abc57cf92a208bca22c52cbb6e2c2e7ab6b78` (31 files, 9,427 insertions,
+141 deletions). A changed mechanics fix requires fresh reviewers in both
+domains despite the clean R-test verdict.
+
+Alternatives considered: carry R-test #10 onto a changed tree; treat SQLite
+commit failure as caller recovery; rely on process-seal equality to make every
+live RTree read safe; catch only the exact reviewer query; or charge only the
+rejecting verdict.
+
+Rationale: R-mech #15 enabled deferred foreign keys so `commit()` failed after
+the managed body. The connection remained inside the failed transaction, the
+invalid row remained visible, and the edge-store seal still marked it as an
+active trusted outer transaction; a later store context entered as nested.
+Separately, deleting active RTree node storage and restoring the exact sealed
+epoch caused `direct_dependents` to leak raw `sqlite3.DatabaseError` from its
+relational/spatial validation join. Managed commit failure must rollback and
+restore seal/cache before re-raising, and every public graph surface must shape
+live SQLite storage failures as `E_CORRUPT`. R-test #10 independently killed
+duplicate, singleton, opaque, and orphan fixture mutations and passed all 958
+tests, but the exact staged tree is still rejected. Both reviewers confirmed the
+unchanged fingerprint at exit.
+
+## 2026-07-27 P4 — Formal #15 remediation and transaction-finalizer closure
+
+Decision: make graph transaction cleanup explicit and idempotent with no-I/O
+commit and rollback finalizers, invoke the matching finalizer as a backstop even
+when a lifecycle hook fails before or after its own state transition, and shape
+genuine live SQLite storage failures on all five public graph-query surfaces as
+`E_CORRUPT` while preserving `sqlite3.ProgrammingError` and unrelated exception
+identity. Require fresh stateless mechanics and test reviews after the final
+verification freeze.
+
+Alternatives considered: restore the process seal only in the ordinary rollback
+hook; attempt rollback after a successful SQLite commit when its publication
+hook fails; let hook failures replace the primary body or commit failure; catch
+the broad `sqlite3.DatabaseError` hierarchy without a caller-misuse carveout; or
+reuse the clean R-test #10 verdict on the changed implementation.
+
+Rationale: a deferred-constraint commit failure must rollback the connection and
+restore the old seal before control returns, whereas a post-commit hook failure
+must publish the new seal and clear bookkeeping without undoing durable data.
+Hooks can themselves fail before or after their state transition, so the store
+now applies a corresponding no-SQL finalizer unconditionally and preserves the
+primary error while chaining cleanup failures. A focused matrix covers managed
+body, commit, rollback-hook, and commit-hook failures on both sides of the state
+transition; repeated finalization performs no database I/O. Query regressions
+cover corrupt live RTree storage plus `ProgrammingError`, `TypeError`,
+`ValueError`, and existing `ExcelLSPError` identity on every public surface.
+Independent non-formal mechanics and bounded-query closure reviews both returned
+clean `APPROVE`; those closure checks are not verdict-bearing invocations. Fresh
+author verification passes the 273-test focused P4 slice in 73.83 seconds. The
+candidate remains gate-pending until a new exact staged fingerprint receives
+fresh formal R-mech and R-test verdicts.
+
+## 2026-07-27 P4 — Fourth formal split finds live-maxima and exact-traversal gaps
+
+Decision: charge global invocation #29 / R-mech #16 and global invocation #30 /
+R-test #11 as `REVISE` on base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, staged tree
+`9a242fb56398bbf11ecf5f6d15861f2ec857c9dd`, and cached-diff blob
+`cfeeefcfca91fad93cda73cba9384f5c96907e11` (31 files, 10,250
+insertions, 146 deletions). Reopen both formal domains after root-cause
+remediation under the unbounded-review authorization.
+
+Alternatives considered: treat mutable rank maxima as harmless metadata; rely
+on direct-query edge validation to protect bounded traces; refresh the facade
+after every live sidecar mutation; accept a 50,000-call count plus first/last
+cells as an exactly-once traversal proof; or carry either rejected verdict onto
+a changed tree.
+
+Rationale: R-mech #16 lowered `dependent_rank_max` and
+`precedent_rank_max` after opening, without changing the three fields held in
+the process seal. Cached dependent and precedent traces on both spatial
+backends then silently returned one node with `truncated=false` even though the
+corresponding direct query still found a real edge. Every persisted graph-state
+field used by a query must therefore participate in the live trusted tuple and
+transaction snapshot. R-test #11 replaced one interior F09b cell with a
+duplicate neighbor while preserving 50,000 resolver calls plus the expected
+first and last cells; all 19 circular/F09b tests still passed, leaving a real
+self-reference at the omitted cell potentially undetected. The boundedness
+guard must assert the complete ordered 50,000-cell sequence. Both reviewers ran
+the 273-test P4 slice and all 1,009 repository tests successfully, confirmed the
+unchanged fingerprint at exit, and made no workspace edits; green baseline
+tests do not override either surviving adversarial mutation.
+
+## 2026-07-27 P4 — Formal #16/#11 remediation and complete live-state closure
+
+Decision: replace the mutation-epoch-only seal with one immutable seven-field
+`graph_spatial_state` tuple, return that validated tuple from `require_clean()`,
+and consume its direction-specific maximum without a second database read.
+Strengthen F09b's boundedness guard to compare the complete ordered list of
+50,000 expected cells. Keep the candidate gate-pending for fresh formal reviews.
+
+Alternatives considered: seal only the two maxima in addition to the epoch;
+revalidate full mirrors on every bounded hop; retain a second maximum query
+after validating the tuple; cover only the reviewer-supplied lowered-maximum
+cases; or assert F09b set equality without order and multiplicity.
+
+Rationale: the complete immutable state holds singleton, dirty, dependent and
+precedent rank maxima, revision, mutation epoch, and clean epoch. Initial open,
+transaction snapshot, pending rebuild, durable-commit publication, rollback
+restoration, and idempotent no-I/O finalizers all carry that same value. Cached
+facade regressions now alter every mutable state field or delete the row on both
+RTree and interval backends; each public query returns structured `E_CORRUPT`.
+The direction-specific maximum cases additionally reproduce both precedent and
+dependent traces. F09b now requires exact equality with
+`CellNode(1, row, 2)` for every row from 3 through 50,002 while retaining its
+Stage-2b hard-failure sentinel and monotonic proof. Focused remediation checks
+passed 18 cached-state cases, both real-F09b paths, the 12-test governance
+contract, Ruff, formatting, Pyright, and whitespace validation. These are
+author/remediation checks, not formal verdicts; a new frozen fingerprint still
+requires fresh stateless R-mech and R-test reviews.
+
+## 2026-07-27 P4 — Fifth formal split finds an operation-snapshot race
+
+Decision: charge global invocation #31 / R-mech #17 as `REVISE` and global
+invocation #32 / R-test #12 as a clean `APPROVE` on base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, staged tree
+`904516baeb260ed2dc7a552037230a4f907f0c37`, and cached-diff blob
+`c9ac51420d96b65cd5c4520edefab08fec7e8f07` (31 files, 10,389
+insertions, 146 deletions). Reopen both domains after mechanics remediation.
+
+Alternatives considered: treat concurrent sidecar mutation as unsupported;
+recheck only the two direct methods on exit; accept an empty result when the
+dirty marker changes during retrieval; carry the clean R-test #12 verdict onto
+a changed tree; or rely on the seven-field entry seal without a stable SQLite
+snapshot.
+
+Rationale: R-mech #17 used a second connection to delete the queried mirror row
+after entry validation but before spatial retrieval, and to atomically delete
+the source mirror plus relational edge before precedent retrieval. Direct
+dependent and precedent queries on both RTree and interval backends silently
+changed from one result to zero while `dirty=1` and mutation/clean epochs
+diverged. A trace or path can likewise mix generations. Every complete public
+graph operation therefore needs one consistent read snapshot with trust
+validation inside it, without committing or rolling back a caller-owned
+transaction. R-test #12 independently matched 5,000 randomized circular graphs
+to a brute oracle, matched 1,000 ranked spatial queries across both backends,
+and passed the 291-test P4 slice, 21 fixture/oracle tests, and all 1,027 tests at
+90.15% coverage with no findings. Both reviewers confirmed the exact unchanged
+fingerprint and no workspace edits; the test approval remains charged but
+cannot approve the forthcoming changed tree.
+
+## 2026-07-27 P4 — Formal #17 remediation with operation-wide read snapshots
+
+Decision: wrap all five public graph operations in one deferred SQLite read
+snapshot whenever no caller transaction already exists, place the complete
+trust-state check as the snapshot's first read, and release only graph-owned
+snapshots on every success or exception. Preserve raw and store-managed caller
+transaction ownership and all existing exception identity rules.
+
+Alternatives considered: revalidate only on method exit; take one snapshot per
+hop; use `BEGIN IMMEDIATE` and block writers before validation; always rollback
+the connection even when the caller owns its transaction; or handle only the
+two direct surfaces from the reviewer reproduction.
+
+Rationale: a deferred read transaction provides one coherent database version
+without acquiring a write lock. In WAL mode, a second connection can commit a
+new coherent graph after the trust read while the current operation continues
+to see the complete prior version. In DELETE rollback-journal mode, the writer
+can prepare its change but its commit waits until the reader releases, after
+which a fresh facade sees the new version. Every public direct, trace, and path
+surface now enters that boundary. Graph-owned snapshots roll back on success,
+`DatabaseError`, `ProgrammingError`, invalid input, and unrelated exceptions;
+cleanup keeps the primary exception and chains cleanup failures. Existing raw
+and managed transactions remain active and retain caller work. Initial focused
+remediation passed 40 race/ownership/error cases and the broad graph/index slice
+passed 259 tests in 52.58 seconds. Independent external probes passed all 20
+surface/backend/journal race combinations and 30 transaction/error ownership
+combinations. Their durable checked-in forms pass 60 snapshot/ownership tests,
+including event-synchronized rollback-journal commit blocking and every caller
+transaction/error combination; the complete focused P4 slice passes 351 tests
+in 76.78 seconds. No formal verdict is implied by this remediation entry.
+
+## 2026-07-27 P4 — Sixth formal split finds snapshot-release lock leakage
+
+Decision: charge global invocation #33 / R-mech #18 as `REVISE` and global
+invocation #34 / R-test #13 as a clean `APPROVE` on base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, staged tree
+`15bd6efc3d6bc7ba7dd06d16627f98d288ce009a`, and cached-diff blob
+`9448472cc182a4b7bc907063bb7c3122035bb3e9` (31 files, 10,789
+insertions, 146 deletions). Reopen both domains after cleanup remediation.
+
+Alternatives considered: leave failed rollback recovery to `close()`; regard a
+rollback exception as proof the transaction ended; preserve the primary error
+without restoring connection state; make future queries inherit the leaked
+transaction as caller-owned; or carry the clean R-test #13 verdict forward.
+
+Rationale: R-mech #18 denied `SQLITE_TRANSACTION/ROLLBACK` in DELETE journal
+mode. A successful query's graph-owned rollback raised, left
+`connection.in_transaction=true`, and caused a second writer's commit to fail
+with `database is locked`; a later query mistook the leaked transaction for a
+caller transaction and kept the obsolete snapshot. An injected primary
+`ValueError` preserved its identity and chained the cleanup error but leaked the
+same lock. Snapshot release therefore needs direct-SQL fallback and must close
+or poison the connection if release remains impossible. `IndexStore.close()`
+must likewise close in a `finally` path and finalize graph bookkeeping despite
+rollback failure. R-test #13 killed snapshot, revision-seal, skipped-F09b-cell,
+and raw-transaction-refusal mutants; its 351-test P4 review found nothing else.
+Both reviewers ran the 1,087-test repository and confirmed the unchanged frozen
+scope; the test approval is charged but cannot approve a changed cleanup tree.
+
+## 2026-07-27 P4 — Formal #18 remediation and conclusive snapshot release
+
+Decision: centralize graph-owned snapshot release with rollback-state
+inspection, direct-SQL `ROLLBACK` fallback, and connection poisoning plus
+verified physical close when release remains uncertain. Harden `IndexStore`
+close and context exit with the same layered recovery, unconditional no-I/O
+finalization, verified retryable close state, and exact primary-error precedence.
+
+Alternatives considered: retry rollback once; mark a graph poisoned while
+leaving its physical connection open; set `IndexStore._closed` before verifying
+the handle; discard earlier body causes when cleanup also fails; assume a close
+override always takes effect before raising; or omit rollback-journal writer
+probes after WAL passed.
+
+Rationale: recoverable rollback failures now fall through to direct SQL and
+leave the connection reusable. If rollback and fallback both fail, every graph
+surface poisons the facade and closes the native SQLite descriptor; after three
+failed overridden/direct close attempts, the native base descriptor provides a
+supported emergency release. `IndexStore.close()` independently retries and
+verifies physical closure, stays retryable if closure cannot be proven, always
+runs the graph rollback finalizer, and always retains the context body as the
+primary exception. Existing explicit causes or implicit contexts are grouped
+with cleanup failures after removing back-links to the primary, so traceback
+chains remain complete and acyclic. Checked-in matrices cover every public
+surface, both backends, WAL/DELETE, successful and failing bodies, fallback and
+denied rollback, raw/managed ownership, transient close-before/after behavior,
+native subclass overrides, writer unblocking, store reopen/trust, hooks, and
+finalizers. Independent adversarial closure passed 80 native close cases,
+96 context-close cases, 32 reopen/trust cases, and 36 hook/finalizer cases with
+no remaining blocker or minor. Fresh author verification passes the 557-test P4
+slice in 79.31 seconds. These remediation results are non-verdict evidence; a
+new exact fingerprint still requires fresh stateless reviews in both domains.
+
+## 2026-07-27 P4 — Seventh formal split finds acquisition and native-close gaps
+
+Decision: charge global invocation #35 / R-mech #19 and global invocation #36 /
+R-test #14 as `REVISE` on base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, staged tree
+`166634a31d389df75b47122aea863571640efb35`, and cached-diff blob
+`24a3c53ae333be3ba684d9c8f32f6585d544d6b6` (31 files, 11,785
+insertions, 152 deletions). Reopen both domains after root-cause remediation.
+
+Alternatives considered: regard a raised `BEGIN` as proof no transaction began;
+leave native-subclass emergency closure exclusive to graph queries; accept
+virtual close retries without proving physical release; replace a transaction
+body's prior cause with cleanup evidence; carry any earlier test approval onto
+the changed tree; or defer the missing matrices to a later phase.
+
+Rationale: R-mech #19 used real SQLite connection subclasses whose `execute`
+performed `BEGIN` or `BEGIN IMMEDIATE` and then raised. Both graph snapshot and
+managed-store acquisition occurred outside their cleanup boundaries, leaving
+an active transaction, inconsistent EdgeStore bookkeeping, and a blocked
+rollback-journal writer. The same review showed that managed cleanup replaced
+an existing explicit cause and left a cleanup-to-primary back-link, producing
+a causal cycle. Both reviewers independently reproduced the adjacent
+`IndexStore.close()` defect: three virtual close failures never reached the
+native base descriptor, so denied rollback left the handle usable and a DELETE
+writer locked. R-test #14 also established that the existing checked-in native
+subclass coverage exercised `DependencyGraph`, not `IndexStore.close()` or
+`__exit__`. Fresh reviewer verification otherwise passed the 557-test P4 slice
+and all 1,293 repository tests, with clean Ruff, formatting, Pyright, lock, and
+cached-diff checks. Both reviews confirmed the unchanged frozen fingerprint and
+made no workspace edits.
+
+## 2026-07-27 P4 — Formal #19/#14 remediation and acquisition-boundary closure
+
+Decision: move graph and managed-store transaction acquisition inside their
+respective cleanup ownership, give `IndexStore` the supported native SQLite
+base-descriptor emergency close already used by graph snapshots, and preserve
+the complete acyclic causal record for managed transactions and context exit.
+Add real-connection fault matrices before freezing another candidate.
+
+Alternatives considered: handle only the reproduced DELETE-journal cases;
+assume `execute("BEGIN")` and `close()` are all-or-nothing; test hooks instead
+of real `sqlite3.Connection` subclasses; close the connection without proving
+descriptor state; retain primary identity while discarding its earlier cause;
+or accept broad existing coverage without the exact reviewer reproductions.
+
+Rationale: acquisition now enters the protected scope before `BEGIN` or `BEGIN
+IMMEDIATE`, so both before-effect and after-effect failures run rollback-state
+inspection, direct-SQL fallback, bookkeeping finalization, and conclusive close
+when release cannot be proven. `IndexStore.close()` makes bounded virtual
+attempts, checks physical state even when an attempt raises after taking effect,
+then invokes `sqlite3.Connection.close(connection)` for a supported native
+subclass whose override never reached the descriptor. Managed cleanup snapshots
+the body's prior explicit cause or unsuppressed context, removes cleanup
+back-links, groups distinct evidence once, and keeps the exact body exception
+primary without cycles; context exit follows the same discipline.
+
+The checked-in fault surface covers all five graph operations, both spatial
+backends, WAL/DELETE, before/after-effect acquisition, normal/denied rollback,
+managed acquisition, persistent close-before-effect, close-after-effect,
+successful and failing context bodies, prior cause/context, writer unblocking,
+and same-database reopen/trust. The focused fault matrix passes 142 tests in
+4.98 seconds; the complete P4 slice passes 699 tests in 83.34 seconds. Fresh
+repository verification passes all 1,435 tests in 311.74 seconds at 90.08% core
+branch coverage. The exact F09b guard passes in 20.14 seconds, fixture/oracle
+verification passes 21 tests in 18.44 seconds, and the standalone generator
+reproduces all 14 current workbooks. These are remediation results, not formal
+approval; both domains require new stateless verdicts on the next fingerprint.
+
+## 2026-07-27 P4 — Eighth formal split finds virtual-state spoofing and evidence aliasing
+
+Decision: charge global invocation #37 / R-mech #20 as `REVISE` and global
+invocation #38 / R-test #15 as a clean `APPROVE` on base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, staged tree
+`a269b73c0575b8aa12f83a8b333caac0719e52da`, and cached-diff blob
+`7a227abdaac35a0460e8646c03d6ef07fe005036` (31 files, 12,362
+insertions, 153 deletions). Reopen both formal domains after remediation.
+
+Alternatives considered: trust a closed-looking `ProgrammingError` from a
+subclass override as native descriptor proof; treat a physically closed handle
+as open when the same virtual property raises a different message; accept the
+same exception identity twice because both semantic roles are meaningful; or
+carry R-test #15 onto the changed closure and causal-composition tree.
+
+Rationale: R-mech #20 built supported real `sqlite3.Connection` subclasses that
+overrode both `close()` and `in_transaction`. A false closed-style state error
+made graph and store cleanup return before native closure, leaving a DELETE
+reader transaction and blocked writer. A false non-closed message after real
+closure made `IndexStore._closed` remain false and exposed a dead connection as
+usable. Native closure proof must therefore bypass virtual dispatch. The same
+review reused one prior body cause as a rollback or grouped cleanup error; graph
+snapshot cleanup, managed cleanup, and context exit each inserted that identical
+object again as earlier evidence, so identity traversal visited it twice. The
+composition must retain all evidence roles once by recursive identity.
+
+R-test #15 independently returned no blocker, major, or minor finding. It ran
+the 699-test P4 slice, exact 142-case native fault matrix, exact F09b guard,
+1,435-test coverage suite at 90.08%, fixture/oracle checks, and all static checks,
+and confirmed deterministic fixtures and the unchanged frozen scope. Its clean
+approval remains charged but cannot approve a changed mechanics candidate.
+
+## 2026-07-27 P4 — Formal #20 remediation with non-virtual proof and unique evidence
+
+Decision: verify supported native SQLite descriptor state through the base
+`sqlite3.Connection.in_transaction` descriptor, retain the existing virtual
+path only for non-native proxies, and compose prior body evidence with cleanup
+evidence through recursive identity containment. Normalize causal links between
+members of graph cleanup groups before another formal freeze.
+
+Alternatives considered: treat any virtual closed-style `ProgrammingError` as
+proof; execute probe SQL that an authorizer could reject; trust the last close
+call's return or exception; deduplicate only direct group members; leave an
+earlier body cause attached after also placing it in the cleanup cause; or test
+only the single-cleanup-error case rather than the reviewer's grouped alias.
+
+Rationale: the base descriptor bypasses subclass properties without performing
+SQL. It therefore sees the native transaction state while the handle is live
+and the native closed-database error after physical closure, regardless of what
+the virtual property reports. Graph poison cleanup and `IndexStore.close()` use
+that proof after every virtual attempt and after the emergency base close.
+Recursive containment prevents re-inserting an earlier cause/context already
+inside cleanup evidence; once represented there, the obsolete primary link is
+cleared before the cleanup cause is installed. Context-exit composition occurs
+outside its cleanup handler so Python cannot auto-attach the cleanup exception
+again. Graph multi-error groups additionally remove sibling causal links before
+composition.
+
+Real native subclasses now lie about state in both directions while failing
+close before or after effect. The 44-case focused matrix covers all five graph
+surfaces, both spatial backends, direct close, successful and failing context
+exit, native usability, physical closure, DELETE writer release, `_closed`, and
+same-database reopen. Its grouped-alias cases reuse the identical earlier cause
+or implicit context as one member of a multi-error cleanup group across graph,
+managed transaction, and context exit, and reject any repeated identity while
+traversing every cause, context, and group member. The matrix passes in 1.93
+seconds, graph plus IndexStore pass 681 tests in 64.24 seconds, and the complete
+P4 slice passes 743 tests in 83.95 seconds. Fresh full verification passes all
+1,479 tests in 324.82 seconds at 90.15% core branch coverage; exact F09b passes
+in 21.27 seconds, fixture/oracle passes 21 tests in 20.34 seconds, and all 14
+current fixtures regenerate deterministically. These are remediation results,
+not formal approval; both domains require fresh verdicts on the next exact tree.
+
+## 2026-07-27 P4 — Ninth formal split finds recursive aliases and rank-key splits
+
+Decision: charge global invocation #39 / R-mech #21 as `REVISE` with two
+minors and global invocation #40 / R-test #16 as a clean `APPROVE` on base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, staged tree
+`69226e78e489a34757b7bff6611c79cfe470c942`, and cached-diff blob
+`7d3fc2c6e18d46c3a8ae29572bf8c3989f0362c7` (31 files, 12,829
+insertions, 153 deletions). Reopen both domains after remediation.
+
+Alternatives considered: accept the mechanics findings as non-corrupting edge
+cases under the handoff's minor release valve; normalize only direct sibling
+links; trust one `LIMIT 1` representative for every dense rank; rely on a fresh
+facade to reject tampering; or carry R-test #16 to a changed integrity tree.
+
+Rationale: R-mech #21 nested the earlier body exception inside an inner cleanup
+group and pointed a separate outer member's suppressed context to that same
+object. Direct-sibling normalization missed the cross-level alias, and complete
+all-link traversal visited the identity twice across graph snapshot, managed
+transaction, and context exit for both explicit and implicit body chains.
+Normalization must use recursive group-membership closure.
+
+The same reviewer duplicated one valid edge so both copies shared a canonical
+semantic rank, cached the graph and exact process seal, changed one copy's
+`via` to a distinct public hop, then restored all seven sealed state fields.
+Direct dependents saw both hops, while bounded dependent trace and path selected
+only the first edge at that rank and silently missed the split; a fresh
+`EdgeStore` correctly rejected the noncanonical ranks. Every selected rank must
+therefore prove that all edges it represents share one canonical public-hop key
+without bulk materialization or unrelated-rank scans.
+
+R-test #16 independently found no blocker, major, or minor. It passed the
+743-test P4 slice, 142-case acquisition/close matrix, 44-case spoof/group matrix,
+exact F09b guard, 1,479-test coverage run at 90.15%, two hash-seed golden probes,
+fixture/oracle checks, and all static checks, and confirmed the unchanged scope.
+Its clean approval remains charged but cannot approve a changed candidate.
+
+## 2026-07-27 P4 — Formal #21 remediation with recursive ownership and rank identities
+
+Decision: normalize cleanup evidence against complete recursive group ownership
+and add an atomically rebuilt, trigger-invalidated `graph_rank_keys` catalog
+that proves the canonical identity of each selected dense rank in O(1).
+
+Alternatives considered: flatten every exception group and lose its structure;
+strip only unsuppressed contexts; scan every duplicate relational edge on each
+bounded hop; retain one representative without a persisted identity; invalidate
+only relational mutations; or accept a fresh-facade rejection while cached
+bounded queries remained inconsistent.
+
+Rationale: recursive normalization first claims every nested group member, then
+walks all cause and context subtrees and removes any link whose identity is
+already group-owned. This includes suppressed contexts, preserves member order
+and distinct evidence, and applies at graph snapshot, managed transaction, and
+context exit boundaries.
+
+`graph_rank_keys` is a `WITHOUT ROWID` table keyed by `(direction, rank)` with
+one canonical serialized hop key. Rebuild validates rank identity, completes
+both spatial mirrors, then repopulates the catalog before sealing the graph.
+Edge, fblock, sheet, catalog, and active RTree/interval source/destination
+mirror triggers invalidate an affected rank or direction. Open-time validation
+checks exact catalog DDL, canonical contents, all 18 trigger bodies, and full
+mirror integrity. Bounded traces and paths retrieve one key through the
+composite primary key and compare it with the representative hop, so restoring
+the seven state fields cannot restore a deleted split-rank identity. Valid
+duplicates still share one rank, one catalog row, and one emitted hop.
+
+The 24-case exact matrix covers recursive explicit/implicit body chains across
+all three cleanup boundaries, suppressed cross-level contexts, dependent and
+precedent rank splits, all three bounded surfaces, both backends, valid
+duplicates, primary-key query planning, and active mirror invalidation. It
+passes in 1.78 seconds. Fresh acquisition/close and native-state matrices pass
+142 tests in 5.20 seconds and 44 tests in 1.89 seconds. The full P4 slice passes
+769 tests in 108.32 seconds; all 1,505 repository tests pass in 335.57 seconds
+at 90.19% core branch coverage. Exact F09b passes in 19.86 seconds,
+fixture/oracle passes 21 tests in 18.62 seconds, and all 14 current fixtures
+regenerate deterministically. These are remediation results, not formal
+approval; both domains require new stateless verdicts on the next fingerprint.
+
+## 2026-07-27 P4 — Tenth formal split finds residual cleanup aliases and an incomplete live seal
+
+Decision: charge global invocation #41 / R-mech #22 and global invocation #42 /
+R-test #17 as `REVISE` on base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, staged tree
+`94194a52eea6e62cc5a675cbcbdf9e3d3dcee719`, and cached-diff blob
+`fc521684b55fd6df908e5acd6a0a3109962a5638` (31 files, 13,606
+insertions, 252 deletions). Reopen both domains after remediation.
+
+Alternatives considered: apply recursive normalization only to the three
+previously tested boundaries; accept fresh-open rejection as sufficient for a
+live cached facade; treat coordinated ordinary SQL and DDL changes as outside
+the exposed-connection threat model; rely on implementation inspection for the
+rank catalog's exact physical identity; or carry either verdict to a changed
+tree.
+
+Rationale: R-mech #22 reproduced repeated exception identities across three
+remaining compositions: successful graph-body snapshot release with multiple
+cleanup failures, direct `IndexStore.close()` aggregation, and successful
+SQLite commit followed by both hook and finalizer failures. In each case a
+later nested group's suppressed context pointed to the earlier error, so a
+complete cause/context/group traversal reached the same identity twice. Every
+multi-cleanup boundary must share the closure-aware normalizer.
+
+The same reviewer coherently changed a duplicate-ranked relational edge and
+its catalog row, restored the exact seven-field graph seal, and obtained a
+stale bounded result from a cached `EdgeStore` on both backends. Dropping an
+invalidation trigger before changing the duplicate edge produced the same
+split. Fresh construction correctly rejected both states, but the live facade
+must also bind its process-local rank identities and schema/storage tokens so
+ordinary SQL or DDL cannot silently change its trusted graph.
+
+R-test #17 found a separate major proof gap: permanent tests checked catalog
+presence, one update trigger, primary-key lookup, and missing-table rebuild,
+but did not kill relaxed exact-DDL, stored-content, and all-trigger validators.
+Remediation must cover malformed physical DDL, missing/wrong/extra catalog
+rows with the exact state seal restored, every catalog and contributing-table
+invalidation family, direct rejection, monotonic current-sidecar rebuild, and
+exact post-rebuild content on both backends. The reviewers otherwise passed
+the 769-test P4 slice, all 1,505 repository tests at 90.19% core branch
+coverage, exact F09b, fixture/oracle, acquisition/close, recursive-group, and
+static-check matrices without mutating the frozen fingerprint.
+
+## 2026-07-28 P4 — Formal #22/#17 remediation with process-local live identity
+
+Decision: retain the exact persisted rank catalog, add process-local monotonic
+live-storage witnesses, route every remaining multi-cleanup composition through
+recursive identity normalization, and add permanent exact-DDL/content/trigger
+kill matrices before requesting another formal verdict.
+
+Alternatives considered: persist another restorable catalog revision; scan all
+duplicate edges on each bounded query; accept fresh-facade rejection while a
+cached facade remains stale; treat coordinated same-connection or cross-
+connection SQL as impossible; ignore other-handle commits that restore all
+persisted fields; or update only the tests named directly by the reviewers.
+
+Rationale: a persisted nonce is as restorable as the seven graph-state fields.
+The live facade instead seals the same handle's monotonic SQLite
+`total_changes`, other-handle `data_version`, `schema_version`, and the complete
+canonical rank-key map in process memory. Selected-rank validation remains one
+composite-primary-key lookup. Managed commit publishes current live baselines;
+rollback restores semantic/catalog snapshots but rebases `total_changes`
+because SQLite counts rolled-back DML monotonically. Exact relational, catalog,
+and seven-field restoration is now rejected on the originating handle and from
+a second connection, as is trigger removal before a silent split. Fresh opening
+still performs the complete canonical relational, mirror, catalog, DDL, and
+trigger validation.
+
+The exception normalizer now claims only recursive group membership—not unique
+external causal subtrees—then removes every cause or context link, including a
+suppressed context, whose identity is already group-owned. Successful snapshot
+multi-cleanup detaches the primary from the later cleanup graph; direct close
+normalizes its aggregate; and commit-hook/finalizer composition detaches and
+normalizes before chaining. Ten snapshot surfaces plus both-backend direct-close
+and post-commit cases traverse every cause, context, and group member and require
+unique identities.
+
+The new 52-case rank-catalog file proves exact columns, checks, composite primary
+key, and `WITHOUT ROWID`; rowid-backed, extra-column, and wrong-constraint DDL;
+missing, wrong, and extra catalog rows after exact seven-field restoration; all
+18 trigger definitions individually missing and malformed; monotonic current-
+sidecar reconstruction; exact canonical post-rebuild catalog content; and
+functional INSERT/UPDATE/DELETE invalidation across edge, fblock, sheet,
+catalog, and both active mirror families on both backends.
+
+Fresh author evidence passes 777 graph/IndexStore/catalog tests in 92.14
+seconds, the complete 839-test P4 slice in 126.75 seconds, and all 1,575
+repository tests in 373.25 seconds at 90.15% core branch coverage. The focused
+cleanup/acquisition matrix passes 156 tests in 9.09 seconds, the live-seal and
+catalog matrix passes 62 in 7.44 seconds, exact F09b passes in 24.36 seconds,
+and fixture/oracle passes 21 in 22.06 seconds. All 14 fixtures regenerate
+deterministically; Ruff, formatting, Pyright, lock, diff, sdist, and wheel
+checks are clean. These are remediation results, not formal approval; both
+domains require new stateless verdicts on the next exact fingerprint.
+
+## 2026-07-28 P4 — Pre-freeze closure of commit, constructor, and causal-identity gaps
+
+Decision: reopen the candidate after two independent non-formal preflights found
+three mechanics defects and five test-evidence weaknesses. Replace the coarse
+same-handle witness with an authorizer-backed graph-write epoch, validate and
+seal under one constructor-owned immediate transaction, rebuild immutable
+exception groups when a chained primary is a member, assign shared external
+causal identities one owner, and strengthen the catalog oracle before the next
+formal freeze. These preflights are not verdict-bearing and do not change the
+42-invocation review ledger.
+
+Alternatives considered: retain `total_changes` and conservatively invalidate
+every metadata-only transaction; rebase the monotonic witness after commit;
+trust a deferred read snapshot to pair validated rows with `data_version`; retry
+open-time validation without excluding a concurrent writer; drop a nested
+primary only from mutable cause/context links; preserve both aliases to one
+external cause; derive trigger expectations from production-created SQL; or
+narrow the evidence claims to the previous partial kill matrix.
+
+Rationale: commit-time rebasing could bless a duplicate-rank semantic split
+after either a pending rebuild or a no-rebuild transaction. `IndexStore` now
+opens a private SQLite connection subclass with statement caching disabled. Its
+non-replaceable dispatcher honors a caller authorizer first and increments a
+process-local epoch for each allowed graph, mirror, trigger, or relevant schema
+write. Commit publishes the captured epoch verbatim; rollback rebases only
+after SQLite restores state. Metadata, diagnostics, and staleness writes do not
+advance the graph epoch. Repeated identical SQL through connection execution,
+cursor execution, and `executemany` remains observable.
+
+Open-time validation, seven-field and catalog capture, live-seal capture, and
+interval-cache warming now share one `BEGIN IMMEDIATE` snapshot, so a WAL or
+DELETE writer cannot commit between validation and sealing. Acquisition belongs
+to the cleanup boundary: failures before or after native effect release the
+transaction or conclusively close the descriptor. Construction refuses an
+already-active caller transaction without disturbing it. Deterministic
+validation-barrier and writer-first tests prove both commit orderings.
+
+Exception evidence now rebuilds immutable membership only when necessary,
+removes a nested primary and later duplicate members, gives the first causal
+occurrence ownership of each external identity and complete descendant chain,
+and clears later aliases or cycles. Existing no-rebuild group identity remains
+unchanged. Graph success/body cleanup, store transaction/close/context cleanup,
+and post-commit hook/finalizer composition retain exact primary identity and
+each distinct evidence object once.
+
+The permanent catalog suite grows from 52 to 70 cases. It independently freezes
+all 18 trigger names, tables, operations, and SQL bodies; covers both catalog
+directions; asserts exact post-DML content; proves both physical backends; and
+kills nine DDL variants spanning both checks, every `NOT NULL`, composite-key
+composition/order, rowid identity, and extra columns. A separate 62-case
+mechanics suite covers both backends, all five graph surfaces, managed coherent
+restoration before/after rebuild, non-graph controls, rollback, authorizers,
+constructor concurrency/acquisition, and the new exception topologies. Fresh
+verification passes the complete 919-test P4 slice in 153.74 seconds, the new
+132-test mechanics/catalog matrix in 11.34 seconds, and all 1,655 repository
+tests in 470.73 seconds at 89.47% core branch coverage. Exact F09b passes in
+27.81 seconds; fixture/oracle passes 21 tests in 26.57 seconds; all 14 fixtures
+regenerate deterministically; Ruff, formatting, Pyright, lock, diff, sdist, and
+wheel checks are clean. The candidate remains gate-pending until stateless
+formal reviews inspect one new exact fingerprint.
+
+## 2026-07-28 P4 — Eleventh formal split finds schema shadows and residual proof gaps
+
+Decision: charge global invocation #43 / R-mech #23 and global invocation #44 /
+R-test #18 as `REVISE` on base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, staged tree
+`6ef43eb612a6213b4f0b4dc6127490f7038a412f`, and cached-diff blob
+`6a465e93ec72cc4f72e0f1950ab62aba580af15c` (33 files, 15,890
+insertions, 265 deletions). Reopen both formal domains after root-cause
+remediation under the unbounded-review authorization.
+
+Alternatives considered: treat TEMP schema objects and `writable_schema` as
+unsupported caller behavior; rely on fresh-facade rejection after cached
+queries have already succeeded; claim that `sqlite_master` writes always change
+`schema_version`; normalize only chained multi-error groups; accept repeated
+standalone group members as presentation-only; preserve `__cause__` without its
+explicit suppression metadata; let constructor cleanup use a weaker local
+composer; infer public query completeness from persisted edge completeness; or
+count a denied metadata write as proof of denied graph-write ordering.
+
+Rationale: R-mech #23 demonstrated that exact TEMP copies of
+`graph_spatial_state` and `graph_rank_keys` can shadow corrupt persistent main
+tables during construction and every cached query. It also enabled
+`writable_schema` before facade construction and changed the persisted SQL of a
+required trigger without advancing the graph epoch, `data_version`, or
+`schema_version`. Both attacks let the cached facade answer while a fresh
+facade rejected the same persistent sidecar. All authoritative graph objects
+must therefore be explicitly main-qualified, relevant TEMP shadows rejected,
+and direct schema-catalog writes included in the process epoch.
+
+The same reviewer found that standalone cleanup groups retain repeated immutable
+members because the normalizer mutates only causal links, and rewriting a cause
+can flip an explicitly false `__suppress_context__` flag. Constructor cleanup
+also chains raw cleanup errors without removing a nested primary, producing
+three occurrences and a cause/member cycle. One returning sanitizer must rebuild
+membership, preserve group and exception metadata after link rewrites, and be
+used at constructor, standalone, and chained boundaries.
+
+R-test #18 independently showed that the fixture I12 test enumerates only hops
+already returned by `direct_precedents`, so a selective public-query omission
+survives despite exact persisted-edge checks. It also found that authorizer
+denial covers only a metadata update, not a denied graph update whose epoch must
+remain unchanged, and that constructor before/after-effect acquisition failures
+run only under WAL. Remediation must derive expected public hops independently,
+freeze denied graph-write ordering across all five surfaces and both backends,
+and extend acquisition failure proof to DELETE. Both reviewers verified the
+exact fingerprint at entry and exit, ran broad green baselines, and made no
+workspace changes; green existing tests do not override the reproduced gaps.
+
+## 2026-07-28 P4 — Schema isolation and returning evidence sanitizer remediated
+
+Decision: bind every authoritative graph read, write, mirror join, state/catalog
+lookup, and schema PRAGMA to `main`; reject protected TEMP names and targets at
+schema setup, facade construction, and managed mutation entry; and count direct
+`sqlite_master`/`sqlite_schema` writes and their TEMP aliases in the private
+graph epoch. Retain caller-authorizer precedence so a denied graph update does
+not advance trust. Replace the duplicated mutating exception helpers with one
+returning sanitizer in `core/exception_evidence.py`, and install its returned
+root at query cleanup, constructor cleanup, store close, and post-commit
+standalone or chained boundaries.
+
+Alternatives considered: rely only on TEMP-object rejection while leaving
+authoritative SQL unqualified; rely only on main qualification while allowing a
+TEMP schema to imitate protected state; assume direct schema-catalog writes
+always advance SQLite's schema version; mutate immutable group members in place;
+normalize only multi-error wrappers; or cover the sanitizer helper without
+proving that each caller installs a rebuilt root.
+
+Rationale: main qualification removes name-resolution ambiguity, while explicit
+TEMP rejection also covers trigger targets and RTree shadow families and makes
+unsupported connection-local interference visible before work begins. The
+authorizer observes writable-schema catalog writes even when SQLite leaves
+`schema_version` unchanged, but evaluates the client's denial first. The shared
+sanitizer derives groups only when membership changes, preserves notes,
+traceback, cause, context, and explicit suppression after link assignment, and
+gives each recursive membership or causal identity exactly one owner. Constructor
+acquisition cleanup uses it for failures both before and after native `BEGIN
+IMMEDIATE` effect.
+
+The I12 fixture assertion now starts from the hand-authored frozen edge oracle,
+asserts exact `direct_precedents` completeness per source, and round-trips every
+independently expected concrete target through `direct_dependents` on both
+RTree and interval backends. Authorizer-denial tests reject `UPDATE edges` and
+prove relational rows, graph state, catalog, and all five public surfaces remain
+unchanged. Writable-schema tests cover connection, cursor, and `executemany`
+execution; constructor acquisition tests cover WAL and DELETE; protected TEMP
+objects and every standalone exception boundary have both-backend matrices.
+Fresh targeted evidence is 123 mechanics cases in 7.44 seconds and 944 graph,
+store, fixture, catalog, and mechanics cases in 156.84 seconds. These are
+remediation checks, not the final frozen-candidate evidence; a full refresh and
+new stateless formal split remain required.
+
+## 2026-07-28 P4 — Non-formal preflight closes full-primary and raw-TEMP gaps
+
+Decision: do not freeze after the first green remediation slice. Incorporate
+three non-formal preflight findings: exclude the complete reachable primary
+exception graph when preparing chained cleanup, permanently test exception-group
+subclass derivation and custom state, and extend the live seal with
+`temp.schema_version` so protected TEMP DDL is visible even on a plain
+`sqlite3.Connection`. Canonical export now rejects protected TEMP objects and
+explicitly binds every projected table to `main`, while retaining its historical
+ability to inspect dirty intermediate test/debug state.
+
+Alternatives considered: exclude only the primary root; treat group subclass
+preservation as an implementation detail; call the TEMP catalog scanner on every
+public query; use `total_changes` as a plain-connection DDL witness; or make
+canonical export require a clean graph. The last option broke legitimate P1/P2
+intermediate-state and raw-rollback comparisons, demonstrating that TEMP
+isolation and graph freshness are separate contracts.
+
+Rationale: a primary group can own an identity through membership, cause, or
+context, so excluding only its root still permits one object to appear twice in
+the final raised graph. A cycle-guarded traversal now seeds the sanitizer with
+every primary-owned identity, and graph, transaction, context-exit, post-commit,
+and constructor regressions prove the result. `source.derive()` is now protected
+by a custom tagged group test that forces rebuilding and checks subclass, state,
+message, members, notes, traceback, and suppression. TEMP DDL does not increment
+SQLite `total_changes`, but `PRAGMA temp.schema_version` is a constant-size
+connection-local identity; adding it keeps the hot live check bounded and makes
+all five raw-connection surfaces fail closed. Canonical export performs its own
+protected-shadow check and main-qualified projection rather than borrowing the
+stricter graph-clean gate.
+
+The mechanics file now contains 147 cases; its 135-case intermediate result and
+the prior section's 123-case result are superseded. Fresh focused checks pass:
+364 mechanics-plus-store tests, 157 mechanics-plus-P1 edge cases, and the
+RTree-unavailable proxy behavior. The earlier full-suite run occurred while
+these preflight edits were still changing and is deliberately rejected as gate
+evidence; a stable-tree full refresh remains required before staging.
+
+## 2026-07-28 P4 — Rolled-back TEMP schema reconnect is stabilized before reseal
+
+Decision: absorb SQLite RTree's non-mutating schema-reconnect authorization
+replay inside the proven managed-rollback boundary. After rollback, touch both
+main RTree virtual tables, then reseal only the process epoch while retaining
+the transaction snapshot's `data_version`, main `schema_version`, and TEMP
+`schema_version`. Do not weaken the authorizer predicate or ignore RTree shadow
+callbacks globally.
+
+Alternatives considered: ignore trigger-origin actions; ignore unqualified
+RTree shadow callbacks; make authorizer tracking statement-aware and defer
+shadow increments until `total_changes` advances; accept that the first graph
+surface works and later surfaces fail; or rebase after the first public query.
+
+Rationale: read-only preflight showed that rolling back TEMP DDL returns the
+TEMP schema version and persistent graph state to their exact snapshots, but
+the first later RTree connection reload emits 32 write-shaped authorizer
+callbacks while changing neither `total_changes`, state, nor catalog. Some
+tuples are identical to real direct shadow mutations, so a stateless ignore
+rule is unsafe. The managed rollback is the one point where SQLite restoration
+has already been proven and no caller code can interleave. Reconnecting both
+virtual tables there consumes the replay before capturing the allowed rollback
+epoch; preserving the three snapshot version fields prevents cross-connection,
+main-DDL, or unresolved TEMP-DDL changes from being blessed. A new both-backend
+regression rolls back a protected TEMP table, exercises all five surfaces, and
+requires the epoch to remain fixed afterward. The mechanics matrix is now 149
+cases and passes in 11.35 seconds; stateless re-preflight and stable-tree broad
+verification remain required.
+
+## 2026-07-28 P4 — Stable remediation tree passes the complete author gate
+
+Decision: keep the remediated tree unfrozen through one independent rollback
+re-preflight and the complete author verification matrix, then advance it to
+candidate-freeze preparation without changing production behavior. The
+preflight found no defect in the managed rollback path and made no file change.
+
+Alternatives considered: reuse the earlier full-suite result that ran while the
+source was changing; infer RTree mutation safety from successful public reads;
+omit deterministic regeneration because fixture hashes were already committed;
+or freeze before the branch-coverage suite completed.
+
+Rationale: the exact former RTree reconnect reproduction now leaves all five
+public surfaces usable on both backends without epoch movement. Direct mutation
+of each backend's spatial table and the base `edges` table still fails closed;
+a denied client-authorizer graph update leaves rows, state, catalog, epoch, and
+all five surfaces unchanged. Ordinary rollback and protected TEMP-DDL rollback
+both passed, and the preflight's focused selection reported 16 passing tests.
+The rollback hooks remain internal coordination points that assume SQLite has
+already completed rollback; the public `IndexStore` path enforces that order.
+
+Fresh stable-tree verification passes the complete 1,011-test P4 slice in
+178.51 seconds, the 219-test mechanics/catalog matrix in 13.92 seconds, and all
+1,747 repository tests in 538.73 seconds at 90.05% core branch coverage. The
+real F09b guard passes in 28.35 seconds, fixture/oracle verification passes 21
+tests in 26.48 seconds, and all 14 generated workbooks reproduce with no diff.
+Ruff lint and formatting, Pyright, lock validation, sdist, and wheel builds are
+clean. These are author-side results; fresh stateless R-mech and R-test verdicts
+must still approve one exact staged fingerprint before the P4 phase gate closes.
+
+## 2026-07-28 P4 — Final preflight closes causal loss and TEMP predicate mutants
+
+Decision: reopen the otherwise green tree for two non-formal adversarial
+findings, centralize compound-failure composition, prevent a second sanitizer
+pass over already-normalized external members, and exhaustively isolate every
+protected TEMP-object predicate before freezing. Do not charge these preflight
+loops as formal verdicts.
+
+Alternatives considered: treat lost cleanup evidence as cosmetic; patch only
+the constructor despite the same direct composition in successful graph cleanup
+and post-commit finalization; retain duplicated boundary-specific prior-cause
+logic; accept one `TEMP TABLE edges` example as proof of the complete scanner;
+or infer RTree target-prefix coverage from name-prefix coverage.
+
+Rationale: a cleanup root could link to an external exception group whose first
+member owned its second member as a cause. The first ownership pass moved the
+second member out of group membership, but a later pass revisited the retained
+first member and cleared that cause, losing the second exception entirely. A
+global normalized-link guard now gives each retained exception one causal pass.
+Both the exact topology and a real graph-cleanup boundary retain every distinct
+identity once and remain acyclic under a harder shared cycle.
+
+Separately, constructor cleanup installed a new cause without relocating an
+existing explicit cause or visible context from its primary failure. One shared
+composer now captures that prior evidence, avoids redundant wrapping when it is
+already represented, excludes the complete remaining primary graph, sanitizes
+the result, and is used by graph, context-exit, transaction, post-commit, and
+constructor composition. Both backends prove explicit-cause and unsuppressed-
+context preservation at graph-cleanup, post-commit, and constructor boundaries;
+acquisition cleanup also carries an existing caused primary.
+
+The original TEMP tests coupled object `name` and `tbl_name`, and coupled RTree
+prefix names and targets. The final 246-case mechanics file independently
+enumerates all 33 protected names on both backends; uses mixed-case views;
+targets unprotected TEMP tables with protected and RTree-prefix trigger names;
+targets `main.edges` and both persistent RTree shadow families with unrelated
+trigger names; and exercises construction, canonical export, and all five live
+surfaces. Fresh read-only mechanics and test rechecks are finding-free.
+
+Final stable-tree verification passes the complete 1,108-test P4 slice in
+121.40 seconds, the 316-test mechanics/catalog matrix in 13.82 seconds, and all
+1,844 repository tests in 356.45 seconds at 90.05% core branch coverage. Exact
+F09b passes in 17.11 seconds; fixture/oracle verification passes 21 tests in
+15.84 seconds; all 14 workbooks regenerate without a diff; Ruff, formatting,
+Pyright, lock, diff, sdist, and wheel checks are clean. The tree is now ready
+for one exact staged fingerprint and fresh formal R-mech/R-test verdicts.
+
+## 2026-07-28 P4 — Twelfth formal split finds two capability-boundary gaps
+
+Decision: charge global invocation #45 / R-mech #24 as `REVISE` and global
+invocation #46 / R-test #19 as a clean `APPROVE` on base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, staged tree
+`ff164c826168e23ad3af279e6c758f40a9e45c49`, and cached-diff blob
+`65c2ef8eac566bf476cd8c0bf8e6df3e06ac1524` (34 files, 17,240
+insertions, 319 deletions). Reject the shared candidate and invalidate its test
+approval because mechanics remediation will change the tree.
+
+Alternatives considered: treat base-descriptor calls as unsupported despite
+the public native connection capability; assume a Python override cannot be
+bypassed; rely only on the authorizer epoch after removing `total_changes` from
+the seal; let constructor cleanup use one virtual close attempt; mask an
+initialization failure with cleanup failure; or mark a connection closed without
+proving native descriptor closure.
+
+Rationale: R-mech #24 called `sqlite3.Connection.set_authorizer(connection,
+None)` through the base descriptor, bypassing `_TrackedConnection`'s override
+and removing the private dispatcher. It then performed the already-frozen
+coherent relational/catalog/state restoration on the same handle. The graph
+epoch no longer moved, all other seal fields matched, and both backends returned
+the forged split. The live seal needs an independent native mutation witness or
+the raw capability must be controlled; a permanent both-backend base-descriptor
+displacement regression is required.
+
+The same reviewer injected an initialization failure after `BEGIN IMMEDIATE`
+and a connection subclass whose virtual `close()` fails before the native
+descriptor. `IndexStore.__init__` leaked the transaction and writer lock while
+the close error replaced the initialization primary. Constructor cleanup must
+prove rollback or conclusive base-descriptor closure and preserve the primary
+with sanitized cleanup evidence, including failures before and after
+acquisition. R-test #19 independently found no critical, major, or minor test
+or oracle defect, reproduced the 1,108-test P4 slice, and verified the exact
+fingerprint unchanged; that approval cannot close a candidate rejected in the
+mechanics domain.
+
+## 2026-07-28 P4 — Capability membrane and complete constructor ownership
+
+Decision: remediate R-mech #24 by replacing the public native SQLite handle
+with a narrow connection/cursor capability membrane and by making every
+constructor, configuration, schema-recreation, rollback, and close boundary
+prove native cleanup while retaining the exact primary exception.
+
+Alternatives considered: document base-descriptor calls as unsupported while
+still returning a native object; retain a raw connection and add another
+mutable seal; trust virtual `in_transaction`, `rollback`, or `close` methods;
+start constructor ownership only after capability allocation; or rely on the
+outer constructor to repair an inner recreation boundary after it had already
+replaced the primary failure.
+
+Rationale: the supported public surface now returns one dynamically resolving
+connection capability, wraps every cursor and its `.connection`, keeps context
+manager entry inside the membrane, rejects custom cursor and row factories,
+and chains caller authorizers behind the non-displaceable private dispatcher.
+Native SQLite base descriptors reject these facades. The retained capability
+follows a legitimately replaced handle and preserves SQLite's closed-handle
+error after close without permitting post-close acquisition.
+
+Constructor cleanup now owns the native handle before capability allocation,
+uses base-descriptor transaction-state, rollback, and close fallbacks, and
+composes unique acyclic cleanup evidence without changing primary identity.
+The same rule covers early and final connection configuration steps, actual
+schema initialization after `BEGIN IMMEDIATE`, and database recreation. Both
+old and temporary replacement handles are conclusively closed. The temporary
+file descriptor is cleanup-owned from `mkstemp` acquisition, and pre-/post-
+effect descriptor failures cannot leave a `.rebuild` artifact. Post-commit
+replacement-close failure leaves the original database intact because
+`os.replace` has not occurred.
+
+Permanent regressions cover the five public SQL acquisition paths on both graph
+backends, caller authorizer observe/deny/remove behavior, public mutation
+invalidation, capability construction failure, early/final configuration
+failure, rollback and close before/after native effect, successful-build
+post-commit close failure, replacement-schema failure, physical closure,
+writer reacquisition, primary/evidence identity, original-database preservation,
+and temporary-artifact cleanup.
+
+## 2026-07-28 P4 — Prospective single-reviewer gate protocol
+
+Decision: apply the user's simplified review workflow prospectively without
+changing any historical accounting. The orchestrator owns implementation,
+debugging, test design, mutation reasoning, documentation, evidence, and all
+verification. After one exact candidate is staged with no unstaged or untracked
+candidate changes, exactly one independent reviewer returns two explicit
+verdicts—one R-mech and one R-test—on that same fingerprint. Each verdict is
+charged separately. A revision returns the newly frozen candidate to that same
+reviewer through a follow-up task.
+
+Alternatives considered: retroactively merge or delete prior verdicts; continue
+non-formal preflight agents; use parallel mechanics and test reviewers; or let
+reviewers implement remediation.
+
+Rationale: the new protocol keeps the unbounded quality loop while reducing
+coordination overhead and preserving the frozen rule that the ledger counts
+verdicts, not subagent invocations. All existing commits, evidence, code, tests,
+and global invocations #1–#46 remain unchanged.
+
+## 2026-07-28 P4 — Final author verification after capability remediation
+
+Decision: accept the orchestrator-owned remediation as ready for candidate
+freeze after rerunning the complete stable author matrix from the final source
+and regenerated fixtures. Formal approval is still pending and must use the
+single combined reviewer protocol above.
+
+Rationale: the exact P4 slice passes 1,200 tests in 105.36 seconds; the
+mechanics/catalog set passes 330 tests in 13.70 seconds; and the real F09b
+boundedness guard passes in 16.60 seconds. The full repository passes all 1,936
+tests in 370.51 seconds at 90.05% core branch coverage. Fixture generation and
+the parser oracle pass 21 tests in 17.58 seconds, and all 14 generated workbooks
+reproduce without a diff. Ruff lint and format, Pyright (zero errors/warnings),
+lock validation, sdist, wheel, and diff checks are clean. These results are
+author evidence only; the P4 gate remains open until both formal verdicts
+approve one unchanged staged fingerprint.
+
+## 2026-07-28 P4 — First combined formal review finds `SQLITE_IGNORE` bypass
+
+Decision: charge global verdict #47 / R-mech #25 and global verdict #48 /
+R-test #20 as `REVISE` on base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, staged tree
+`3f70058ba0ed52714bd842f712e53fe9b6034cab`, and cached-diff blob
+`82620eff8209c5ac8c143cda9064bc77c36fdac8` (34 files, 18,631
+insertions, 349 deletions). Reject the shared candidate and return its eventual
+replacement to the same combined reviewer.
+
+Alternatives considered: treat every non-`SQLITE_OK` caller verdict as a denied
+mutation; infer `SQLITE_IGNORE` behavior from `SQLITE_DENY`; or carry the test
+approval because the full suite and coverage gate were green.
+
+Rationale: SQLite permits `SQLITE_IGNORE` to continue some operations with
+altered semantics. In particular, ignoring `SQLITE_DELETE` disables truncate
+optimization but still deletes rows. Returning that caller verdict before the
+private dispatcher advanced graph authority allowed an edge deletion while
+ignored trigger updates preserved the trusted graph state and private epoch.
+Both backends then returned silently changed topology from an already-sealed
+graph facade. The reviewer reproduced the defect on the unchanged fingerprint,
+reproduced all 1,200 P4 tests and all 1,936 repository tests at 90.05% core
+branch coverage, and correctly identified the missing behaviorally distinct
+both-backend regression. `SQLITE_DENY` must remain non-mutating; graph-affecting
+`SQLITE_IGNORE` must conservatively advance private authority before SQLite
+continues.
+
+## 2026-07-28 P4 — `SQLITE_IGNORE` remediation and stable author evidence
+
+Decision: compute graph-authoritative action identity before invoking caller
+policy; preserve `SQLITE_DENY` as a non-mutating early return; and advance the
+private graph epoch before returning `SQLITE_IGNORE` for a graph-affecting
+action. Add one behaviorally distinct both-backend regression rather than a
+mechanical action/table matrix.
+
+Alternatives considered: increment for every non-OK verdict, including denied
+and invalid verdicts; forbid caller authorizers; depend on `total_changes`; or
+test only that the epoch moved without proving SQLite performed the ignored
+write and every cached graph surface rejected its old seal.
+
+Rationale: the regression first seals all five graph surfaces, installs a
+caller policy that ignores DELETE and UPDATE authorization actions, deletes a
+real edge, and proves SQLite removed that row while ignored trigger updates did
+not provide the normal state signal. It then requires the private epoch to have
+advanced and all five surfaces to return `E_CORRUPT`. The existing denial test
+still proves an aborted graph write changes neither rows, state, catalog,
+authority, nor public results. Removing the new `SQLITE_IGNORE` branch makes
+this regression fail, so the test directly protects the reproduced defect.
+
+Fresh post-remediation verification passes the 1,202-test P4 slice in 119.48
+seconds, the 332-test mechanics/catalog set in 12.48 seconds, and all 1,938
+repository tests in 365.82 seconds at 90.05% core branch coverage. The real
+F09b guard passes in 17.76 seconds; fixture/oracle verification passes 21 tests
+in 17.36 seconds; all 14 generated workbooks reproduce without a diff; and
+Ruff, formatting, Pyright, lock validation, sdist, wheel, and diff checks are
+clean. The replacement candidate must now be staged, fingerprinted, and sent
+back to the same combined reviewer.
+
+## 2026-07-28 P4 — Combined follow-up approves the remediated fingerprint
+
+Decision: charge global verdict #49 / R-mech #26 and global verdict #50 /
+R-test #21 as clean `APPROVE` verdicts on base
+`6eb092b12c1c0398ac76a6153c52096f08904d7a`, staged tree
+`fdfa3d0e00faba1844d9636e650b63ee8a395a4c`, and cached-diff blob
+`67fb916469f7a109b1f584907c0128f1d7164f3d` (34 files, 18,748
+insertions, 349 deletions). Close the P4 formal gate and permit the P4 milestone
+commit; do not begin P5 before that commit exists.
+
+Rationale: the same combined reviewer verified the replacement fingerprint at
+entry and exit with no unstaged or untracked changes, found no blocking issue,
+and independently reproduced the 10-case authorizer selection, 332-case
+mechanics/catalog set, and 1,202-case P4 slice. It confirmed that `SQLITE_OK`
+tracks normally, `SQLITE_DENY` aborts without advancing authority, and a
+graph-affecting `SQLITE_IGNORE` advances authority before SQLite can continue
+with altered semantics. The both-backend regression physically deletes the
+edge and makes every cached graph surface fail closed, while the separate denial
+regression proves the non-mutating contract. Ruff, formatting, and Pyright were
+also clean. Both verdicts apply to the same unchanged fingerprint; the only
+post-verdict edits are this append-only verdict record, PLAN ledger/checklist
+accounting, gate and current-status documentation, and their contract
+assertions.

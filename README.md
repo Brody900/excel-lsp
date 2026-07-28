@@ -167,7 +167,7 @@ exact evidence required before this section can make numerical claims.
 | Capability | Excel LSP | haris-musa/excel-mcp-server | jwadow/mcp-excel | Naive dump baseline |
 |---|---|---|---|---|
 | Persistent semantic index | [P1 evidence available](docs/evidence/p1-foundation.md#delivered-contracts) | Source review pending | Source review pending | P8 baseline pending |
-| Formula dependency graph | P4 evidence pending | Source review pending | Source review pending | P8 baseline pending |
+| Formula dependency graph | [P4 evidence available](docs/evidence/p4-graph.md#formal-phase-gate) | Source review pending | Source review pending | P8 baseline pending |
 | Incremental reindex | [P1 evidence available](docs/evidence/p1-foundation.md#invariant-evidence) | Source review pending | Source review pending | P8 baseline pending |
 | Formula diagnostics | P5 evidence pending | Source review pending | Source review pending | P8 baseline pending |
 | Edit support and untouched-part fidelity | P6 evidence pending | Source review pending | Source review pending | P8 baseline pending |

@@ -38,10 +38,14 @@ public API is being claimed yet.
   shared-formula translation; exact R1C1 formula blocks; translated,
   context-equivalent structured-reference tiling; clamped edge extrusion;
   F07/F19 semantic goldens; and atomic incremental formula lifecycle persistence.
+- Ranked bidirectional dependency mirrors with exact semantic ordering;
+  precedents, dependents, bounded traces and shortest paths; R*Tree/interval
+  parity; two-stage circular analysis; corruption-resistant live seals and
+  capability-isolated SQLite tracking; and approved P4 mechanics/test evidence.
 
 ### Planned before v0.1.0
 
-- Graph navigation and the complete diagnostics catalog.
+- The complete diagnostics catalog.
 - A surgical OOXML editor with untouched-part fidelity evidence.
 - The 14-tool stdio MCP server, CLI, response-cap conformance, and Codex
   quickstart verification.

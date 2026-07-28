@@ -93,14 +93,14 @@ def _table(
     )
 
 
-def test_schema_v3_has_normalized_list_object_tables_and_complete_persistence(
+def test_schema_v5_has_normalized_list_object_tables_and_complete_persistence(
     tmp_path: Path,
 ) -> None:
     descriptor = _descriptor("Data", 0)
     table = _table("SalesTable", display_name="Sales Display")
 
     with IndexStore(tmp_path / "catalog.xlsp.db") as store:
-        assert SCHEMA_VERSION == "3"
+        assert SCHEMA_VERSION == "5"
         store.replace_sheet_catalog((descriptor,))
         _replace_sheet(store, descriptor, table, part_hash="sheet-v1")
 
@@ -402,9 +402,9 @@ def test_schema_v2_sidecar_rebuild_preserves_monotonic_generation(tmp_path: Path
 
     with IndexStore(database) as rebuilt:
         assert rebuilt.schema_rebuilt is True
-        assert rebuilt.get_meta("schema_version") == "3"
+        assert rebuilt.get_meta("schema_version") == "5"
         assert rebuilt.generation == 42
-        assert rebuilt.connection.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert rebuilt.connection.execute("PRAGMA user_version").fetchone()[0] == 5
         tables = {
             str(row[0])
             for row in rebuilt.connection.execute(

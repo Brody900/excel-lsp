@@ -35,6 +35,7 @@ _FORMULA_CONTEXT_PREFIXES = (
 )
 _REGION_ANALYSIS_VERSION = "1"
 _FORMULA_ANALYSIS_VERSION = "1"
+_GRAPH_ANALYSIS_VERSION = "1"
 
 
 class _WorkbookChangedDuringIndex(RuntimeError):
@@ -137,6 +138,7 @@ def _index_from_parser(
             or not _paths_equal(stored_path, workbook)
             or store.get_meta("analysis_version") != _REGION_ANALYSIS_VERSION
             or store.get_meta("formula_analysis_version") != _FORMULA_ANALYSIS_VERSION
+            or store.get_meta("graph_analysis_version") != _GRAPH_ANALYSIS_VERSION
             or store.get_meta("region_gap_tol") != str(region_options.gap_tol)
         )
         if not full_rebuild and old_workbook_hash == hashes.whole_file:
@@ -224,6 +226,7 @@ def _index_from_parser(
                     ),
                     "analysis_version": _REGION_ANALYSIS_VERSION,
                     "formula_analysis_version": _FORMULA_ANALYSIS_VERSION,
+                    "graph_analysis_version": _GRAPH_ANALYSIS_VERSION,
                     "region_gap_tol": region_options.gap_tol,
                 }
             )
@@ -254,6 +257,7 @@ def _fast_path_matches(
             and store.get_meta("workbook_hash") is not None
             and store.get_meta("analysis_version") == _REGION_ANALYSIS_VERSION
             and store.get_meta("formula_analysis_version") == _FORMULA_ANALYSIS_VERSION
+            and store.get_meta("graph_analysis_version") == _GRAPH_ANALYSIS_VERSION
             and store.get_meta("region_gap_tol") == str(region_options.gap_tol)
         )
     except ValueError:

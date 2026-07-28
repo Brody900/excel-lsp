@@ -316,7 +316,7 @@ def test_current_claim_artifact_paths_nodes_and_anchors_resolve() -> None:
             continue
         cells = tuple(cell.strip() for cell in line.strip("|").split("|"))
         status = cells[3]
-        if status not in {"Verified P1", "Verified P2"}:
+        if status not in {"Verified P1", "Verified P2", "Verified P4"}:
             continue
         for reference in re.findall(r"`([^`]+)`", cells[4]):
             _assert_exact_reference(reference)
@@ -354,13 +354,15 @@ def test_review_governance_current_state_is_consistent() -> None:
         ROOT / "CHANGELOG.md",
     )
 
-    assert "Total verdict-bearing invocations recorded: 22." in plan
-    assert "8 nominal slots remain" in plan
+    assert "Total formal verdicts recorded: 50." in plan
+    assert "0 nominal slots remain" in plan
     assert "The minimum completion path is now 30 total invocations" in plan
     assert "leaving no pooled\ncontingency slots" in plan
     assert "fresh re-review after any subsequent `REVISE`" in plan
     assert "2026-07-27 unbounded-review amendment" in plan
     assert "supersedes the first amendment's 30-invocation hard stop" in plan
+    assert "2026-07-28 single-reviewer amendment" in plan
+    assert "exactly one independent reviewer evaluates\nboth domains" in plan
     assert "The first required early P2 R-repo invocation is charged as `REVISE`." in claims
     assert "a fresh stateless R-repo re-review\nfollows each `REVISE`" in claims
     assert "The early P2 repository gate\nis approved." in claims

@@ -12,12 +12,14 @@ None. In particular, openpyxl 3.1.5 expands both F07 shared-formula groups in
 read-only mode: `C3`, `C11`, `C14`, and `C21` return their correctly translated
 formula text. Shared followers therefore require no oracle exception.
 
-F02/F03/F12/F13/F14/F19/F20 also compare without exclusions. F19's `_xlfn.`/
-`_xlws.` functions, `_xlpm.` LET/LAMBDA locals, `A1#`/defined-name spill
-consumers, and `@` implicit intersection round-trip as formula text through
-openpyxl's read-only loader. Merged-cell placeholders and truly empty sheets produce no
-canonical tuples in either reader; F13's raw date serials are converted through
-the same workbook epoch and style semantics.
+F02/F03/F04/F05/F09a/F09b/F12/F13/F14/F15/F19/F20 also compare without
+exclusions. This includes F04's scoped-name formulas, F05's structured and
+totals-row formulas, all 50,000 F09b cached formulas, and F15's 3-D formula.
+F19's `_xlfn.`/`_xlws.` functions, `_xlpm.` LET/LAMBDA locals,
+`A1#`/defined-name spill consumers, and `@` implicit intersection round-trip as
+formula text through openpyxl's read-only loader. Merged-cell placeholders and
+truly empty sheets produce no canonical tuples in either reader; F13's raw date
+serials are converted through the same workbook epoch and style semantics.
 
 ## Verified read-only metadata deficiencies
 
