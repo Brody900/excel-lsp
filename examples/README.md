@@ -1,10 +1,9 @@
 # Examples
 
-This directory contains configuration examples for Excel LSP's planned v0.1.0
-stdio MCP server. They are committed early so the P2 repository review can
-check the public quickstart and configuration shape. They are not release proof:
-the server arrives in P7, and P9 must execute each path from a clean environment
-before the pre-release warning is removed from the README.
+This directory contains configuration examples for Excel LSP's v0.1.0 stdio
+MCP server. The server is verified in P7, but these published
+`uvx` commands are not release proof until P9 executes each path from a clean
+environment.
 
 ## Codex configuration
 
@@ -31,8 +30,9 @@ version and output, initialize the server, and remove the configuration again.
 JSON shape. It is for MCP clients that consume that format; it is not Codex's
 native configuration file.
 
-Both examples currently describe a future published command. Until P7 and P9
-finish, use the repository's locked development environment and treat
+Both examples currently describe a future published command. Until P9
+finishes, use `uv run excel-lsp serve` in the repository's locked development
+environment and treat
 [`README.md`](../README.md) as pre-release documentation. The exact install and
 configuration evidence required for publication is tracked in the
 [README claims-to-artifacts plan](../docs/evidence/readme-claims-to-artifacts.md).

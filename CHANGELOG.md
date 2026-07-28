@@ -52,11 +52,15 @@ public API is being claimed yet.
   patching, transitive `I_STALE` propagation, A1/R1C1 semantic column fills,
   F16/F21 complete part manifests, a 50-script preservation property, and a
   desktop-Excel recalculation smoke test.
+- A verified 14-tool FastMCP stdio server and shared Typer CLI with generated
+  schemas, annotations, progress, freshness, generation-bound cursors,
+  realpath confinement, guarded regex search, deterministic response caps,
+  surgical write integration, and real-client subprocess conformance.
 
 ### Planned before v0.1.0
 
-- The 14-tool stdio MCP server, CLI, response-cap conformance, and Codex
-  quickstart verification.
+- Clean-install and Codex quickstart verification for the completed MCP/CLI
+  surface.
 - Live Microsoft Excel evidence, deterministic and headless-Codex benchmarks,
   final documentation, public repository publication, and registry metadata.
 

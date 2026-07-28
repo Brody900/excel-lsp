@@ -1,141 +1,169 @@
 # Tool reference
 
-This document records the frozen v0.1.0 MCP contracts before their P7
-implementation. It is not a claim that the server is available in the active
-P2 worktree. P7 must add one fully worked request/response example, happy-path
-and error-path conformance, and exact generated schemas under every heading.
+Excel LSP exposes exactly 14 local stdio MCP tools. The canonical generated input
+schemas and annotations are committed in
+[`p7-tool-schemas.json`](evidence/p7-tool-schemas.json); the stdio conformance
+test compares that artifact to `tools/list` so schema drift fails the suite.
 
-The first 12 tools are reads and will declare `readOnlyHint: true` and
-`openWorldHint: false`. `write_cells` and `set_column_formula` are destructive
-writes and will declare `readOnlyHint: false` and `destructiveHint: true`.
-Every call performs a freshness check. No response may exceed 8,000 serialized
-characters, and no response may contain more than 200 raw cell values.
+The first 12 tools are reads with `readOnlyHint: true` and
+`openWorldHint: false`. The two writes declare `readOnlyHint: false` and
+`destructiveHint: true`. Every call checks freshness. Successful responses are
+at most 8,000 serialized characters, no page contains more than 200 raw values,
+and expected failures use the canonical `{"error":{"code":"E_...",...}}`
+envelope.
+
+The examples use `model.xlsx` as a compact stand-in. Cursors are abbreviated
+only in this prose; the server returns the complete opaque base64 token.
 
 ## `open_workbook`
 
-Input: `path`.
+Schema key: `open_workbook`. Opens or refreshes an index, emits per-sheet
+progress when the client supplies a progress token, and returns the compact map.
 
-Output: the compact workbook map: sheet dimensions and visibility, bounded
-regions and column summaries, names, external links, diagnostics counts, VBA
-presence, staleness, and navigation hints. It returns no raw body-cell values.
-P2 implements the core map projection; P7 adds this MCP entry point and
-per-sheet progress notifications.
+```json
+{"request":{"path":"model.xlsx"},"response":{"workbook":"model.xlsx","sheets":3,"stale":false,"sheetList":[{"sheet":"Inputs","dims":"A1:C5","regions":[{"id":"region:Inputs:0","range":"A1:C5"}]}],"reindexed":true}}
+```
 
 ## `refresh`
 
-Input: `path`, `recalculated: bool = false`.
+Schema key: `refresh`. Rechecks the workbook and optionally clears staleness
+after Excel recalculation.
 
-Output: the refreshed workbook map and `reindexedSheets`. When `recalculated`
-is true, P6 staleness may be cleared according to the editor contract. P7 must
-also report indexing progress when the client supplies a progress token.
+```json
+{"request":{"path":"model.xlsx","recalculated":true},"response":{"workbook":"model.xlsx","sheets":3,"stale":false,"reindexed":true,"reindexedSheets":["Calc","Summary"]}}
+```
 
 ## `list_symbols`
 
-Input: `path`, `query: str = ""`, `kinds: list[str] = all`.
+Schema key: `list_symbols`. Kinds are `sheets`, `regions`, `columns`,
+`names`, `fblocks`, and `cells`. Filtering covers the complete indexed symbol
+domain; the response returns the first 100 stable IDs in deterministic order
+with a truthful full-match `total` and `truncated` flag.
 
-Output: matching stable symbol IDs with one-line descriptors. The frozen kinds
-cover sheets, regions, columns, defined names, formula blocks, and cells.
+```json
+{"request":{"path":"model.xlsx","query":"revenue","kinds":["columns"]},"response":{"symbols":[{"id":"col:Calc:0:revenue","kind":"column","description":"Revenue (float)"}],"total":1,"truncated":false,"reindexed":false}}
+```
 
 ## `get_region_schema`
 
-Input: `path`, `region_id`.
+Schema key: `get_region_schema`. Samples are capped by
+`max(0, min(3, 180 // ncols))`; a zero-row sample points callers to
+`read_range`.
 
-Output: headers, inferred dtypes, non-null and distinct counts, validation
-summaries, formula-block summaries, confidence, and bounded sample rows. Sample
-rows use `max(0, min(3, 180 // ncols))`; when zero, the response directs the
-caller to `read_range`.
+```json
+{"request":{"path":"model.xlsx","region_id":"region:Inputs:0"},"response":{"region":"region:Inputs:0","sheet":"Inputs","range":"A1:C5","columns":[{"id":"col:Inputs:0:value","header":"Value","dtype":"float","nonnull":4,"distinct":4,"validation":[]}],"samples":[["Tax rate",0.21,"%"]],"formulaBlocks":[],"conf":1.0,"stale":false,"reindexed":false}}
+```
 
 ## `read_range`
 
-Input: `path`, `ref`, optional `cursor`, `max_cells: int = 200`.
+Schema key: `read_range`. This is the only bulk-value tool. Pages contain at
+most 200 cells. The cursor binds the normalized parameters and index generation;
+a refresh or write makes it return `E_STALE_CURSOR`.
 
-Output: a two-dimensional value page plus `truncated`, `cursor`, and `stale`.
-This is the only tool that returns values in quantity. Cursors bind tool
-parameters, offset, and index generation; mutation before the next page yields
-`E_STALE_CURSOR`.
+```json
+{"request":{"path":"model.xlsx","ref":"Inputs!A1:C5","max_cells":3},"response":{"sheet":"Inputs","range":"A1:C5","page":{"start":"A1","end":"C1"},"values":[["Input","Value","Unit"]],"offset":0,"totalCells":15,"truncated":true,"cursor":"eyJ...","stale":false,"reindexed":false}}
+```
 
 ## `find`
 
-Input: `path`, `pattern`, `in` selected from values, headers, formulas, and
-names, optional `sheet`, `max: int = 50`.
+Schema key: `find`. Search subjects are limited to 1,000 characters, snippets
+to 80, patterns to 256, and matching to two seconds. A timeout returns partial
+results plus `W_REGEX_TIMEOUT`. Whenever `values` participates, `stale`
+conservatively reports whether any searched cached-value range is invalidated.
 
-Output: bounded `{ref, kind, snippet}` matches with snippets no longer than 80
-characters. P7 must enforce the regex deadline and return `W_REGEX_TIMEOUT`
-rather than allowing unbounded expression work.
+```json
+{"request":{"path":"model.xlsx","pattern":"Revenue","in":["headers"],"max":10},"response":{"matches":[{"ref":"col:Calc:0:revenue","kind":"header","snippet":"Revenue"}],"truncated":false,"reindexed":false}}
+```
 
 ## `trace_precedents`
 
-Input: `path`, `ref_or_symbol`, `depth: int = 2` capped at 8, and
-`max_nodes: int = 200`.
+Schema key: `trace_precedents`. Depth is capped at 8 and nodes at 200.
 
-Output: a bounded tree of upstream symbols or references and edge reasons,
-including a truncation flag. It returns graph structure, not values.
+```json
+{"request":{"path":"model.xlsx","ref_or_symbol":"Calc!C2","depth":2,"max_nodes":20},"response":{"direction":"precedents","tree":{"kind":"cell","symbol":"cell:Calc!C2","ref":"Calc!C2","via":null,"childCount":1,"children":[{"kind":"cell","symbol":"cell:Inputs!B2","ref":"Inputs!B2","via":"ref","childCount":0,"children":[]}]},"nodeCount":2,"edgeCount":1,"truncated":false,"reindexed":false}}
+```
 
 ## `trace_dependents`
 
-Input: `path`, `ref_or_symbol`, `depth: int = 2` capped at 8, and
-`max_nodes: int = 200`.
+Schema key: `trace_dependents`. It returns the bounded downstream tree without
+cell values.
 
-Output: a bounded tree of downstream symbols or references and edge reasons,
-including a truncation flag. It returns graph structure, not values.
+```json
+{"request":{"path":"model.xlsx","ref_or_symbol":"Inputs!B2","depth":1},"response":{"direction":"dependents","tree":{"kind":"cell","symbol":"cell:Inputs!B2","ref":"Inputs!B2","via":null,"childCount":1,"children":[{"kind":"fblock","symbol":"fblock:Calc:3","ref":"Calc!D2:D6","via":"ref","childCount":0,"children":[]}]},"nodeCount":2,"edgeCount":1,"truncated":false,"reindexed":false}}
+```
 
 ## `trace_path`
 
-Input: `path`, `from_ref_or_symbol`, `to_ref_or_symbol`,
-`max_paths: int = 3`, and `max_depth: int = 12`.
+Schema key: `trace_path`. It returns bounded shortest block-level paths, or
+`{"connected":false,"paths":[]}` when no route exists.
 
-Output: bounded block-level dependency paths, each expressed as
-`{symbol, via}` steps. No connection returns
-`{"connected": false, "paths": []}` rather than an error.
+```json
+{"request":{"path":"model.xlsx","from_ref_or_symbol":"Inputs!B2","to_ref_or_symbol":"Summary!C2","max_paths":3,"max_depth":12},"response":{"connected":true,"paths":[[{"symbol":"cell:Inputs!B2","via":null},{"symbol":"fblock:Calc:3","via":"ref"},{"symbol":"fblock:Summary:0","via":"ref"}]],"truncated":false,"reindexed":false}}
+```
 
 ## `explain_formula`
 
-Input: `path`, `ref`.
+Schema key: `explain_formula`. It reports A1/R1C1 forms, block geometry,
+resolution classes, flags, and cell diagnostics.
 
-Output: A1 and R1C1 forms, formula-block ID and extent, resolved names and
-structured references, volatile/opaque flags, and diagnostics attached to that
-cell.
+```json
+{"request":{"path":"model.xlsx","ref":"Calc!C2"},"response":{"ref":"cell:Calc!C2","a1":"=B2*Inputs!$B$2","r1c1":"=RC[-1]*Inputs!R2C2","block":"fblock:Calc:2","extent":"C2:C6","resolvedNames":[],"structuredRefs":[],"volatile":false,"opaque":false,"diagnostics":[],"reindexed":false}}
+```
 
 ## `get_diagnostics`
 
-Input: `path`, optional `sheet`, `severity`, and `code`, plus
-`max: int = 100`.
+Schema key: `get_diagnostics`. Filters are applied before the 100-item cap;
+counts describe the full filtered set.
 
-Output: matching diagnostics and counts. Workbook diagnostics are distinct from
-canonical tool errors such as `E_NOT_FOUND`, `E_INVALID_REF`, and
-`E_STALE_CURSOR`.
+```json
+{"request":{"path":"model.xlsx","severity":"warn","max":100},"response":{"diagnostics":[{"severity":"warn","code":"W_UNKNOWN_NAME","sheet":"Calc","ref":"cell:Calc!D2","message":"Formula references an unknown name.","related":{}}],"total":1,"counts":{"severity":{"error":0,"warn":1,"info":0},"code":{"W_UNKNOWN_NAME":1}},"truncated":false,"reindexed":false}}
+```
 
 ## `profile_column`
 
-Input: `path`, `col_symbol_or_ref`.
+Schema key: `profile_column`. Numeric columns return aggregates; categorical
+columns return the five most common bounded values. Missing formula caches set
+`cachedValues: false` and include a recalculation hint. `count` is the number
+of positions in the resolved range, including blanks; `nonnull` is the number
+of normalized non-null values.
 
-Output: count, non-null, sum, mean, minimum, maximum, and distinct estimate for
-numeric columns; otherwise the top five bounded values. A workbook without
-cached formula values returns `cachedValues: false` with a recalculation hint.
+```json
+{"request":{"path":"model.xlsx","col_symbol_or_ref":"Inputs!B:B"},"response":{"column":"Inputs!B:B","sheet":"Inputs","range":"B2:B5","count":4,"nonnull":4,"distinct":4,"cachedValues":true,"stale":false,"sum":1000.95,"mean":250.2375,"min":0.1,"max":1000.0,"reindexed":false}}
+```
 
 ## `write_cells`
 
-Input: `path` and at most 500 `{ref, value?, formula?}` items. Supported values
-are number, string, boolean, and null; datetime values yield
-`E_INVALID_VALUE`.
+Schema key: `write_cells`. Accepts 1–500 qualified edits. Each item supplies
+exactly one of `value` or `formula`. Values are number, string, boolean, or
+null; formulas begin with `=`.
 
-Output: per-cell success/error results and `staleBlocks`. P6 must implement the
-surgical OOXML writer, conflict and lock checks, array-formula refusal, and
-untouched-part fidelity before P7 exposes this destructive tool.
+```json
+{"request":{"path":"model.xlsx","cells":[{"ref":"Inputs!B2","value":0.25},{"ref":"Inputs!B3","formula":"=B2*2"}]},"response":{"results":[{"ref":"Inputs!B2","ok":true},{"ref":"Inputs!B3","ok":true}],"staleBlocks":5,"generation":4,"reindexed":false}}
+```
 
 ## `set_column_formula`
 
-Input: `path`, `col_symbol`, `formula`, and `overwrite: bool = false`. Formula
-input may be A1 at the anchor or R1C1.
+Schema key: `set_column_formula`. The formula may be A1 at the column anchor or
+R1C1. Existing cells require explicit `overwrite: true`.
 
-Output: formula-block ID, cells written, and `staleBlocks`. P6 must implement
-formula translation, overwrite protection, surgical persistence, and direct
-index patching before P7 exposes this destructive tool.
+```json
+{"request":{"path":"model.xlsx","col_symbol":"col:Calc:0:cost","formula":"=RC[-1]*0.5","overwrite":true},"response":{"formulaBlock":"fblock:Calc:2","cellsWritten":5,"staleBlocks":6,"generation":5,"reindexed":false}}
+```
 
-## P7 completion evidence
+## Canonical errors and executable evidence
 
-P7 must add exact generated schemas and worked examples here, then link
-`tests/mcp/test_conformance.py` and `docs/evidence/p7-mcp-cli.md`. That evidence
-must cover all 14 happy paths, at least one error path per tool, annotations,
-initialization instructions, progress, response caps, path confinement,
-freshness, pagination, and cursor invalidation.
+Canonical codes are `E_NOT_FOUND`, `E_UNSUPPORTED_FORMAT`, `E_ENCRYPTED`,
+`E_LOCKED`, `E_OPEN_IN_EXCEL`, `E_CONFLICT`, `E_CORRUPT`,
+`E_STALE_CURSOR`, `E_INVALID_REF`, `E_UNKNOWN_SYMBOL`,
+`E_ARRAY_FORMULA`, `E_INVALID_VALUE`, `E_PATH_DENIED`, and
+`E_INTERNAL`. The 8,000-character cap applies to canonical error envelopes as
+well as successful responses; oversized echoed inputs and details are
+deterministically truncated without changing the error code.
+
+[`tests/mcp/test_conformance.py`](../tests/mcp/test_conformance.py) initializes
+the real subprocess server through the official MCP client SDK, compares the
+generated schemas, calls all 14 happy paths and every tool's error path, verifies
+progress, annotations, successful and oversized-error 8k caps, the 200-value
+cap, complete late-cell symbol search, cached-value staleness, sparse profile
+counts, pagination, write invalidation, and path confinement. The recorded phase results are in
+[`p7-mcp-cli.md`](evidence/p7-mcp-cli.md).

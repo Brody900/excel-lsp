@@ -9,11 +9,9 @@ promise.
 ## Development status
 
 This repository is pre-release. The parser, index, regions, symbols, formula
-analysis, graph, and diagnostics are verified through P5. The P6 core surgical
-editor, direct index patch, transitive staleness, complete F16/F21 part
-manifests, property proof, and desktop-Excel smoke are implemented; their
-combined formal gate is pending. The MCP server and path-confinement boundary
-remain P7 work, so the edit services are not yet exposed as release tools.
+analysis, graph, diagnostics, P6 surgical editor, and P7 bounded stdio MCP/CLI
+surface with realpath confinement are verified. P8 still owns the complete
+live protocol and benchmark evidence, and P9 owns public release verification.
 
 ## Supported files and trust boundary
 
@@ -29,8 +27,8 @@ sidecars or use them as backups.
 
 ## Path access
 
-P7 will add optional confinement through `EXCEL_LSP_ROOT`. The value is an
-`os.pathsep`-separated allowlist of directories. Every workbook path will be
+The MCP server supports optional confinement through `EXCEL_LSP_ROOT`. The value is an
+`os.pathsep`-separated allowlist of directories. Every workbook path is
 realpath-resolved, including symlinks, and must remain within one of those
 directories or return `E_PATH_DENIED`.
 
@@ -41,7 +39,7 @@ smallest workbook directory it needs.
 
 ## Write scope and workbook fidelity
 
-P6 implements exactly two core edit services for the later tools:
+Excel LSP exposes exactly two edit tools:
 `write_cells` and `set_column_formula`. They use surgical OOXML patches rather
 than loading and saving an existing workbook through openpyxl. A successful
 edit may modify the targeted worksheet XML and required calculation metadata,
@@ -53,9 +51,9 @@ workbook changed since indexing or immediately after replacement, reject
 unsupported values, and refuse cells
 inside multi-cell array formulas. The release gate includes deterministic
 part-diff tests on macro, chart, and image fixtures plus a live Excel pass. The
-P6 candidate evidence is in [`docs/evidence/p6-editor.md`](docs/evidence/p6-editor.md);
-P7 still owns MCP exposure and path confinement, while P8 owns the complete
-live protocol.
+P6 verified evidence is in [`docs/evidence/p6-editor.md`](docs/evidence/p6-editor.md);
+P7's stdio conformance suite covers their structured tool surface and path
+confinement, while P8 owns the complete live protocol.
 
 ## Runtime data handling
 

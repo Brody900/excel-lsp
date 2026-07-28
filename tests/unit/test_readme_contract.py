@@ -144,19 +144,19 @@ def test_readme_preserves_security_scope_and_limitations() -> None:
     normalized_readme = " ".join(readme.split())
 
     required_text = (
-        "Pre-release security boundary; P7/P9 verification remains pending",
-        "implemented core operates on local workbook paths and makes no runtime",
-        "network requests. MCP path confinement",
-        "default will be unrestricted local-path access",
+        "Pre-release security boundary; P7 is verified and P9 release verification",
+        "local stdio server makes no runtime network requests",
+        "supports realpath-resolved workbook confinement",
+        "default is unrestricted local-path access",
         "every OOXML part not deliberately modified stays byte-identical",
         "P6 core verified; P8 live protocol pending",
         "does not recalculate formulas",
         "Verified P3/P5",
         "are flaggable but opaque to static dependency analysis",
         "every inferred region exposes a confidence score",
-        "P6 candidate",
+        "P6 verified",
         "Written strings use OOXML inline strings",
-        "P6 core implemented; P7 exposure pending",
+        "P6/P7 verified",
         "Datetime cell writes are rejected in v0.1.0",
         "Writes inside multi-cell array formulas are refused",
         "Verified P3",
@@ -235,7 +235,7 @@ def test_claims_matrix_has_unique_mapped_rows_and_statuses() -> None:
         assert "TBD" not in artifact.upper()
         assert re.fullmatch(r"P\d(?:/P\d)*", phase)
         assert re.fullmatch(
-            r"(?:Verified P\d|Planned P\d|Scope declaration)",
+            r"(?:Verified P\d|Candidate P\d|Planned P\d|Scope declaration)",
             status,
         )
         references = re.findall(r"`([^`]+)`", artifact)
@@ -323,6 +323,8 @@ def test_current_claim_artifact_paths_nodes_and_anchors_resolve() -> None:
             "Verified P3",
             "Verified P4",
             "Verified P5",
+            "Verified P6",
+            "Verified P7",
         }:
             continue
         for reference in re.findall(r"`([^`]+)`", cells[4]):
@@ -361,7 +363,7 @@ def test_review_governance_current_state_is_consistent() -> None:
         ROOT / "CHANGELOG.md",
     )
 
-    assert "Total formal verdicts recorded: 64." in plan
+    assert "Total formal verdicts recorded: 70." in plan
     assert "0 nominal slots remain" in plan
     assert "The minimum completion path is now 30 total invocations" in plan
     assert "leaving no pooled\ncontingency slots" in plan

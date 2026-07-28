@@ -2406,3 +2406,184 @@ adversarial schema-order smoke in 2.15 seconds with clean COM teardown. All 20
 fixture IDs regenerate without tracked drift; the 70-package lock check,
 sdist/wheel build, Ruff, format, Pyright, README contract, and whitespace
 checks pass.
+
+## 2026-07-28 P7 — Shared MCP/CLI boundary and bounded-query decisions
+
+Decision: implement one stateless `ToolService` beneath exactly 14 FastMCP
+handlers and the Typer debugging commands. Bind every request to the existing
+freshness lifecycle, use Pydantic-derived schemas, preserve canonical core
+errors, and sanitize unexpected failures before they reach the client.
+
+Alternatives: duplicate query behavior in MCP and CLI; expose the SQLite
+capability directly from handlers; or let framework exceptions become the
+public error surface. A shared service keeps path checks, generation handling,
+caps, symbol resolution, and write semantics identical across transports.
+
+Rationale: T6 drives the production stdio process with the official MCP client,
+compares all generated schemas and annotations, exercises every happy and error
+path, and separately verifies the CLI projections. The `in` field requires a
+Pydantic validation alias plus a distinct serialization alias: an ordinary
+alias generated the correct JSON schema but caused FastMCP to call Python with
+the reserved keyword `in`.
+
+## 2026-07-28 P7 — Real progress, regex timeout, and response-cap mechanics
+
+Decision: add an optional synchronous per-sheet callback to the core lifecycle,
+bridge it back to the MCP event loop only when a client progress token exists,
+and fall back to reporting the indexed catalog on no-op opens. Add the locked
+timeout-capable `regex` runtime dependency and enforce a single two-second
+budget across 1,000-character subjects. Measure response size using the pretty
+JSON representation FastMCP actually emits.
+
+Alternatives: send progress only after indexing; statically reject patterns
+that look risky; use Python `re` with deadline checks only between cells; or cap
+compact JSON while ignoring FastMCP whitespace. Post-hoc progress does not help
+long cold opens, static regex heuristics produce false positives, and Python
+`re` cannot interrupt one catastrophic match on Windows.
+
+Rationale: regressions prove progress originates inside a cold three-sheet
+index; `^(a|aa)+b$` against a 1,000-character nonmatch is interrupted with
+`W_REGEX_TIMEOUT`; F20 and a 500-edit result remain within 8,000 emitted
+characters; a 181-column region omits samples before the 200-value ceiling; and
+row-major range pages remain unambiguous when a page crosses a row boundary.
+
+## 2026-07-28 P7 — Cursor, confinement, and phase-boundary decisions
+
+Decision: encode cursors as opaque URL-safe base64 objects containing tool,
+parameter hash, offset, and generation. Resolve every path and each configured
+`EXCEL_LSP_ROOT` directory before case-normalized containment checks. Register
+the `bench` CLI command now but delegate its executable harness and measurements
+to P8, which the authoritative phase table assigns to benchmark implementation.
+
+Alternatives: continue pagination after a refresh; compare lexical path
+prefixes; allow file-valued roots; or implement the six-task benchmark early in
+P7. Generation mismatch must fail with `E_STALE_CURSOR`; lexical prefixes and
+unresolved symlinks are not confinement; and advancing P8 work would violate
+the ordered phase gates.
+
+Rationale: stdio conformance advances a cursor, performs a surgical write, and
+observes `E_STALE_CURSOR`; an external workbook change causes the next read
+tool to report `reindexed=true`; unit and subprocess tests cover allowed paths,
+outside denial, and symlink escape denial. P7 therefore proves the command and
+transport boundary without claiming P8 benchmark results.
+
+## 2026-07-28 P7 — Exact-candidate author verification
+
+Decision: treat `Candidate Pn` as an explicit claims-ledger state between
+implementation evidence and formal approval, rerun the complete candidate
+after that accounting correction, and freeze only after every broad,
+reproducibility, and packaging check describes the same source tree.
+
+Alternatives: label unreviewed P7 claims `Verified`; leave them `Planned`
+despite committed candidate evidence; or reuse the earlier 2,049-test run after
+adding the maximum-write regression. Each alternative would misstate either
+review status or exact-candidate verification.
+
+Rationale: all 12 README contract tests pass with the explicit candidate state;
+the complete repository passes 2,050 tests with one opt-in live test deselected
+in 206.35 seconds; branch instrumentation passes the same 2,050 tests in 375.15
+seconds at 89.63% total core coverage. Ruff lint and format, Pyright, the
+70-package lock check, deterministic regeneration of all 20 fixture IDs,
+sdist/wheel construction, and whitespace validation are clean. These are
+author-side results only; one combined reviewer must still return both formal
+verdicts on the frozen fingerprint.
+
+## 2026-07-28 P7 — Combined formal review #1 requires boundary remediation
+
+Decision: charge global verdicts #65–#66, R-mech #34 and R-test #29, as
+`REVISE`; reopen the P7 candidate; and remediate every finding in the
+orchestrator before sending one replacement fingerprint back to the same
+combined reviewer.
+
+Alternatives: treat the response cap as success-only; retain the 1,001-cell
+internal cutoff as an undocumented search horizon; infer value-search freshness
+from a prior map; define profile count as persisted rows; or add only direct
+unit reproductions. Each would leave an agent-visible false claim or an
+unverified transport boundary.
+
+Rationale: the reviewer independently reproduced a 12,100-character canonical
+error, a missing row-1,100 symbol, a stale cached match without a staleness
+flag, and a sparse `A1:A5` profile reporting count two. Expected errors now pass
+through the transport fitter; symbol search streams the full domain with a
+bounded deterministic top 100 and exact total; value searches expose
+scope-conservative staleness; and profile count measures resolved rectangle
+positions separately from non-null values. Four focused regressions plus the
+real stdio test cover the behaviorally distinct failures. The remediated
+repository passes 2,054 tests with one live test deselected in 377.61 seconds;
+branch instrumentation passes the same set in 778.73 seconds at 89.67% total
+core coverage. All 20 fixture IDs regenerate without tracked drift; Ruff,
+format, Pyright, the 70-package lock check, sdist/wheel build, README contracts,
+and whitespace checks are clean. Fresh formal approval remains required.
+
+## 2026-07-28 P7 — Combined formal review #2 finds escaped-value expansion
+
+Decision: charge global verdicts #67–#68, R-mech #35 and R-test #30, as
+`REVISE` on base `701b6832b5138010aab8063b9dade7371154cb73`, tree
+`d6381cd0ef71a16224a952111b380c51d0776719`, and staged diff
+`401a17ea09b18525dcb256fbd86a9541379c0aef`. Reopen P7 and keep all
+remediation, verification, and regression work in the orchestrator before a
+follow-up to the same combined reviewer.
+
+Alternatives: rely on the transport-wide string fitter; define the 4,000-code
+point cell guard as sufficient; mark the response as a truncated page; or omit
+the value-level signal. Those choices would conflate serialization expansion
+with pagination and could silently change a complete one-cell result.
+
+Rationale: the reviewer reproduced a cell containing 4,000 newlines whose
+direct `read_range` result occupied 8,243 pretty-JSON characters. FastMCP's
+generic envelope fitting shortened the nested value but exposed only top-level
+`truncated=true`, no cursor, and no `valueTruncated` signal. The service now
+binary-searches the largest deterministic string prefix that fits the actual
+pretty-serialized response, marks `valueTruncated=true`, and preserves the
+complete page as `truncated=false` with `cursor=null`. A direct service
+regression and the real stdio conformance flow exercise this behaviorally
+distinct escaped-string boundary. Fresh author verification and a replacement
+fingerprint remain required before re-review.
+
+## 2026-07-28 P7 — Escaped-value remediation author verification
+
+Decision: freeze the replacement candidate only after direct and subprocess
+escaped-value regressions, a 34-test P7/accounting slice, the complete suite,
+branch instrumentation, deterministic fixture regeneration, static checks,
+and package construction all pass on the remediated implementation.
+
+Alternatives: rely on the generic envelope fitter's existing tests; skip the
+real stdio reproduction; or omit the final exact-accounting suite because only
+evidence Markdown changed after the first broad pass. Each would weaken the
+same-boundary proof requested by the combined reviewer.
+
+Rationale: the focused slice passes 34 tests; an uninterrupted full run passes
+2,055 tests with one opt-in live test deselected in 400.05 seconds; branch
+instrumentation passes the same 2,055 tests at 89.67% total core coverage in
+785.74 seconds. After final accounting and evidence edits, an exact-candidate
+full rerun again passes all 2,055 tests; its 2,007.08-second wall time includes
+a prolonged runner-output stall and is retained here rather than substituted
+for the uninterrupted measurement. Ruff lint and formatting, Pyright, the
+70-package lock check, all 20 deterministic fixture IDs, sdist/wheel build,
+README contracts, and whitespace validation are clean. The candidate is ready
+for one frozen fingerprint and follow-up to the same combined reviewer.
+
+## 2026-07-28 P7 — Combined formal approval closes the phase
+
+Decision: charge global verdicts #69–#70 as R-mech #36 and R-test #31, both
+clean `APPROVE`, on base `701b6832b5138010aab8063b9dade7371154cb73`, tree
+`2e7d105387e44a4acbdb674f6b73121e1d2f0d2f`, and staged binary-diff hash
+`b3cb3077e40963b328d82fc4fc7095ab1a7a5798` (27 files, 3,127 insertions,
+180 deletions). Close the P7 formal gate and permit the milestone commit after
+only ledger, phase-status, and approval-evidence promotion edits.
+
+Alternatives: carry either rejected verdict forward; treat the generic
+transport fitter as sufficient proof; start P8 before recording the gate; or
+request another reviewer after a finding-free combined result. Each would
+violate the single-reviewer protocol or obscure the exact approved tree.
+
+Rationale: the same reviewer revisited both prior review rounds and found no
+critical, major, or minor issue in either domain. Independent verification
+passed the 34-test P7/CLI/accounting slice, targeted Ruff and format checks,
+and Pyright with zero findings. A separate two-page JSON-expansion probe
+produced 7,999-character pages with correct value truncation and cursor
+semantics, while a complete one-cell request produced exactly 8,000 characters
+with `valueTruncated=true`, `truncated=false`, and `cursor=null`. Entry and exit
+fingerprints matched; there were no unstaged or untracked changes. Both formal
+verdicts therefore approve the same frozen implementation, test, and evidence
+candidate.

@@ -12,10 +12,10 @@ An LSP for Excel: semantic index + MCP server so AI agents navigate workbooks by
 <!-- P8 HERO SLOT: replace the visible placeholder above with docs/assets/benchmark-token-hero.svg. Its alt text must describe the tasks, arms, and log scale. Derive every number in the surrounding copy from committed raw results; do not promise a reduction before the checker output proves it. -->
 
 > **Development status:** Excel LSP is under active development toward v0.1.0.
-> The parser, persistent index foundation, sparse regions, stable symbols, and
-> compact workbook map are verified through P2. Formula navigation, the MCP
-> surface, live-Excel evidence, measured benchmarks, and release-install
-> evidence remain later gated work.
+> The parser, index, regions, formula navigation, graph, diagnostics, surgical
+> editor, and 14-tool MCP/CLI surface are verified through P7. Live-Excel
+> evidence, measured benchmarks, and release-install evidence remain later
+> gated work.
 
 ## 60-second lineage demo
 
@@ -79,9 +79,9 @@ It is also committed as [`examples/mcp.json`](examples/mcp.json).
 
 ## Tools
 
-The contracts below are frozen for v0.1.0. Their MCP implementations and
-worked examples are planned for P7, so this table is a product contract rather
-than a claim that the server is already complete.
+The contracts below are frozen for v0.1.0 and verified by the completed P7
+milestone. Exact generated schemas and one worked example per tool are in the
+[tool reference](docs/tool-reference.md).
 
 | Tool | What it gives an agent |
 |---|---|
@@ -101,7 +101,7 @@ than a claim that the server is already complete.
 | `set_column_formula` | Fill a region column formula with formula-block and staleness tracking. |
 
 The first 12 tools are read tools. The final two are destructive write tools
-and will carry the corresponding MCP annotations so clients can request
+and carry the corresponding MCP annotations so clients can request
 confirmation.
 
 ## Architecture
@@ -170,7 +170,7 @@ exact evidence required before this section can make numerical claims.
 | Formula dependency graph | [P4 evidence available](docs/evidence/p4-graph.md#formal-phase-gate) | Source review pending | Source review pending | P8 baseline pending |
 | Incremental reindex | [P1 evidence available](docs/evidence/p1-foundation.md#invariant-evidence) | Source review pending | Source review pending | P8 baseline pending |
 | Formula diagnostics | [P5 evidence available](docs/evidence/p5-diagnostics.md#formal-phase-gate) | Source review pending | Source review pending | P8 baseline pending |
-| Edit support and untouched-part fidelity | [P6 candidate evidence available](docs/evidence/p6-editor.md#part-preservation); gate pending | Source review pending | Source review pending | P8 baseline pending |
+| Edit support and untouched-part fidelity | [P6 verified evidence available](docs/evidence/p6-editor.md#part-preservation) | Source review pending | Source review pending | P8 baseline pending |
 | Token discipline | P7/P8 evidence pending | Source review pending | Source review pending | P8 baseline pending |
 
 ## How it works
@@ -194,17 +194,16 @@ range into individual edges. See [index internals](docs/index-internals.md).
 
 ## Security & scope
 
-> **Pre-release security boundary; P7/P9 verification remains pending.** The
-> implemented core operates on local workbook paths and makes no runtime
-> network requests. MCP path confinement and release verification remain later
-> gates.
+> **Pre-release security boundary; P7 is verified and P9 release verification
+> remains pending.** The local stdio server makes no runtime network requests and
+> supports realpath-resolved workbook confinement.
 
 The P6 core edit services surgically modify targeted worksheet XML and required
 calculation metadata. Complete F16/F21 part manifests and a property test prove
-that every OOXML part not deliberately modified stays byte-identical on the
-current candidate. In P7,
-`EXCEL_LSP_ROOT` will provide an optional `os.pathsep`-separated directory
-allowlist applied after realpath resolution. Its default will be unrestricted
+that every OOXML part not deliberately modified stays byte-identical in the
+verified implementation. `EXCEL_LSP_ROOT` provides an optional
+`os.pathsep`-separated directory allowlist applied after realpath resolution.
+Its default is unrestricted
 local-path access. See [SECURITY.md](SECURITY.md) for the current threat model
 and implementation status.
 
@@ -221,11 +220,11 @@ are verified P3 behavior; later-phase bullets remain planned release behavior.
   dynamic references are flaggable but opaque to static dependency analysis.
 - Header inference is heuristic and can be wrong; every inferred region exposes
   a confidence score.
-- **P6 candidate:** Written strings use OOXML inline strings, which Excel and
+- **P6 verified:** Written strings use OOXML inline strings, which Excel and
   LibreOffice support but some third-party tools handle poorly.
-- **P6 core implemented; P7 exposure pending:** Datetime cell writes are
+- **P6/P7 verified:** Datetime cell writes are
   rejected in v0.1.0.
-- **P6 core implemented; P7 exposure pending:** Writes inside multi-cell array
+- **P6/P7 verified:** Writes inside multi-cell array
   formulas are refused.
 - **Verified P3:** Dynamic-array spill extents are not statically
   tracked.

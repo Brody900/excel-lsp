@@ -41,12 +41,15 @@ or other secrets.
   direct index patch, staleness lifecycle, R1C1 column fill, complete F16/F21
   part manifests, property proof, and desktop-Excel smoke. Its combined formal
   reviewer approved both gates on the exact final frozen fingerprint.
+- [Phase 7 MCP server and CLI](p7-mcp-cli.md) records the 14-tool stdio
+  service, exact generated schemas, shared CLI service, progress, caps, cursor
+  invalidation, regex timeout, path confinement, and verification. Its combined
+  formal reviewer approved both gates on the exact final frozen fingerprint.
 
 ## Planned evidence paths
 
 These paths are contracts, not links to completed work:
 
-- `p7-mcp-cli.md`: 14-tool conformance, annotations, instructions, caps, and CLI.
 - `live-excel/index.md`: numbered live protocol, screenshots, and demo capture.
 - `success-criteria.md`: final S1-S7 evidence cross-check.
 - `fresh-install.md`: clean package, CLI, Codex MCP, and fallback verification.

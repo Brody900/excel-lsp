@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
@@ -69,6 +69,7 @@ def index_workbook(
     index_dir: str | Path | None = None,
     gap_tol: int | None = None,
     recalculated: bool = False,
+    progress: Callable[[int, int, str], None] | None = None,
 ) -> IndexUpdate:
     """Open or refresh a workbook index using stat and selected-part hashes."""
     requested_region_options = None if gap_tol is None else RegionOptions(gap_tol=gap_tol)
@@ -99,7 +100,13 @@ def index_workbook(
         source_stat = initial_stat
         for attempt in range(2):
             try:
-                update = _index_from_parser(workbook, source_stat, store, region_options)
+                update = _index_from_parser(
+                    workbook,
+                    source_stat,
+                    store,
+                    region_options,
+                    progress=progress,
+                )
                 return _clear_recalculated_staleness(
                     store,
                     update,
@@ -128,9 +135,10 @@ def ensure_fresh(
     *,
     index_dir: str | Path | None = None,
     gap_tol: int | None = None,
+    progress: Callable[[int, int, str], None] | None = None,
 ) -> IndexUpdate:
     """Ensure the sidecar matches the workbook before serving a core API call."""
-    return index_workbook(path, index_dir=index_dir, gap_tol=gap_tol)
+    return index_workbook(path, index_dir=index_dir, gap_tol=gap_tol, progress=progress)
 
 
 def _clear_recalculated_staleness(
@@ -158,6 +166,8 @@ def _index_from_parser(
     source_stat: os.stat_result,
     store: IndexStore,
     region_options: RegionOptions,
+    *,
+    progress: Callable[[int, int, str], None] | None,
 ) -> IndexUpdate:
     with OOXMLParser(workbook) as parser:
         metadata = parser.metadata
@@ -227,13 +237,16 @@ def _index_from_parser(
                 store.replace_defined_names(metadata)
 
             store.prepare_list_object_refresh(sheets_to_reindex)
-            for descriptor in sheets_to_reindex:
+            total_sheets = len(sheets_to_reindex)
+            for sheet_number, descriptor in enumerate(sheets_to_reindex, 1):
                 store.replace_sheet(
                     descriptor,
                     lambda on_cell, sheet=descriptor: parser.parse_sheet(sheet, on_cell),
                     styles=parser.styles,
                     region_options=region_options,
                 )
+                if progress is not None:
+                    progress(sheet_number, total_sheets, descriptor.name)
 
             formula_sheets = metadata.sheets if formula_context_changed else sheets_to_reindex
             store.replace_formula_analysis(metadata, formula_sheets)

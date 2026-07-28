@@ -1,4 +1,6 @@
 # MCP conformance tests
 
-Protocol and tool-contract coverage begins when the MCP server is introduced in
-Phase 7. There is no server surface in Phase 0.
+`test_conformance.py` launches the installed server over stdio through the
+official `mcp` client SDK. It verifies initialization instructions, exact tool
+count and annotations, schemas, all happy and error paths, progress, response
+caps, cursor round-trips and write invalidation, and `EXCEL_LSP_ROOT` denial.

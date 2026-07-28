@@ -6,9 +6,9 @@ SQLite sidecar and refreshes that index from package hashes. Verified P2 adds
 sparse regions, stable symbols, and the compact workbook map. Verified P3 adds
 formula reference extraction and R1C1 blocks. Verified P4 adds ranked
 dependency navigation and bounded circular analysis. Verified P5 completes the
-typed diagnostic catalog, persisted cached-error/link/volatility findings, and
-filtered core query. Editing, MCP, benchmarks, and release behavior remain
-planned in their ordered phases.
+typed diagnostic catalog; verified P6 adds surgical editing, direct index
+patches, and transitive staleness. Verified P7 adds the shared MCP/CLI service
+boundary. Benchmarks and release behavior remain planned in P8–P9.
 
 ## Layer boundaries
 
@@ -16,14 +16,13 @@ The package has three one-way layers:
 
 - `excel_lsp.core` owns OOXML parsing, normalized values, index persistence,
   freshness, regions, symbols, workbook maps, dependency navigation, and
-  circular analysis, plus the future complete diagnostics catalog and surgical
-  editor. It has no MCP dependency and remains independently embeddable.
-- `excel_lsp.server` will wrap core with stdio MCP schemas, response shaping,
-  pagination, annotations, progress, path confinement, and sanitized errors in
-  P7. It is currently only a package boundary.
-- `excel_lsp.cli` will expose the same core operations for debugging and public
-  demos. Its current verified surface is package help and version output; the
-  workbook commands arrive with P7.
+  circular analysis, diagnostics, and the surgical editor. It has no MCP
+  dependency and remains independently embeddable.
+- `excel_lsp.server` wraps core with stdio MCP schemas, response shaping,
+  pagination, annotations, live indexing progress, path confinement, guarded
+  regex matching, and sanitized errors.
+- `excel_lsp.cli` calls the same service operations for debugging and public
+  demos, including JSON traces and Mermaid graph rendering.
 
 Transport code may depend on core. Core must never depend on MCP or the CLI.
 The source workbook is authoritative; the SQLite database is disposable,
@@ -110,7 +109,7 @@ bounded map projection over indexed rows. See
 [index internals](index-internals.md), and the
 [claims-to-artifacts plan](evidence/readme-claims-to-artifacts.md).
 
-## Planned architecture by phase
+## Architecture by phase
 
 | Phase | Component | Status boundary |
 |---|---|---|
@@ -121,7 +120,7 @@ bounded map projection over indexed rows. See
 | P4 | Dependency graph, spatial edge queries, traces, paths, circular checks | Verified |
 | P5 | Formula and workbook diagnostics | Verified |
 | P6 | Surgical OOXML editing and transitive staleness | Verified |
-| P7 | Fourteen-tool MCP server and full CLI | Planned |
+| P7 | Fourteen-tool MCP server and full CLI | Verified |
 | P8 | Live Excel protocol, benchmarks, headless-Codex evaluations, charts | Planned |
 | P9 | Documentation, clean installs, CI matrix, public release and registries | Planned |
 
@@ -136,7 +135,7 @@ production phase allowed to change a workbook, and only through surgical OOXML
 edits with byte-identity proof for every untouched ZIP part. It checks Excel's
 lockfile before source-hash conflict, validates a same-directory replacement
 archive before atomic installation, and recovers the derivable sidecar if a
-post-replacement direct index patch fails. P7 adds the optional
+post-replacement direct index patch fails. Verified P7 adds the optional
 `EXCEL_LSP_ROOT` realpath boundary around all agent-supplied paths. The complete
 pre-release threat model is in [`SECURITY.md`](../SECURITY.md).
 
