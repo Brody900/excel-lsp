@@ -28,6 +28,7 @@ EXPECTED_FIXTURE_IDS = {
     "F14",
     "F15",
     "F16",
+    "F17",
     "F18",
     "F19",
     "F20",
@@ -197,6 +198,19 @@ def test_openpyxl_observes_p5_error_dynamic_external_and_volatile_caches(
         canonical = openpyxl_canonical_cells(generated_paths[fixture_id])
         by_ref = {(sheet, ref): (value, formula) for sheet, ref, value, formula in canonical}
         assert {ref: by_ref[ref] for ref in expected_cells} == expected_cells
+
+
+def test_openpyxl_observes_f17_unicode_names_and_formula_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    canonical = openpyxl_canonical_cells(generated_paths["F17"])
+    by_ref = {(sheet, ref): (value, formula) for sheet, ref, value, formula in canonical}
+
+    assert by_ref[("Résumé d'été", "A2")] == ("Café", None)
+    assert by_ref[("東京", "A2")] == ("売上", None)
+    assert by_ref[("O'Brien résumé", "B2")] == (7, "='Résumé d''été'!B2")
+    assert by_ref[("O'Brien résumé", "B3")] == (11, "='東京'!B2")
+    assert by_ref[("O'Brien résumé", "B4")] == (14, "=TauxÉté*2")
 
 
 def test_every_emitted_fixture_matches_production_ooxml_parser(

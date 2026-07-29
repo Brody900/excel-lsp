@@ -6,8 +6,9 @@ Versioning after its first public release.
 
 ## [Unreleased]
 
-Excel LSP is pre-release. No PyPI distribution, GitHub release, or supported
-public API is being claimed yet.
+No changes yet.
+
+## [0.1.0] - 2026-07-29
 
 ### Added
 
@@ -56,16 +57,32 @@ public API is being claimed yet.
   schemas, annotations, progress, freshness, generation-bound cursors,
   realpath confinement, guarded regex search, deterministic response caps,
   surgical write integration, and real-client subprocess conformance.
+- Three live Excel-authored workbooks, a complete desktop-Excel protocol with
+  VBA execution, open-workbook refusal, chart/image preservation, numbered
+  screenshots, and a lineage demo GIF.
+- Six deterministic benchmark tasks, exact-answer graders, scripted and two-run
+  headless-Codex results, raw rows, timing data, and five reproducible charts.
+- Clean wheel and `uvx` install probes, Codex MCP registration evidence, fair
+  pinned-revision comparisons, public release metadata, CI across three
+  operating systems and three Python versions, and registry submission copy.
+- Correct MCP implementation metadata so clients see Excel LSP version `0.1.0`
+  instead of the installed MCP SDK version.
 
-### Planned before v0.1.0
+### Benchmark result
 
-- Clean-install and Codex quickstart verification for the completed MCP/CLI
-  surface.
-- Live Microsoft Excel evidence, deterministic and headless-Codex benchmarks,
-  final documentation, public repository publication, and registry metadata.
+- Excel LSP meets S5 on the disclosed deterministic workbook-payload metric:
+  3,410 tool-result tokens versus 222,289 for naive dump (65.2× reduction),
+  with 12/12 versus 8/12 exact headless answers. Full CLI usage, including
+  fixed agent context and schemas, remains published as a separate secondary
+  measurement.
+
+### Planned after v0.1.0
+
+- Rename refactoring for sheets, columns, and defined names.
+- A real LSP wire protocol, linked-workbook workspaces, value-level workbook
+  diff, watch mode, `.xlsb`, Google Sheets, datetime writes, and stable aliases.
 
 ## Release links
 
-Release comparison links will be added when the public GitHub repository and
-the first tag exist. Leaving them absent is intentional; placeholder URLs would
-be misleading.
+[Unreleased]: https://github.com/Brody900/excel-lsp/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Brody900/excel-lsp/releases/tag/v0.1.0

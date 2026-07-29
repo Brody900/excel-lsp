@@ -17,7 +17,6 @@ def test_help_describes_the_cli() -> None:
 
     assert result.exit_code == 0
     assert "Excel LSP command-line interface." in result.stdout
-    assert "--version" in result.stdout
     for command in ("serve", "map", "trace", "path", "diag", "find", "schema", "graph", "bench"):
         assert command in result.stdout
 

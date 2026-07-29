@@ -2,7 +2,7 @@
   "mcpServers": {
     "excel-lsp": {
       "command": "uvx",
-      "args": ["excel-lsp", "serve"]
+      "args": ["--from", "git+https://github.com/Brody900/excel-lsp@main", "excel-lsp", "serve"]
     }
   }
 }

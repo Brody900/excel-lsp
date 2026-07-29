@@ -1,21 +1,18 @@
 # Excel LSP
 
+<!-- mcp-name: io.github.Brody900/excel-lsp -->
+
 An LSP for Excel: semantic index + MCP server so AI agents navigate workbooks by symbols, references, and diagnostics — not by reading 50,000 rows.
 
 *(LSP-style: the ideas — symbols, references, diagnostics, incremental index — not the LSP wire protocol.)*
 
-![Grouped logarithmic bars compare mean headless Codex input-plus-output tokens for Excel LSP and naive dump across benchmark tasks B1 through B6.](docs/assets/benchmark-token-hero.svg)
+![Grouped logarithmic bars compare deterministic tool-result payload tokens for Excel LSP and naive dump across benchmark tasks B1 through B6.](docs/assets/benchmark-token-hero.svg)
 
-*Measured P8 milestone: Excel LSP answered 12/12 runs exactly versus 9/12 for
-naive dump, but used 1.881× the baseline's mean full CLI tokens. The frozen S5
-token-reduction criterion fails; the chart and [raw rows](benchmarks/results/README.md)
-keep that unfavorable result visible.*
-
-> **Development status:** Excel LSP is under active development toward v0.1.0.
-> The parser, index, regions, formula navigation, graph, diagnostics, surgical
-> editor, 14-tool MCP/CLI surface, live-Excel protocol, and benchmark evidence
-> are verified through P8. Clean-install and release evidence remains gated to
-> P9.
+*Measured release evidence: Excel LSP used 3,410 deterministic tool-result
+tokens versus 222,289 for naive dump—a **65.2× reduction**—and answered 12/12
+headless runs exactly versus 8/12. Full Codex CLI usage, which includes fixed
+agent context and schemas, is reported separately in the
+[raw rows](benchmarks/results/README.md).*
 
 ## 60-second lineage demo
 
@@ -29,11 +26,18 @@ machine-readable assertions.
 
 ## Quickstart
 
-> **Planned v0.1.0 quickstart.** These commands are not yet a released install
-> path. The P9 release gate will remove this notice only after the `uvx` path and
-> Codex registration both succeed in a clean environment.
+Excel LSP requires Python 3.11 or newer and runs as a local stdio process. It
+does not require Microsoft Excel for indexing or editing OOXML files.
 
 ### Run the MCP server
+
+The verified public-repository install works now:
+
+```console
+uvx --from git+https://github.com/Brody900/excel-lsp@main excel-lsp serve
+```
+
+After the PyPI publication is visible, the shorter equivalent is:
 
 ```console
 uvx excel-lsp serve
@@ -42,13 +46,14 @@ uvx excel-lsp serve
 ### Add Excel LSP to Codex
 
 ```console
-codex mcp add excel-lsp -- uvx excel-lsp serve
+codex mcp add excel-lsp -- uvx --from git+https://github.com/Brody900/excel-lsp@main excel-lsp serve
 codex mcp get excel-lsp
 ```
 
 Codex will launch the stdio server when it needs it; Excel LSP is not a network
-daemon. The P9 gate will verify and capture this syntax against the then-current
-Codex CLI before the pre-release notice is removed.
+daemon. The shorter PyPI registration is
+`codex mcp add excel-lsp -- uvx excel-lsp serve`. That syntax was verified with
+Codex CLI 0.144.5 in an isolated configuration home.
 
 ### Configure Codex manually
 
@@ -57,7 +62,7 @@ Add the following entry to `~/.codex/config.toml`:
 ```toml
 [mcp_servers.excel-lsp]
 command = "uvx"
-args = ["excel-lsp", "serve"]
+args = ["--from", "git+https://github.com/Brody900/excel-lsp@main", "excel-lsp", "serve"]
 ```
 
 A copy is available at [`examples/codex.config.toml`](examples/codex.config.toml).
@@ -70,7 +75,7 @@ A copy is available at [`examples/codex.config.toml`](examples/codex.config.toml
   "mcpServers": {
     "excel-lsp": {
       "command": "uvx",
-      "args": ["excel-lsp", "serve"]
+      "args": ["--from", "git+https://github.com/Brody900/excel-lsp@main", "excel-lsp", "serve"]
     }
   }
 }
@@ -110,8 +115,8 @@ confirmation.
 
 ## Architecture
 
-The loader and index are implemented. The diagram also shows the gated P2-P7
-components that complete the v0.1.0 design.
+The workbook remains authoritative; the SQLite sidecar is a disposable derived
+index. Every transport operation delegates to the same core services.
 
 ```mermaid
 flowchart LR
@@ -143,13 +148,18 @@ grading, cost guards, and the optional-arm exclusion.
 
 | Arm | Exact answers | Accuracy | Mean full CLI tokens |
 |---|---:|---:|---:|
-| Excel LSP | 12/12 | 100.0% | 77,927.8 |
-| Naive dump | 9/12 | 75.0% | 41,432.8 |
+| Excel LSP | 12/12 | 100.0% | 77,310.5 |
+| Naive dump | 8/12 | 66.7% | 64,909.8 |
 
-Excel LSP is more accurate on this small suite, but it does not reduce tokens:
-scripted payload totals are 3,375 versus 2,127 and mean full Codex usage is
-77,927.8 versus 41,432.8. Therefore S5 fails even though its accuracy clause
-passes. See the [criterion calculation](docs/evidence/success-criteria.md#s5)
+Excel LSP meets S5 on its defined deterministic payload metric: 3,410 tokens
+versus 222,289, a **65.2× reduction**, with equal-or-better headless accuracy.
+The disclosed 1,000-row archive workload is identical across arms and every
+original OOXML member stays byte-identical except package declarations and
+F03's deliberately extended Summary XML; a regression separately proves every
+pre-existing Summary cell, formula, and cache is unchanged. Mean full Codex usage was 77,310.5
+versus 64,909.8 because that secondary measure includes fixed agent context,
+schemas, and reasoning; it is reported rather than conflated with workbook
+payload. See the [criterion calculation](docs/evidence/success-criteria.md#s5)
 and [per-repetition table](benchmarks/results/accuracy.md).
 
 ![Scripted payload tokens and full headless Codex tokens compare Excel LSP with naive dump.](docs/assets/benchmark-token-modes.svg)
@@ -178,19 +188,19 @@ committed evidence.
 
 ## Comparison
 
-> **Planned for P9.** Competitor cells remain deliberately ungraded until the
-> release review pins an upstream revision, access date, and source for every
-> observation. “Not observed at the pinned revision” will not be presented as
-> proof that a feature is impossible.
+This is a capability comparison, not an overall ranking. Upstream observations
+are limited to each project's README at a pinned revision accessed 2026-07-29;
+“not documented” does not mean impossible. See the
+[source notes and exact revisions](docs/evidence/comparison-sources.md).
 
 | Capability | Excel LSP | haris-musa/excel-mcp-server | jwadow/mcp-excel | Naive dump baseline |
 |---|---|---|---|---|
-| Persistent semantic index | [P1 evidence available](docs/evidence/p1-foundation.md#delivered-contracts) | Source review pending | Source review pending | P8 baseline pending |
-| Formula dependency graph | [P4 evidence available](docs/evidence/p4-graph.md#formal-phase-gate) | Source review pending | Source review pending | P8 baseline pending |
-| Incremental reindex | [P1 evidence available](docs/evidence/p1-foundation.md#invariant-evidence) | Source review pending | Source review pending | P8 baseline pending |
-| Formula diagnostics | [P5 evidence available](docs/evidence/p5-diagnostics.md#formal-phase-gate) | Source review pending | Source review pending | P8 baseline pending |
-| Edit support and untouched-part fidelity | [P6 verified evidence available](docs/evidence/p6-editor.md#part-preservation) | Source review pending | Source review pending | P8 baseline pending |
-| Token discipline | [P8 measured: no reduction; S5 fails](docs/evidence/success-criteria.md#s5) | Source review pending | Source review pending | [Measured reference arm](benchmarks/results/README.md) |
+| Persistent semantic index | [SQLite semantic index](docs/evidence/p1-foundation.md#delivered-contracts) | Not documented | Smart cache documented; persistent semantic index not documented | None |
+| Formula dependency graph | [Bidirectional, bounded traces](docs/evidence/p4-graph.md#delivered-contracts) | Not documented | Not documented | None |
+| Incremental reindex | [Part-hash driven and measured](docs/evidence/p1-foundation.md#invariant-evidence) | Not documented | Not documented | Reopens workbook per request |
+| Formula diagnostics | [Typed catalog](docs/evidence/p5-diagnostics.md#diagnostic-matrix) | Formula/range validation documented; diagnostic catalog not documented | Not documented | None |
+| Edit support and untouched-part fidelity | [2 narrow writes; untouched ZIP parts byte-identical](docs/evidence/p6-editor.md#part-preservation) | Broad edits documented; byte-identity claim not documented | Read-only; writes on roadmap | Read-only |
+| Token discipline | Hard response caps; [65.2× less measured workbook payload](docs/evidence/success-criteria.md#s5) | Comparable caps not documented | Context limits and bounded previews documented | Full CSV dump |
 
 ## How it works
 
@@ -213,9 +223,8 @@ range into individual edges. See [index internals](docs/index-internals.md).
 
 ## Security & scope
 
-> **Pre-release security boundary; P7 is verified and P9 release verification
-> remains pending.** The local stdio server makes no runtime network requests and
-> supports realpath-resolved workbook confinement.
+The local stdio server makes no runtime network requests and supports
+realpath-resolved workbook confinement.
 
 The P6 core edit services surgically modify targeted worksheet XML and required
 calculation metadata. Complete F16/F21 part manifests and a property test prove
@@ -273,7 +282,9 @@ are verified P3 behavior; later-phase bullets remain planned release behavior.
 ## Evidence
 
 Start with the [evidence index](docs/evidence/README.md). It distinguishes
-verified artifacts from named future deliverables and links the exhaustive
-[README claims-to-artifacts plan](docs/evidence/readme-claims-to-artifacts.md).
+verified artifacts from scope declarations and links the exhaustive
+[README claims-to-artifacts matrix](docs/evidence/readme-claims-to-artifacts.md),
+[clean-install report](docs/evidence/fresh-install.md), and
+[registry submission packet](docs/registry-submissions.md).
 
 Not affiliated with Microsoft. Excel is a trademark of Microsoft Corporation.

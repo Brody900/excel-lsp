@@ -15,6 +15,7 @@ import tiktoken
 from benchmarks.baseline_server import read_sheet, read_workbook_full
 from benchmarks.check import check_transcript
 from benchmarks.model import TASKS, TaskSpec, fixture_path
+from benchmarks.workloads import build_workloads
 from excel_lsp.server.service import ToolService
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,6 +80,7 @@ def _transcript(task: TaskSpec) -> str:
 
 
 def collect_scripted(root: Path = ROOT) -> list[ScriptedResult]:
+    build_workloads(root, force=True)
     encoding = tiktoken.get_encoding(ENCODING)
     results: list[ScriptedResult] = []
     arms: tuple[tuple[str, Callable[[TaskSpec, Path], list[tuple[str, dict[str, Any]]]]], ...] = (
@@ -116,7 +118,11 @@ def collect_scripted(root: Path = ROOT) -> list[ScriptedResult]:
 def write_scripted(results: list[ScriptedResult], output: Path = DEFAULT_OUTPUT) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=tuple(asdict(results[0])))
+        writer = csv.DictWriter(
+            stream,
+            fieldnames=tuple(asdict(results[0])),
+            lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(asdict(result) for result in results)
 

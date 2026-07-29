@@ -1,0 +1,30 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Brody900/excel-lsp",
+  "title": "Excel LSP",
+  "description": "Semantic workbook index, dependency navigation, diagnostics, and surgical Excel edits",
+  "version": "0.1.0",
+  "websiteUrl": "https://github.com/Brody900/excel-lsp",
+  "repository": {
+    "url": "https://github.com/Brody900/excel-lsp",
+    "source": "github",
+    "id": "1315997024"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "excel-lsp",
+      "version": "0.1.0",
+      "runtimeHint": "uvx",
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "serve"
+        }
+      ],
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

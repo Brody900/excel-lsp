@@ -953,6 +953,38 @@ def _generate_f15(output_dir: Path) -> Path:
     return path
 
 
+def _generate_f17(output_dir: Path) -> Path:
+    path = output_dir / "unicode_names.xlsx"
+    workbook, summer = _new_workbook("Résumé d'été")
+    tokyo = workbook.create_sheet("東京")
+    summary = workbook.create_sheet("O'Brien résumé")
+
+    summer.append(("Libellé", "Valeur"))
+    summer.append(("Café", 7))
+    tokyo.append(("項目", "値"))
+    tokyo.append(("売上", 11))
+
+    workbook.defined_names.add(DefinedName("TauxÉté", attr_text="'Résumé d''été'!$B$2"))
+    summary.append(("Mesure", "Valeur"))
+    summary.append(("Été", "='Résumé d''été'!B2"))
+    summary.append(("東京", "='東京'!B2"))
+    summary.append(("Nom défini", "=TauxÉté*2"))
+
+    workbook.save(path)
+    workbook.close()
+    inject_cached_values(
+        path,
+        "O'Brien résumé",
+        {
+            "B2": CachedValue(7),
+            "B3": CachedValue(11),
+            "B4": CachedValue(14),
+        },
+    )
+    repack_deterministic(path)
+    return path
+
+
 def _generate_f20(output_dir: Path) -> Path:
     path = output_dir / "stress_map.xlsx"
     workbook, stress = _new_workbook("Stress01")
@@ -1135,6 +1167,7 @@ def generate_all(output_dir: Path = GENERATED_DIR) -> dict[str, Path]:
     existing.update(
         {
             "F16": _generate_f16(output_dir),
+            "F17": _generate_f17(output_dir),
             "F21": _generate_f21(output_dir),
         }
     )

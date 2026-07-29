@@ -15,10 +15,14 @@ ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "benchmarks" / "results"
 PREFLIGHT = RESULTS / "llm-eval-preflight-mixed.jsonl"
 BASELINE_RERUN = RESULTS / "llm-eval-baseline-rerun.jsonl"
+S5_REMEDIATION = RESULTS / "llm-eval-s5-remediation.jsonl"
 CONSOLIDATED = RESULTS / "llm-eval.jsonl"
 FLAT_CSV = RESULTS / "accuracy.csv"
 ACCURACY_TABLE = RESULTS / "accuracy.md"
 AUDIT_COST = RESULTS / "audit-cost.json"
+RUN_GUARD_MAXIMUM = 80
+DISCARDED_INVALID_WORKLOAD_COMPLETED = 12
+DISCARDED_INVALID_WORKLOAD_INTERRUPTED = 1
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -117,7 +121,7 @@ def write_flat_csv(rows: list[dict[str, Any]], path: Path = FLAT_CSV) -> None:
         "cost_usd_reported",
     )
     with path.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fields)
+        writer = csv.DictWriter(stream, fields, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             input_tokens = int(row.get("input_tokens") or 0)
@@ -174,6 +178,43 @@ def _mark(row: dict[str, Any]) -> str:
     return "pass" if row["correct"] else "fail"
 
 
+def run_guard_accounting() -> dict[str, Any]:
+    """Account for every retained, failed, deleted, and interrupted headless run."""
+    entries = [
+        {
+            "source": "llm-eval-preflight-mixed.jsonl",
+            "status": "retained historical P8 preflight",
+            "runs": len(load_jsonl(PREFLIGHT)),
+        },
+        {
+            "source": "llm-eval-baseline-rerun.jsonl",
+            "status": "retained historical P8 baseline rerun",
+            "runs": len(load_jsonl(BASELINE_RERUN)),
+        },
+        {
+            "source": "deleted invalid P9 openpyxl-workload matrix",
+            "status": "12 completed rows deleted; next B4 Excel-LSP run interrupted",
+            "completed_runs": DISCARDED_INVALID_WORKLOAD_COMPLETED,
+            "interrupted_runs": DISCARDED_INVALID_WORKLOAD_INTERRUPTED,
+            "runs": (DISCARDED_INVALID_WORKLOAD_COMPLETED + DISCARDED_INVALID_WORKLOAD_INTERRUPTED),
+        },
+        {
+            "source": "llm-eval-s5-remediation.jsonl",
+            "status": "retained P9 remediation matrix",
+            "runs": len(load_jsonl(S5_REMEDIATION)),
+        },
+    ]
+    observed = sum(int(entry["runs"]) for entry in entries)
+    if observed > RUN_GUARD_MAXIMUM:
+        raise ValueError("recorded headless invocations exceed the frozen run guard")
+    return {
+        "accounting": entries,
+        "observed_headless_runs": observed,
+        "maximum": RUN_GUARD_MAXIMUM,
+        "remaining": RUN_GUARD_MAXIMUM - observed,
+    }
+
+
 def write_audit_cost(rows: list[dict[str, Any]], path: Path = AUDIT_COST) -> None:
     audit = [row for row in rows if row["task"] == "B2" and row["arm"] == "excel-lsp"]
     payload = {
@@ -193,15 +234,16 @@ def write_audit_cost(rows: list[dict[str, Any]], path: Path = AUDIT_COST) -> Non
             "Codex CLI 0.144.5 with ChatGPT authentication emitted token usage but no cost field; "
             "no unsupported dollar conversion is claimed."
         ),
-        "run_guard": {"observed_headless_runs": 36, "maximum": 80},
+        "run_guard": run_guard_accounting(),
     }
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 def run() -> list[dict[str, Any]]:
+    remediation = load_jsonl(S5_REMEDIATION)
     rows = consolidate(
-        load_jsonl(PREFLIGHT),
-        load_jsonl(BASELINE_RERUN),
+        remediation,
+        remediation,
         allow_regrade=True,
     )
     write_consolidated(rows)

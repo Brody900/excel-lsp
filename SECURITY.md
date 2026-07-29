@@ -6,12 +6,11 @@ Because an MCP server can be given paths and can eventually write workbooks,
 the filesystem boundary is part of the security model rather than an implicit
 promise.
 
-## Development status
+## Release status
 
-This repository is pre-release. The parser, index, regions, symbols, formula
-analysis, graph, diagnostics, P6 surgical editor, and P7 bounded stdio MCP/CLI
-surface with realpath confinement are verified. P8 still owns the complete
-live protocol and benchmark evidence, and P9 owns public release verification.
+Version 0.1.0 includes the parser, index, regions, symbols, formula analysis,
+graph, diagnostics, surgical editor, bounded stdio MCP/CLI surface, realpath
+confinement, live Excel evidence, benchmarks, and clean-install evidence.
 
 ## Supported files and trust boundary
 
@@ -67,19 +66,16 @@ confinement, while P8 owns the complete live protocol.
 
 ## Dependency and release practices
 
-Dependencies are locked in `uv.lock`. CI will exercise the supported Python and
-operating-system matrix before release. Release artifacts must be built from a
-clean checkout, and the clean-install evidence must identify the tested commit,
-Python version, operating system, and Codex CLI version.
+Dependencies are locked in `uv.lock`. CI exercises Python 3.11–3.13 on Linux,
+macOS, and Windows. Release artifacts are built from the reviewed source, and
+the clean-install evidence identifies the tested commit, Python version,
+operating system, Codex CLI version, and artifact hashes.
 
 ## Reporting a vulnerability
 
 Do not disclose a suspected vulnerability in a public issue with an exploit or
-private workbook attached. Once the public GitHub repository enables private
-vulnerability reporting, use its **Security → Report a vulnerability** flow.
-Before that P9 publication step, report the issue privately to the repository
-owner through the same private channel used to receive this source tree. This
-section will be updated with the final private-advisory URL at release time.
+private workbook attached. Use GitHub's private
+[security-advisory form](https://github.com/Brody900/excel-lsp/security/advisories/new).
 
 Include the affected commit or version, platform, minimal reproduction using
 synthetic data, impact, and whether the issue permits reading or modifying paths
@@ -87,6 +83,7 @@ outside the intended scope. Remove secrets and personal workbook data first.
 
 ## Supported versions
 
-No public version is supported yet. After v0.1.0, the latest tagged minor line
-will receive security fixes; the precise support window will be recorded here
-before the first release.
+| Version | Supported |
+|---|---:|
+| 0.1.x | Yes |
+| Earlier or untagged builds | No |

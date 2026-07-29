@@ -1,9 +1,8 @@
 # Examples
 
-This directory contains configuration examples for Excel LSP's v0.1.0 stdio
-MCP server. The server is verified in P7, but these published
-`uvx` commands are not release proof until P9 executes each path from a clean
-environment.
+This directory contains verified configuration examples for Excel LSP's v0.1.0
+stdio MCP server. Clean wheel, `uvx`, MCP initialization, and Codex registration
+results are recorded in the [install evidence](../docs/evidence/fresh-install.md).
 
 ## Codex configuration
 
@@ -12,17 +11,19 @@ environment.
 ```toml
 [mcp_servers.excel-lsp]
 command = "uvx"
-args = ["excel-lsp", "serve"]
+args = ["--from", "git+https://github.com/Brody900/excel-lsp@main", "excel-lsp", "serve"]
 ```
 
-The equivalent Codex CLI registration planned for the release quickstart is:
+The equivalent Codex CLI registration is:
 
 ```console
-codex mcp add excel-lsp -- uvx excel-lsp serve
+codex mcp add excel-lsp -- uvx --from git+https://github.com/Brody900/excel-lsp@main excel-lsp serve
 ```
 
-P9 will re-check this syntax against the then-current Codex CLI, record the
-version and output, initialize the server, and remove the configuration again.
+Codex CLI 0.144.5 accepted this exact fallback command in an isolated
+configuration home, returned the expected stdio command and arguments, and
+removed it cleanly. The server also completed real MCP initialization from the
+same public source.
 
 ## Generic MCP JSON
 
@@ -30,9 +31,6 @@ version and output, initialize the server, and remove the configuration again.
 JSON shape. It is for MCP clients that consume that format; it is not Codex's
 native configuration file.
 
-Both examples currently describe a future published command. Until P9
-finishes, use `uv run excel-lsp serve` in the repository's locked development
-environment and treat
-[`README.md`](../README.md) as pre-release documentation. The exact install and
-configuration evidence required for publication is tracked in the
-[README claims-to-artifacts plan](../docs/evidence/readme-claims-to-artifacts.md).
+After PyPI publication is visible, the shorter arguments are
+`["excel-lsp", "serve"]`. The [README](../README.md) contains copy-paste
+commands for both paths.

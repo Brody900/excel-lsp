@@ -103,15 +103,15 @@ def _grouped_bars(
     axis.legend(frameon=False, ncols=2)
 
 
-def plot_hero(llm_rows: list[dict[str, str]], assets: Path) -> None:
-    values = _mean_by(llm_rows, "total_tokens")
+def plot_hero(scripted_rows: list[dict[str, str]], assets: Path) -> None:
+    values = _mean_by(scripted_rows, "payload_tokens")
     figure, axis = plt.subplots(figsize=(9.2, 4.8))
-    _grouped_bars(axis, values, ylabel="Mean CLI tokens (input + output, log scale)", log=True)
-    axis.set_title("Headless Codex token usage by benchmark task")
+    _grouped_bars(axis, values, ylabel="Tool-result payload tokens (log scale)", log=True)
+    axis.set_title("Semantic navigation versus complete workbook dumps")
     axis.text(
         0,
         -0.2,
-        "Two repetitions per task/arm; includes fixed agent context and MCP schemas.",
+        "Deterministic o200k_base proxy; exact answers for both scripted arms.",
         transform=axis.transAxes,
         fontsize=8,
         color="#475569",
@@ -234,7 +234,7 @@ def plot_all(results: Path = RESULTS, assets: Path = ASSETS) -> tuple[Path, ...]
     scripted_rows = _read_csv(results / "scripted.csv")
     index_rows = _read_csv(results / "index-timing.csv")
     audit = json.loads((results / "audit-cost.json").read_text(encoding="utf-8"))
-    plot_hero(llm_rows, assets)
+    plot_hero(scripted_rows, assets)
     plot_modes(scripted_rows, llm_rows, assets)
     plot_tool_calls(llm_rows, assets)
     plot_index(index_rows, assets)

@@ -39,6 +39,7 @@ EXPECTED_FIXTURE_IDS = {
     "F14",
     "F15",
     "F16",
+    "F17",
     "F18",
     "F19",
     "F20",
@@ -673,6 +674,39 @@ def test_f15_has_exact_three_dimensional_formula_span_and_cache(
         "SUM(Jan:Mar!B2)",
         "60",
     )
+
+
+def test_f17_preserves_unicode_and_quoted_apostrophe_names(
+    generated_paths: dict[str, Path],
+) -> None:
+    path = generated_paths["F17"]
+    workbook = _xml_member(path, "xl/workbook.xml")
+    assert [sheet.get("name") for sheet in workbook.findall(f".//{{{MAIN_NS}}}sheet")] == [
+        "Résumé d'été",
+        "東京",
+        "O'Brien résumé",
+    ]
+    defined_names = workbook.findall(f".//{{{MAIN_NS}}}definedName")
+    assert [(name.get("name"), "".join(name.itertext())) for name in defined_names] == [
+        ("TauxÉté", "'Résumé d''été'!$B$2"),
+    ]
+    assert {
+        ref: _formula_and_value(_cells(path, "O'Brien résumé")[ref]) for ref in ("B2", "B3", "B4")
+    } == {
+        "B2": ("'Résumé d''été'!B2", "7"),
+        "B3": ("'東京'!B2", "11"),
+        "B4": ("TauxÉté*2", "14"),
+    }
+
+    with OOXMLParser(path) as parser:
+        assert [sheet.name for sheet in parser.metadata.sheets] == [
+            "Résumé d'été",
+            "東京",
+            "O'Brien résumé",
+        ]
+        assert [
+            (name.name, name.refers_to, name.kind) for name in parser.metadata.defined_names
+        ] == [("TauxÉté", "'Résumé d''été'!$B$2", "range")]
 
 
 def test_f20_has_40_sheets_12_islands_and_300_typed_names(

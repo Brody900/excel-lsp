@@ -13,9 +13,9 @@ or other secrets.
 - [Phase 1 parser and index foundation](p1-foundation.md) records parser,
   lifecycle, canonical-export, oracle, concurrency, coverage, build, and review
   evidence.
-- [README claims-to-artifacts plan](readme-claims-to-artifacts.md) maps every
+- [README claims-to-artifacts matrix](readme-claims-to-artifacts.md) maps every
   public claim or required README section to its producing phase and exact
-  proof. At P2, most later-phase rows are intentionally marked `Planned`.
+  proof. P9 release claims remain `Candidate P9` until the formal gate closes.
 
 ## Completed phase evidence
 
@@ -56,18 +56,22 @@ or other secrets.
   harness, both headless-Codex repetitions, raw measurements, S1 pass, honest
   S5 failure, optional-arm skip, and generated charts. Its combined reviewer
   approved both gates on the exact final frozen fingerprint.
-- [Success criteria](success-criteria.md) cross-checks the frozen S1–S7 wording
-  without promoting pending or failed criteria.
+- [Success criteria](success-criteria.md) cross-checks the frozen S1–S7 wording,
+  retains the historical P8 failure, and records the candidate P9 remediation.
 
-## Planned evidence paths
+## Candidate Phase 9 evidence
 
-These paths are contracts, not links to completed work:
-
-- `fresh-install.md`: clean package, CLI, Codex MCP, and fallback verification.
-- `codex-mcp-help.txt`: sanitized release-time Codex syntax capture.
-- `comparison-sources.md`: pinned, dated sources for every comparison cell.
-
-Each future evidence document must identify the exact commit, environment,
-commands, results, and underlying raw artifact. A passing test source without a
-fresh run, or a chart without raw rows and its generation script, is not enough
-to mark a claim verified.
+- [Fresh-install evidence](fresh-install.md) records package build, wheel and
+  `uvx` execution, MCP initialization, Codex registration, runtime network
+  denial, and the public-git fallback.
+- [Codex MCP help](codex-mcp-help.txt) records the release-time syntax and
+  isolated registration result.
+- [Comparison sources](comparison-sources.md) pins and dates every upstream
+  observation used by the README comparison.
+- [Registry submission packet](../registry-submissions.md) contains exact
+  account-scoped follow-up copy and current submission constraints.
+- [Phase 9 release evidence](p9-release.md) summarizes the packaging, public
+  repository, verification, and remaining formal/release gates.
+- [P9 S5 and fixture remediation](p9-s5-remediation.md) records the disclosed
+  workload, fresh exact-answer matrix, passing mandatory criterion, and F17
+  corpus completion.

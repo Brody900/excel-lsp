@@ -8,7 +8,8 @@ formula reference extraction and R1C1 blocks. Verified P4 adds ranked
 dependency navigation and bounded circular analysis. Verified P5 completes the
 typed diagnostic catalog; verified P6 adds surgical editing, direct index
 patches, and transitive staleness. Verified P7 adds the shared MCP/CLI service
-boundary. Benchmarks and release behavior remain planned in P8–P9.
+boundary. P8 adds live Excel and benchmark evidence; P9 adds clean distribution,
+documentation, CI, and public release metadata.
 
 ## Layer boundaries
 
@@ -122,7 +123,7 @@ bounded map projection over indexed rows. See
 | P6 | Surgical OOXML editing and transitive staleness | Verified |
 | P7 | Fourteen-tool MCP server and full CLI | Verified |
 | P8 | Live Excel protocol, benchmarks, headless-Codex evaluations, charts | Verified |
-| P9 | Documentation, clean installs, CI matrix, public release and registries | Planned |
+| P9 | Documentation, clean installs, CI matrix, public release and registries | Verified release candidate |
 
 This phase boundary is intentional. A schema table or README contract can exist
 before the behavior that populates it; public status follows the gate evidence,
@@ -137,7 +138,7 @@ lockfile before source-hash conflict, validates a same-directory replacement
 archive before atomic installation, and recovers the derivable sidecar if a
 post-replacement direct index patch fails. Verified P7 adds the optional
 `EXCEL_LSP_ROOT` realpath boundary around all agent-supplied paths. The complete
-pre-release threat model is in [`SECURITY.md`](../SECURITY.md).
+threat model is in [`SECURITY.md`](../SECURITY.md).
 
 ## P6 mutation flow
 

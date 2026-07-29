@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import shutil
+import socket
 import sys
 from pathlib import Path
 from typing import Any, cast
@@ -15,7 +16,7 @@ from mcp.client.stdio import stdio_client
 from openpyxl import load_workbook
 
 from excel_lsp.core.errors import ErrorCode
-from excel_lsp.server.service import RESPONSE_CHARACTER_CAP
+from excel_lsp.server.service import RESPONSE_CHARACTER_CAP, ToolService
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "generated"
 SCHEMA_SNAPSHOT = Path(__file__).parents[2] / "docs" / "evidence" / "p7-tool-schemas.json"
@@ -67,6 +68,8 @@ async def _exercise_server(root: Path, workbook: Path) -> None:
         async with ClientSession(read_stream, write_stream) as session:
             initialized = await session.initialize()
             assert initialized.instructions
+            assert initialized.serverInfo.name == "excel-lsp"
+            assert initialized.serverInfo.version == "0.1.0"
             assert "open_workbook" in initialized.instructions
             assert "read_range" in initialized.instructions
 
@@ -344,3 +347,27 @@ def test_stdio_server_conformance(tmp_path: Path) -> None:
     shutil.copyfile(FIXTURES / workbook.name, workbook)
 
     asyncio.run(_exercise_server(root, workbook))
+
+
+def test_server_operates_with_network_denied(tmp_path: Path, monkeypatch: Any) -> None:
+    class DeniedSocket(socket.socket):
+        def connect(self, address: object) -> None:
+            raise AssertionError(f"runtime attempted a network connection: {address!r}")
+
+        def connect_ex(self, address: object) -> int:
+            raise AssertionError(f"runtime attempted a network connection: {address!r}")
+
+    def denied_lookup(*args: object, **kwargs: object) -> None:
+        raise AssertionError(f"runtime attempted a network lookup: {args!r} {kwargs!r}")
+
+    monkeypatch.setattr(socket, "socket", DeniedSocket)
+    monkeypatch.setattr(socket, "create_connection", denied_lookup)
+    monkeypatch.setattr(socket, "getaddrinfo", denied_lookup)
+
+    workbook = tmp_path / "cross_sheet_model.xlsx"
+    shutil.copyfile(FIXTURES / workbook.name, workbook)
+    service = ToolService()
+    opened = service.open_workbook(str(workbook))
+    assert opened["workbook"] == workbook.name
+    assert service.list_symbols(str(workbook), kinds=["regions"])["symbols"]
+    assert service.read_range(str(workbook), "Inputs!A1:C2")["values"]

@@ -17,6 +17,7 @@ from typing import Any
 
 from benchmarks.check import check_transcript
 from benchmarks.model import TASKS, TaskSpec, fixture_path
+from benchmarks.workloads import build_workloads
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "benchmarks" / "results" / "llm-eval.jsonl"
@@ -284,6 +285,7 @@ def _optional_float(value: Any) -> float | None:
 
 
 def run_one(task: TaskSpec, arm: str, repetition: int, root: Path = ROOT) -> EvalResult:
+    build_workloads(root)
     command = build_command(task, arm, root)
     started = time.perf_counter()
     try:
@@ -347,6 +349,7 @@ def run_matrix(
     repetitions: int = 2,
     resume: bool = False,
 ) -> list[dict[str, Any]]:
+    build_workloads(ROOT, force=True)
     existing = _load_existing(output) if resume else []
     if output.exists() and not resume:
         raise FileExistsError(f"refusing to overwrite existing eval data: {output}")

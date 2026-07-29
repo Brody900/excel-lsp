@@ -1,5 +1,4 @@
-# Planned v0.1.0 Codex MCP configuration. The P9 clean-install gate must verify
-# this exact command before the README removes its pre-release warning.
+# Verified v0.1.0 Codex MCP configuration using the public Git fallback.
 [mcp_servers.excel-lsp]
 command = "uvx"
-args = ["excel-lsp", "serve"]
+args = ["--from", "git+https://github.com/Brody900/excel-lsp@main", "excel-lsp", "serve"]

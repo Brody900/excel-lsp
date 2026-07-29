@@ -1,0 +1,24 @@
+Captured 2026-07-29
+codex-cli 0.144.5
+
+codex mcp add --help
+
+Usage: codex mcp add [OPTIONS] <NAME> (--url <URL> | -- <COMMAND>...)
+
+Arguments:
+  <NAME>          Name for the MCP server configuration
+  [COMMAND]...    Command to launch the MCP server
+
+Relevant option:
+  --env <KEY=VALUE>    Environment variables to set when launching a stdio server
+
+Verified command:
+  codex mcp add excel-lsp -- uvx --from git+https://github.com/Brody900/excel-lsp@main excel-lsp serve
+
+Isolated `codex mcp get excel-lsp` result:
+  enabled: true
+  transport: stdio
+  command: uvx
+  args: --from git+https://github.com/Brody900/excel-lsp@main excel-lsp serve
+  cwd: -
+  env: -

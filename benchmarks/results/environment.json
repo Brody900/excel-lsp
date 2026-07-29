@@ -1,6 +1,7 @@
 {
   "environment_id": "windows-amd64-py31211-20260729T070238Z",
   "captured_at_utc": "2026-07-29T07:02:38Z",
+  "s5_remediation_captured_at_utc": "2026-07-29T13:29:57Z",
   "git_revision": "6b770459ccd19a01c33430ebf906d2d618ce341f",
   "git_worktree_dirty": true,
   "platform": "Windows-11-10.0.26200-SP0",
@@ -25,6 +26,7 @@
     "Incremental timing begins after a one-part OOXML mutation and excludes mutation time.",
     "Filesystem cache state is uncontrolled and disclosed rather than cleared destructively.",
     "All committed timing rows in index-timing.csv share this singleton environment record.",
-    "Measurements were captured from the P8 worktree based on the recorded P7 revision; the exact reviewed P8 candidate fingerprint is recorded at the formal phase freeze."
+    "Measurements were captured from the P8 worktree based on the recorded P7 revision; the exact reviewed P8 candidate fingerprint is recorded at the formal phase freeze.",
+    "The P9 S5 matrix used the same machine, Python, Codex CLI, model, reasoning effort, and pinned dependencies with the disclosed deterministic archive workload."
   ]
 }

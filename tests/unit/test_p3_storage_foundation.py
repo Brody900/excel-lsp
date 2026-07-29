@@ -448,16 +448,27 @@ def test_lifecycle_keeps_raw_external_target_private_from_canonical_export(
     secret_target = (
         "https://user:password@example.test/private/budget.xlsx?sig=SECRET_TOKEN#fragment"
     )
-    workbook = tmp_path / "external-secret.xlsx"
+    workbook_dir = tmp_path / "private-host-path"
+    workbook_dir.mkdir()
+    workbook = workbook_dir / "external-secret.xlsx"
     _write_external_package(workbook, secret_target)
 
-    update = index_workbook(workbook, index_dir=tmp_path / "indexes")
+    update = index_workbook(workbook, index_dir=workbook_dir / "indexes")
 
     with IndexStore(update.index_path) as store:
         assert json.loads(store.get_meta("external_links") or "{}") == {"1": secret_target}
-        serialized = json.dumps(store.canonical_export(), ensure_ascii=False)
+        exported = store.canonical_export()
+        assert all(key != "external_links" for key, _value in exported["meta"])
+        serialized = json.dumps(exported, ensure_ascii=False)
 
-    for secret in ("user", "password", "private", "SECRET_TOKEN", "fragment"):
+    for secret in (
+        secret_target,
+        "user:password@example.test",
+        "example.test",
+        "budget.xlsx",
+        "SECRET_TOKEN",
+        "#fragment",
+    ):
         assert secret not in serialized
 
 

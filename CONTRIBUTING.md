@@ -1,8 +1,8 @@
 # Contributing to Excel LSP
 
-Excel LSP is being built through ordered, evidence-backed phases. Contributions
-are welcome when they preserve the frozen public contracts in `HANDOFF.md`, fit
-the current phase, and include focused verification.
+Excel LSP was built through ordered, evidence-backed phases. Contributions are
+welcome when they preserve the public v0.1 contracts, fit the architecture,
+and include focused verification.
 
 ## Before starting
 

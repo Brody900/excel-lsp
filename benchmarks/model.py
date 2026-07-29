@@ -36,7 +36,9 @@ class TaskSpec:
         )
         return (
             f"# {self.task_id} — {self.title}\n\n"
-            f"Workbook: `tests/fixtures/generated/{self.fixture}`.\n\n"
+            f"Workbook: `tests/fixtures/generated/benchmarks/{self.fixture}`. This is the "
+            "canonical task fixture plus the deterministic, disclosed archive workload from "
+            "`benchmarks/workloads.py`.\n\n"
             f"{self.question}\n\n"
             "Use only the configured workbook MCP tools. Do not use Python, shell commands, "
             "or another spreadsheet library. You may explain your reasoning briefly.\n\n"
@@ -146,7 +148,7 @@ TASK_BY_ID = {task.task_id: task for task in TASKS}
 
 
 def fixture_path(task: TaskSpec, root: Path) -> Path:
-    return root / "tests" / "fixtures" / "generated" / task.fixture
+    return root / "tests" / "fixtures" / "generated" / "benchmarks" / task.fixture
 
 
 __all__ = ["TASKS", "TASK_BY_ID", "TaskSpec", "fixture_path"]

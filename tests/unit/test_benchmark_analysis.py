@@ -8,7 +8,12 @@ from zipfile import ZipFile
 
 import pytest
 
-from benchmarks.analyze_results import consolidate, write_accuracy_table, write_flat_csv
+from benchmarks.analyze_results import (
+    consolidate,
+    run_guard_accounting,
+    write_accuracy_table,
+    write_flat_csv,
+)
 from benchmarks.check import check_transcript
 from benchmarks.model import TASKS
 from benchmarks.plot import OUTPUTS, plot_all
@@ -250,7 +255,7 @@ def test_plotter_emits_all_png_and_svg_assets(tmp_path: Path) -> None:
             assert "<svg" in output.read_text(encoding="utf-8")
 
 
-def test_committed_results_reproduce_s1_and_honest_s5_status() -> None:
+def test_committed_results_reproduce_s1_and_s5_status() -> None:
     results = Path(__file__).parents[2] / "benchmarks" / "results"
     with (results / "scripted.csv").open(encoding="utf-8", newline="") as stream:
         scripted = list(csv.DictReader(stream))
@@ -258,6 +263,7 @@ def test_committed_results_reproduce_s1_and_honest_s5_status() -> None:
         llm = list(csv.DictReader(stream))
     with (results / "index-timing.csv").open(encoding="utf-8", newline="") as stream:
         timing = list(csv.DictReader(stream))
+    audit = json.loads((results / "audit-cost.json").read_text(encoding="utf-8"))
 
     assert len(scripted) == 12
     assert len(llm) == 24
@@ -276,12 +282,12 @@ def test_committed_results_reproduce_s1_and_honest_s5_status() -> None:
     }
     fifty_thousand = [row for row in timing if int(row["rows"]) == 50_000]
 
-    assert scripted_totals == {"excel-lsp": 3_375, "naive-dump": 2_127}
+    assert scripted_totals == {"excel-lsp": 3_410, "naive-dump": 222_289}
     assert llm_means == {
-        "excel-lsp": pytest.approx(77_927.833333),
-        "naive-dump": pytest.approx(41_432.833333),
+        "excel-lsp": pytest.approx(77_310.5),
+        "naive-dump": pytest.approx(64_909.833333),
     }
-    assert llm_correct == {"excel-lsp": 12, "naive-dump": 9}
+    assert llm_correct == {"excel-lsp": 12, "naive-dump": 8}
     assert statistics.median(float(row["cold_seconds"]) for row in fifty_thousand) == pytest.approx(
         9.439544
     )
@@ -289,6 +295,12 @@ def test_committed_results_reproduce_s1_and_honest_s5_status() -> None:
         float(row["incremental_seconds"]) for row in fifty_thousand
     ) == pytest.approx(0.065912)
 
-    assert scripted_totals["excel-lsp"] > scripted_totals["naive-dump"]
+    assert scripted_totals["excel-lsp"] * 10 <= scripted_totals["naive-dump"]
     assert llm_means["excel-lsp"] > llm_means["naive-dump"]
     assert llm_correct["excel-lsp"] >= llm_correct["naive-dump"]
+    assert audit["run_guard"] == run_guard_accounting()
+    assert [entry["runs"] for entry in audit["run_guard"]["accounting"]] == [24, 12, 13, 24]
+    assert audit["run_guard"]["accounting"][2]["completed_runs"] == 12
+    assert audit["run_guard"]["accounting"][2]["interrupted_runs"] == 1
+    assert audit["run_guard"]["observed_headless_runs"] == 73
+    assert audit["run_guard"]["remaining"] == 7

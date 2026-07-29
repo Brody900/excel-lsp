@@ -11,6 +11,7 @@ from mcp.server.fastmcp import Context, FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
+from excel_lsp import __version__
 from excel_lsp.core.errors import ErrorCode, ExcelLSPError
 from excel_lsp.server.models import WriteCellInput
 from excel_lsp.server.service import ToolService, fit_tool_envelope
@@ -34,6 +35,9 @@ WRITE_ANNOTATIONS = ToolAnnotations(
 )
 
 mcp = FastMCP("excel-lsp", instructions=INSTRUCTIONS)
+# FastMCP leaves its low-level implementation version unset, so the SDK would
+# otherwise substitute the SDK package version during MCP initialization.
+mcp._mcp_server.version = __version__
 service = ToolService()
 logger = logging.getLogger(__name__)
 

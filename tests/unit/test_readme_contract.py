@@ -92,7 +92,7 @@ def test_readme_has_frozen_positioning_and_section_order() -> None:
 
     assert readme.startswith("# Excel LSP\n\n")
     assert f"{ONE_LINER}\n\n{QUALIFIER}" in readme
-    hero = "![Grouped logarithmic bars compare mean headless Codex"
+    hero = "![Grouped logarithmic bars compare deterministic tool-result"
     assert hero in readme
     assert "](docs/assets/benchmark-token-hero.svg)" in readme
     assert "](docs/assets/lineage-demo.gif)" in readme
@@ -116,7 +116,7 @@ def test_readme_lists_exactly_the_frozen_fourteen_tools() -> None:
     assert tool_headings == TOOLS
 
 
-def test_readme_is_codex_first_and_labels_future_evidence() -> None:
+def test_readme_is_codex_first_and_labels_release_fallback() -> None:
     readme = _read(README)
     lowered = readme.casefold()
 
@@ -125,14 +125,14 @@ def test_readme_is_codex_first_and_labels_future_evidence() -> None:
     assert not re.search(r"\bclaude\s+(?:mcp|exec|-p)\b", lowered)
     assert "This is a generic MCP-client example, not Codex's native" in readme
 
-    required_status_labels = (
-        "Development status",
-        "are verified through P8",
-        "Planned v0.1.0 quickstart",
-        "Planned for P9",
-        "Therefore S5 fails",
+    required_release_labels = (
+        "verified public-repository install works now",
+        "After the PyPI publication is visible",
+        "source notes and exact revisions",
+        "clean-install report",
+        "65.2\u00d7 reduction",
     )
-    for label in required_status_labels:
+    for label in required_release_labels:
         assert label in readme
 
 
@@ -141,7 +141,6 @@ def test_readme_preserves_security_scope_and_limitations() -> None:
     normalized_readme = " ".join(readme.split())
 
     required_text = (
-        "Pre-release security boundary; P7 is verified and P9 release verification",
         "local stdio server makes no runtime network requests",
         "supports realpath-resolved workbook confinement",
         "default is unrestricted local-path access",
@@ -176,10 +175,10 @@ def test_benchmark_section_publishes_measured_results_and_raw_evidence() -> None
     normalized_section = " ".join(benchmark_section.split())
 
     assert "[raw results index](benchmarks/results/README.md)" in benchmark_section
-    assert "| Excel LSP | 12/12 | 100.0% | 77,927.8 |" in benchmark_section
-    assert "| Naive dump | 9/12 | 75.0% | 41,432.8 |" in benchmark_section
-    assert "S5 fails" in normalized_section
-    assert "scripted payload totals are 3,375 versus 2,127" in normalized_section
+    assert "| Excel LSP | 12/12 | 100.0% | 77,310.5 |" in benchmark_section
+    assert "| Naive dump | 8/12 | 66.7% | 64,909.8 |" in benchmark_section
+    assert "meets S5" in normalized_section
+    assert "3,410 tokens versus 222,289" in normalized_section
     assert "excel-lsp bench" in benchmark_section
     for asset in (
         "benchmark-token-modes.svg",
@@ -220,7 +219,15 @@ def test_codex_and_generic_mcp_examples_are_equivalent() -> None:
 
     codex_server = codex_config["mcp_servers"]["excel-lsp"]
     generic_server = generic_config["mcpServers"]["excel-lsp"]
-    expected = {"command": "uvx", "args": ["excel-lsp", "serve"]}
+    expected = {
+        "command": "uvx",
+        "args": [
+            "--from",
+            "git+https://github.com/Brody900/excel-lsp@main",
+            "excel-lsp",
+            "serve",
+        ],
+    }
 
     assert codex_server == expected
     assert generic_server == expected
@@ -334,28 +341,34 @@ def test_current_claim_artifact_paths_nodes_and_anchors_resolve() -> None:
             "Verified P6",
             "Verified P7",
             "Verified P8",
+            "Candidate P9",
         }:
             continue
         for reference in re.findall(r"`([^`]+)`", cells[4]):
             _assert_exact_reference(reference)
 
 
-def test_readme_links_current_positive_comparison_claims_to_p1_evidence() -> None:
+def test_readme_links_comparison_claims_to_exact_phase_evidence() -> None:
     readme = _read(README)
 
-    assert "[P1 evidence available](docs/evidence/p1-foundation.md#delivered-contracts)" in readme
-    assert "[P1 evidence available](docs/evidence/p1-foundation.md#invariant-evidence)" in readme
+    assert "[SQLite semantic index](docs/evidence/p1-foundation.md#delivered-contracts)" in readme
+    assert (
+        "[Part-hash driven and measured](docs/evidence/p1-foundation.md#invariant-evidence)"
+        in readme
+    )
+    assert "[source notes and exact revisions](docs/evidence/comparison-sources.md)" in readme
 
 
-def test_repository_skeleton_documents_are_substantive_and_pre_release() -> None:
+def test_release_documents_are_substantive_and_current() -> None:
     for filename in ("SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md"):
         content = _read(ROOT / filename)
         assert len(content.splitlines()) >= 25
 
     security = _read(ROOT / "SECURITY.md")
     changelog = _read(ROOT / "CHANGELOG.md")
-    assert "No public version is supported yet" in security
-    assert "Excel LSP is pre-release" in changelog
+    assert "| 0.1.x | Yes |" in security
+    assert "## [0.1.0] - 2026-07-29" in changelog
+    assert "No changes yet." in changelog
 
 
 def test_review_governance_current_state_is_consistent() -> None:
@@ -372,7 +385,7 @@ def test_review_governance_current_state_is_consistent() -> None:
         ROOT / "CHANGELOG.md",
     )
 
-    assert "Total formal verdicts recorded: 76." in plan
+    assert "Total formal verdicts recorded: 85." in plan
     assert "0 nominal slots remain" in plan
     assert "The minimum completion path is now 30 total invocations" in plan
     assert "leaving no pooled\ncontingency slots" in plan

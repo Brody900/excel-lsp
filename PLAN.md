@@ -88,14 +88,14 @@ Authoritative specification: `HANDOFF.md` (v1.1). Work phases execute in order; 
 
 ### P9 — Documentation and release
 
-- [ ] Complete README in the required order with fair, sourced comparisons and artifact-backed claims.
-- [ ] Complete architecture, internals, security, contribution, tool-reference, changelog, examples, and registry copy.
-- [ ] Run clean-environment install, CLI, MCP, `uvx`, lint, type, test, coverage, and build checks.
-- [ ] Verify the GitHub Actions 3 OS x 3 Python matrix.
-- [ ] Create the public GitHub repository and push `main`.
+- [x] Complete README in the required order with fair, sourced comparisons and artifact-backed claims.
+- [x] Complete architecture, internals, security, contribution, tool-reference, changelog, examples, and registry copy.
+- [x] Run clean-environment install, CLI, MCP, `uvx`, lint, type, test, coverage, and build checks.
+- [x] Verify the GitHub Actions 3 OS x 3 Python matrix.
+- [x] Create the public GitHub repository and push `main`.
 - [ ] Tag/release `v0.1.0`, attach release assets, and publish to PyPI or document the git+ fallback.
-- [ ] Prepare official MCP Registry, Smithery, mcp.so, and PulseMCP submissions.
-- [ ] Spend final R-repo reviews and close the release gate.
+- [x] Prepare official MCP Registry, Smithery, mcp.so, and PulseMCP submissions.
+- [x] Spend final R-repo reviews and close the release gate.
 
 ## Review ledger
 
@@ -123,14 +123,23 @@ each single reviewer invocation are charged:
 | 2 | `c2554b5ec0d5844f2135600c48eac24e9d0d276b` | APPROVE (#38) | REVISE (#33) |
 | 3 | `e299db5fed3d26db9b85b838f4476e1a86692efd` | APPROVE (#39) | APPROVE (#34) |
 
-Effective counts after P8 round 3: R-mech 39 (latest `APPROVE`), R-test 34
-(latest `APPROVE`), R-repo 3 (latest `APPROVE`).
+P9's authoritative gate additionally requires R-repo. The same single combined
+reviewer returns all three verdicts so the exact-fingerprint and one-reviewer
+rules remain intact:
 
-Total formal verdicts recorded: 76. Against the historical
-allocation, 0 nominal slots remain. At least 3 future R-repo invocations remain
-reserved for P9 under the later unbounded-review authorization. Additional fresh
-invocations are likewise authorized whenever a `REVISE` or changed candidate
-requires them.
+| P9 combined round | Frozen staged tree | R-mech | R-test | R-repo |
+|---:|---|---|---|---|
+| 1 | `5913b8f446a5edd235eeb604acc880c5b6e030ee` | APPROVE (#40) | REVISE (#35) | REVISE (#4) |
+| 2 | `44cdb0c9cd3afe2838b1d0db74252f3cb86335e7` | APPROVE (#41) | REVISE (#36) | REVISE (#5) |
+| 3 | `8e823d81d335c518d61cddf63a69c15adaae62ba` | APPROVE (#42) | APPROVE (#37) | APPROVE (#6) |
+
+Effective counts after P9 round 3: R-mech 42 (latest `APPROVE`), R-test 37
+(latest `APPROVE`), R-repo 6 (latest `APPROVE`).
+
+Total formal verdicts recorded: 85. Against the historical allocation, 0 nominal slots remain.
+Additional fresh invocations are authorized whenever a
+`REVISE` or changed candidate requires them under the later unbounded-review
+authorization.
 
 ### User-authorized review-governance amendment
 
@@ -179,13 +188,13 @@ and requirement that both verdicts approve one unchanged tree remain intact.
 
 ## Definition of Done
 
-- [ ] S1–S7 all verified with evidence linked (S4 includes the part-diff proof)
-- [ ] CI green: 3 OS × 3 Python, lint + types + tests, coverage ≥ 85% core
-- [ ] All **21** generated fixtures + 3 live-authored fixtures exercised; **T-oracle green with documented skip-list**
-- [ ] Live-Excel evidence committed: authoring, round-trip (incl. .xlsm/VBA with macro-runs assertion), trace cross-validation, no-repair screenshots, **open-in-Excel refusal (step 5)**, **chart-intact screenshot (step 6)**, demo GIF
-- [ ] Benchmarks: scripted + LLM-eval results committed with raw data, **ANSWER-contract checkers**, **both repetitions reported**, and 5 charts (incl. incremental series); hero chart in README
-- [ ] README complete per §10.2 (**14 tools, LSP-style qualifier, Security & scope note**); fresh-env install verified
-- [ ] **SECURITY.md, CLAUDE.md, uv.lock committed; `tests/fixtures/README.md` documents vbaProject.bin provenance**
-- [ ] Review ledger: budget accounting complete (incl. the P2 R-repo spend); every domain ended on clean APPROVE (or exhaustion policy executed)
+- [x] S1–S7 all verified with evidence linked (S4 includes the part-diff proof; S5 remediation is candidate P9)
+- [x] CI green: 3 OS × 3 Python, lint + types + tests, coverage ≥ 85% core
+- [x] All **21** generated fixtures + 3 live-authored fixtures exercised; **T-oracle green with documented skip-list**
+- [x] Live-Excel evidence committed: authoring, round-trip (incl. .xlsm/VBA with macro-runs assertion), trace cross-validation, no-repair screenshots, **open-in-Excel refusal (step 5)**, **chart-intact screenshot (step 6)**, demo GIF
+- [x] Benchmarks: scripted + LLM-eval results committed with raw data, **ANSWER-contract checkers**, **both repetitions reported**, and 5 charts (incl. incremental series); hero chart in README
+- [x] README complete per §10.2 (**14 tools, LSP-style qualifier, Security & scope note**); fresh-env install verified
+- [x] **SECURITY.md, CLAUDE.md, uv.lock committed; `tests/fixtures/README.md` documents vbaProject.bin provenance**
+- [x] Review ledger: budget accounting complete (incl. the P2 R-repo spend); every domain ended on clean APPROVE (or exhaustion policy executed)
 - [ ] `v0.1.0` tagged; PyPI published or fallback documented; registry submissions prepared
 - [ ] agent-log.md tells the whole story; final summary written for the user listing follow-ups (tokens, registry accounts)

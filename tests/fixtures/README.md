@@ -85,6 +85,9 @@ regenerate F16; the committed project blob is the deterministic input.
 - F16 `macro_book.xlsm`: a macro-enabled worksheet with the sanctioned
   `vbaProject.bin`, one cached arithmetic formula, and the live `Stamp` target;
   P6 edits prove the VBA part is byte-identical afterward.
+- F17 `unicode_names.xlsx`: non-ASCII values and worksheet names, including an
+  apostrophe that requires doubled quoting in formulas, plus a Unicode defined
+  name and deterministic cross-sheet formula caches.
 - F18 `volatile.xlsx`: independent `NOW` and `RAND` formula blocks with stable
   saved caches, proving one `I_VOLATILE` finding per block.
 - F19 `modern_functions.xlsx`: stored `_xlfn.`/`_xlws.` functions and Excel's
