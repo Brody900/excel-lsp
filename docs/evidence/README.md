@@ -46,12 +46,23 @@ or other secrets.
   invalidation, regex timeout, path confinement, and verification. Its combined
   formal reviewer approved both gates on the exact final frozen fingerprint.
 
+## Verified Phase 8 evidence
+
+- [Phase 8 live desktop-Excel evidence](live-excel/index.md) records all seven
+  required protocol steps, numbered screenshots, COM assertions, exact product
+  responses, the VBA run, write refusal, chart/image preservation, three trace
+  cross-checks, and the real-capture demo GIF.
+- [Phase 8 benchmarks](p8-benchmarks.md) records the exact-graded six-task
+  harness, both headless-Codex repetitions, raw measurements, S1 pass, honest
+  S5 failure, optional-arm skip, and generated charts. Its combined reviewer
+  approved both gates on the exact final frozen fingerprint.
+- [Success criteria](success-criteria.md) cross-checks the frozen S1–S7 wording
+  without promoting pending or failed criteria.
+
 ## Planned evidence paths
 
 These paths are contracts, not links to completed work:
 
-- `live-excel/index.md`: numbered live protocol, screenshots, and demo capture.
-- `success-criteria.md`: final S1-S7 evidence cross-check.
 - `fresh-install.md`: clean package, CLI, Codex MCP, and fallback verification.
 - `codex-mcp-help.txt`: sanitized release-time Codex syntax capture.
 - `comparison-sources.md`: pinned, dated sources for every comparison cell.

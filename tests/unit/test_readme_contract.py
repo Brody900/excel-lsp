@@ -92,17 +92,14 @@ def test_readme_has_frozen_positioning_and_section_order() -> None:
 
     assert readme.startswith("# Excel LSP\n\n")
     assert f"{ONE_LINER}\n\n{QUALIFIER}" in readme
-    assert "Benchmark hero chart — planned for P8" in readme
-    assert "P8 HERO SLOT" in readme
+    hero = "![Grouped logarithmic bars compare mean headless Codex"
+    assert hero in readme
+    assert "](docs/assets/benchmark-token-hero.svg)" in readme
+    assert "](docs/assets/lineage-demo.gif)" in readme
 
     positions = [readme.index(heading) for heading in README_SECTIONS]
     assert positions == sorted(positions)
-    assert (
-        readme.index(QUALIFIER)
-        < readme.index("Benchmark hero chart — planned for P8")
-        < readme.index("P8 HERO SLOT")
-        < positions[0]
-    )
+    assert readme.index(QUALIFIER) < readme.index(hero) < positions[0]
     assert readme.rstrip().endswith(TRADEMARK_FOOTER)
 
 
@@ -130,10 +127,10 @@ def test_readme_is_codex_first_and_labels_future_evidence() -> None:
 
     required_status_labels = (
         "Development status",
-        "Planned for P8",
+        "are verified through P8",
         "Planned v0.1.0 quickstart",
         "Planned for P9",
-        "currently makes no measured performance",
+        "Therefore S5 fails",
     )
     for label in required_status_labels:
         assert label in readme
@@ -149,7 +146,7 @@ def test_readme_preserves_security_scope_and_limitations() -> None:
         "supports realpath-resolved workbook confinement",
         "default is unrestricted local-path access",
         "every OOXML part not deliberately modified stays byte-identical",
-        "P6 core verified; P8 live protocol pending",
+        "P6 core verified; P8 live evidence captured",
         "does not recalculate formulas",
         "Verified P3/P5",
         "are flaggable but opaque to static dependency analysis",
@@ -170,7 +167,7 @@ def test_readme_preserves_security_scope_and_limitations() -> None:
         assert " ".join(text.split()) in normalized_readme
 
 
-def test_benchmark_section_links_the_planned_raw_results_index() -> None:
+def test_benchmark_section_publishes_measured_results_and_raw_evidence() -> None:
     readme = _read(README)
     raw_results = _read(RAW_RESULTS_INDEX)
     benchmark_section = readme.split("## Benchmarks", maxsplit=1)[1].split(
@@ -179,7 +176,18 @@ def test_benchmark_section_links_the_planned_raw_results_index() -> None:
     normalized_section = " ".join(benchmark_section.split())
 
     assert "[raw results index](benchmarks/results/README.md)" in benchmark_section
-    assert "placeholder until P8 commits measured rows" in normalized_section
+    assert "| Excel LSP | 12/12 | 100.0% | 77,927.8 |" in benchmark_section
+    assert "| Naive dump | 9/12 | 75.0% | 41,432.8 |" in benchmark_section
+    assert "S5 fails" in normalized_section
+    assert "scripted payload totals are 3,375 versus 2,127" in normalized_section
+    assert "excel-lsp bench" in benchmark_section
+    for asset in (
+        "benchmark-token-modes.svg",
+        "benchmark-tool-calls.svg",
+        "benchmark-index-time.svg",
+        "benchmark-audit-cost.svg",
+    ):
+        assert f"docs/assets/{asset}" in benchmark_section
     for filename in (
         "environment.json",
         "scripted.csv",
@@ -325,6 +333,7 @@ def test_current_claim_artifact_paths_nodes_and_anchors_resolve() -> None:
             "Verified P5",
             "Verified P6",
             "Verified P7",
+            "Verified P8",
         }:
             continue
         for reference in re.findall(r"`([^`]+)`", cells[4]):
@@ -363,7 +372,7 @@ def test_review_governance_current_state_is_consistent() -> None:
         ROOT / "CHANGELOG.md",
     )
 
-    assert "Total formal verdicts recorded: 70." in plan
+    assert "Total formal verdicts recorded: 76." in plan
     assert "0 nominal slots remain" in plan
     assert "The minimum completion path is now 30 total invocations" in plan
     assert "leaving no pooled\ncontingency slots" in plan

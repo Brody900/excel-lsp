@@ -25,7 +25,7 @@ from openpyxl.utils.datetime import CALENDAR_MAC_1904, CALENDAR_WINDOWS_1900, fr
 
 from excel_lsp.core.errors import ErrorCode, ExcelLSPError
 from excel_lsp.core.formulas.a1 import CellRef
-from excel_lsp.core.formulas.translation import translate_a1_formula
+from excel_lsp.core.formulas.translation import A1TranslationPlan
 from excel_lsp.core.models import (
     CalculationMode,
     CalculationProperties,
@@ -97,8 +97,8 @@ class _ArraySpan:
 @dataclass(frozen=True, slots=True)
 class _SharedFormula:
     formula: str
-    origin: str
     rect: Rect
+    translation: A1TranslationPlan
 
 
 class OOXMLParser:
@@ -820,6 +820,10 @@ class OOXMLParser:
         data_tables: list[DataTableFormulaInfo],
     ) -> CellRecord | None:
         raw_ref = attr_by_local(element, "r")
+        if raw_ref is not None and not arrays and not data_tables:
+            fast_numeric = _plain_numeric_cell(element, raw_ref=raw_ref)
+            if fast_numeric is not None:
+                return fast_numeric
         if raw_ref is None:
             row = current_row or 1
             col = implicit_column
@@ -834,9 +838,19 @@ class OOXMLParser:
         style_text = attr_by_local(element, "s")
         style_idx = 0 if style_text is None else _bounded_int(style_text, 0, 2_147_483_647, "style")
         type_code = (attr_by_local(element, "t") or "n").casefold()
-        formula_element = child_by_local(element, "f")
-        value_element = child_by_local(element, "v")
-        inline_element = child_by_local(element, "is")
+        formula_element: etree._Element | None = None
+        value_element: etree._Element | None = None
+        inline_element: etree._Element | None = None
+        for child in element:
+            if not isinstance(child.tag, str):
+                continue
+            child_name = local_name(child.tag)
+            if child_name == "f" and formula_element is None:
+                formula_element = child
+            elif child_name == "v" and value_element is None:
+                value_element = child
+            elif child_name == "is" and inline_element is None:
+                inline_element = child
         has_value = value_element is not None or inline_element is not None
         if formula_element is None and not has_value:
             return None
@@ -876,7 +890,11 @@ class OOXMLParser:
                         raise _PackageCorrupt(
                             f"shared formula si {shared_index} has more than one master"
                         )
-                    shared_formulas[shared_index] = _SharedFormula(formula, ref, group_rect)
+                    shared_formulas[shared_index] = _SharedFormula(
+                        formula,
+                        group_rect,
+                        A1TranslationPlan.compile(formula, origin=CellRef(row, col)),
+                    )
                 else:
                     master = shared_formulas.get(shared_index)
                     if master is None:
@@ -888,10 +906,7 @@ class OOXMLParser:
                             f"shared formula follower {ref} is outside its master ref span"
                         )
                     try:
-                        master_row, master_col = _checked_cell_ref(master.origin)
-                        formula = translate_a1_formula(
-                            master.formula,
-                            origin=CellRef(master_row, master_col),
+                        formula = master.translation.translate(
                             target=CellRef(row, col),
                         )
                     except ValueError as error:
@@ -1398,6 +1413,55 @@ def _parse_number(value: str) -> int | float:
     if not math.isfinite(result):
         raise _PackageCorrupt("numeric cell is outside the float range")
     return result
+
+
+def _plain_numeric_cell(
+    element: etree._Element,
+    *,
+    raw_ref: str,
+) -> CellRecord | None:
+    """Return the common unstyled numeric-cell shape without general dispatch."""
+    type_code = element.get("t")
+    if element.get("s") is not None or (type_code is not None and type_code.casefold() != "n"):
+        return None
+    if len(element) != 1:
+        return None
+    value_element = element[0]
+    if not isinstance(value_element.tag, str) or local_name(value_element.tag) != "v":
+        return None
+    if value_element.text is None:
+        return None
+    if element.get("r") != raw_ref or raw_ref != raw_ref.upper() or "$" in raw_ref:
+        return None
+    try:
+        row, col = parse_cell_ref(raw_ref)
+    except ValueError:
+        return None
+    return CellRecord(
+        ref=raw_ref,
+        row=row,
+        col=col,
+        value=_parse_plain_number(value_element.text),
+        value_type="number",
+        formula=None,
+        style_idx=0,
+    )
+
+
+def _parse_plain_number(value: str) -> int | float:
+    """Parse one ordinary OOXML numeric lexical value without Decimal allocation."""
+    try:
+        if not any(marker in value for marker in ".eE"):
+            return int(value)
+        parsed = float(value)
+    except ValueError as error:
+        raise _PackageCorrupt("numeric cell has an invalid value") from error
+    if not math.isfinite(parsed):
+        return _parse_number(value)
+    # Decimal-looking integral values can exceed float's exact-integer range.
+    # Reuse the canonical parser only for that uncommon branch so the fast
+    # path cannot silently turn 9007199254740993.0 into 9007199254740992.
+    return _parse_number(value) if parsed.is_integer() else parsed
 
 
 def _parse_iso_temporal(value: str) -> date | datetime | time:

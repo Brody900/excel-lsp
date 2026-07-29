@@ -41,7 +41,7 @@ dev = [
 path = "src/excel_lsp/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/excel_lsp"]
+packages = ["src/excel_lsp", "benchmarks"]
 
 [tool.ruff]
 target-version = "py311"

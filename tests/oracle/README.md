@@ -4,7 +4,7 @@
 read-only mode: once for formulas and once for cached values. It emits canonical
 `(sheet, ref, normalized_value, formula)` tuples and compares them with the
 production `OOXMLParser` stream. The comparison covers every fixture currently
-emitted by `generate_all` (F01, F02, F03, F04, F05, F07, F08, F09a, F09b,
+emitted by `generate_all` (F01, F02, F03, F04, F05, F06, F07, F08, F09a, F09b,
 F10, F11, F12, F13, F14, F15, F16, F18, F19, F20, and F21), including F03's
 cross-sheet caches; F04's
 scoped/global-name consumers; F05's structured and totals-row formulas; all

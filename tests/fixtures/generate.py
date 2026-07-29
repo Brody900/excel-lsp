@@ -39,6 +39,7 @@ _PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 _CONTENT_TYPES_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
 _DCTERMS_NS = "http://purl.org/dc/terms/"
 _REL_TYPE_BASE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+_VBA_REL_TYPE = "http://schemas.microsoft.com/office/2006/relationships/vbaProject"
 _VBA_PROJECT = Path(__file__).resolve().parent / "assets" / "vbaProject.bin"
 _PNG_16X16 = bytes.fromhex(
     "89504e470d0a1a0a0000000d49484452000000100000001008060000001ff3ff61"
@@ -330,6 +331,19 @@ def inject_external_link(
 def inject_vba_project(workbook_path: Path, project_path: Path = _VBA_PROJECT) -> None:
     """Inject the sanctioned F16 VBA project and macro-enabled package metadata."""
     members = _read_archive(workbook_path)
+
+    workbook = etree.fromstring(members["xl/workbook.xml"])
+    workbook_properties = workbook.find(f"{{{_MAIN_NS}}}workbookPr")
+    if workbook_properties is None:
+        raise ValueError("workbook properties are missing")
+    workbook_properties.set("codeName", "ThisWorkbook")
+
+    worksheet = etree.fromstring(members["xl/worksheets/sheet1.xml"])
+    sheet_properties = worksheet.find(f"{{{_MAIN_NS}}}sheetPr")
+    if sheet_properties is None:
+        raise ValueError("worksheet properties are missing")
+    sheet_properties.set("codeName", "Sheet1")
+
     relationships = etree.fromstring(members["xl/_rels/workbook.xml.rels"])
     if any(
         relationship.get("Id") == "rIdVbaProject"
@@ -340,7 +354,7 @@ def inject_vba_project(workbook_path: Path, project_path: Path = _VBA_PROJECT) -
         relationships,
         f"{{{_PACKAGE_REL_NS}}}Relationship",
         Id="rIdVbaProject",
-        Type=f"{_REL_TYPE_BASE}/vbaProject",
+        Type=_VBA_REL_TYPE,
         Target="vbaProject.bin",
     )
 
@@ -366,6 +380,8 @@ def inject_vba_project(workbook_path: Path, project_path: Path = _VBA_PROJECT) -
         ContentType="application/vnd.ms-office.vbaProject",
     )
 
+    members["xl/workbook.xml"] = etree.tostring(workbook)
+    members["xl/worksheets/sheet1.xml"] = etree.tostring(worksheet)
     members["xl/_rels/workbook.xml.rels"] = etree.tostring(relationships)
     members["[Content_Types].xml"] = etree.tostring(content_types)
     members["xl/vbaProject.bin"] = project_path.read_bytes()
@@ -632,6 +648,33 @@ def _generate_f05(output_dir: Path) -> Path:
     inject_cached_values(path, "Structured", caches)
     repack_deterministic(path)
     return path
+
+
+def _generate_f06(output_dir: Path) -> Path:
+    """Author the 1k/10k/50k timing family and return the S1 target."""
+    for data_rows, label in ((1_000, "1k"), (10_000, "10k"), (50_000, "50k")):
+        path = output_dir / f"perf_{label}.xlsx"
+        workbook, worksheet = _new_workbook("Perf")
+        worksheet.append(("ID", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "Total"))
+        caches: dict[str, CachedValue] = {}
+        for row_number in range(2, data_rows + 2):
+            identifier = row_number - 1
+            measures = tuple(((identifier * factor) % 997) / 10 for factor in range(1, 9))
+            worksheet.append((identifier, *measures, f"=SUM(B{row_number}:I{row_number})"))
+            caches[f"J{row_number}"] = CachedValue(sum(measures))
+        control = workbook.create_sheet("Control")
+        control["A1"] = "Revision"
+        control["A2"] = 1
+        workbook.save(path)
+        workbook.close()
+        inject_cached_values(path, "Perf", caches)
+        convert_shared_formula_groups(
+            path,
+            "Perf",
+            (SharedFormulaGroup(f"J2:J{data_rows + 1}", "J2", 0),),
+        )
+        repack_deterministic(path)
+    return output_dir / "perf_50k.xlsx"
 
 
 def _generate_f07(output_dir: Path) -> Path:
@@ -1068,6 +1111,7 @@ def generate_all(output_dir: Path = GENERATED_DIR) -> dict[str, Path]:
         "F03": _generate_f03(output_dir),
         "F04": _generate_f04(output_dir),
         "F05": _generate_f05(output_dir),
+        "F06": _generate_f06(output_dir),
         "F07": f07,
         "F09a": _generate_f09a(output_dir),
         "F09b": _generate_f09b(output_dir),

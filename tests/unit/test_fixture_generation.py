@@ -11,6 +11,7 @@ from zipfile import ZipFile
 
 import lxml.etree as etree
 import pytest
+from openpyxl import load_workbook
 from openpyxl.utils.cell import get_column_letter
 
 from excel_lsp.core.parse import OOXMLParser
@@ -18,6 +19,7 @@ from excel_lsp.core.parse import OOXMLParser
 MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 OFFICE_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
+VBA_REL_TYPE = "http://schemas.microsoft.com/office/2006/relationships/vbaProject"
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 EXPECTED_FIXTURE_IDS = {
     "F01",
@@ -25,6 +27,7 @@ EXPECTED_FIXTURE_IDS = {
     "F03",
     "F04",
     "F05",
+    "F06",
     "F07",
     "F08",
     "F09a",
@@ -62,7 +65,7 @@ P5_SHA256 = {
     "F18": "5b77a7efc0d93e06355206bba1385dc14a3743f592a8864091913300e57bfc7e",
 }
 P6_SHA256 = {
-    "F16": "9f392ed6227358c5ff79a667433e79290e5acd2b6415e2ea6e80006b09cb6ae6",
+    "F16": "f1f8bd18f42527ae1f6d26fc5e4f27b210f822032255cf95ca101bc3f5474577",
     "F21": "d8f0d32d51ce7aa864f47c1ad83a192eb650559ee6ac800e297562d3eb0212fb",
 }
 GenerateAll = Callable[[Path], dict[str, Path]]
@@ -156,6 +159,14 @@ def test_generation_is_byte_identical_with_stable_zip_metadata(tmp_path: Path) -
     second_paths = generate_all(tmp_path / "second")
 
     assert second_paths.keys() == first_paths.keys() == EXPECTED_FIXTURE_IDS
+    first_perf = {
+        path.name: path.read_bytes() for path in sorted((tmp_path / "first").glob("perf_*.xlsx"))
+    }
+    second_perf = {
+        path.name: path.read_bytes() for path in sorted((tmp_path / "second").glob("perf_*.xlsx"))
+    }
+    assert second_perf == first_perf
+    assert set(first_perf) == {"perf_1k.xlsx", "perf_10k.xlsx", "perf_50k.xlsx"}
     for fixture_id, path in second_paths.items():
         assert path.read_bytes() == first_bytes[fixture_id]
         with ZipFile(path) as archive:
@@ -211,6 +222,58 @@ def test_f01_has_listobject_formulas_and_injected_caches(
         "UnitPrice",
         "LineTotal",
     ]
+
+
+def test_f06_authors_all_timing_sizes_with_shared_formulas_and_caches(
+    generated_paths: dict[str, Path],
+) -> None:
+    family = generated_paths["F06"].parent
+    for data_rows, label in ((1_000, "1k"), (10_000, "10k"), (50_000, "50k")):
+        path = family / f"perf_{label}.xlsx"
+        formulas = load_workbook(path, read_only=True, data_only=False)
+        values = load_workbook(path, read_only=True, data_only=True)
+        try:
+            formula_sheet = formulas["Perf"]
+            value_sheet = values["Perf"]
+            assert formulas.sheetnames == ["Perf", "Control"]
+            assert values["Control"]["A2"].value == 1
+            assert formula_sheet.max_row == data_rows + 1
+            assert formula_sheet.max_column == 10
+            assert formula_sheet["J2"].value == "=SUM(B2:I2)"
+            assert formula_sheet[f"J{data_rows + 1}"].value == (
+                f"=SUM(B{data_rows + 1}:I{data_rows + 1})"
+            )
+            assert isinstance(value_sheet[f"J{data_rows + 1}"].value, float)
+        finally:
+            formulas.close()
+            values.close()
+
+
+def test_f06_plain_numeric_cells_use_the_bounded_parser_fast_path(
+    generated_paths: dict[str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workbook = generated_paths["F06"].parent / "perf_1k.xlsx"
+    calls = 0
+    original = OOXMLParser._parse_cell_value
+
+    def counted(
+        self: OOXMLParser,
+        type_code: str,
+        value_element: Any,
+        inline_element: Any,
+        style_idx: int,
+    ) -> tuple[Any, Any]:
+        nonlocal calls
+        calls += 1
+        return original(self, type_code, value_element, inline_element, style_idx)
+
+    monkeypatch.setattr(OOXMLParser, "_parse_cell_value", counted)
+    with OOXMLParser(workbook) as parser:
+        cells = parser.collect_cells(parser.metadata.sheets[0])
+
+    assert len(cells) == 10_010
+    assert calls == 1_010  # 1,000 formulas plus the ten string headers
 
 
 def test_f07_has_shared_groups_tamper_caches_table_and_merge(
@@ -721,11 +784,18 @@ def test_f16_has_macro_enabled_metadata_exact_vba_blob_and_formula_cache(
             archive.read("xl/vbaProject.bin")
             == (Path(__file__).parents[1] / "fixtures" / "assets" / "vbaProject.bin").read_bytes()
         )
+        workbook = etree.fromstring(archive.read("xl/workbook.xml"))
+        worksheet = etree.fromstring(archive.read("xl/worksheets/sheet1.xml"))
         relationships = etree.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
         content_types = etree.fromstring(archive.read("[Content_Types].xml"))
+    workbook_properties = workbook.find(f"{{{MAIN_NS}}}workbookPr")
+    sheet_properties = worksheet.find(f"{{{MAIN_NS}}}sheetPr")
+    assert workbook_properties is not None
+    assert sheet_properties is not None
+    assert workbook_properties.get("codeName") == "ThisWorkbook"
+    assert sheet_properties.get("codeName") == "Sheet1"
     assert any(
-        relationship.get("Type", "").endswith("/vbaProject")
-        and relationship.get("Target") == "vbaProject.bin"
+        relationship.get("Type") == VBA_REL_TYPE and relationship.get("Target") == "vbaProject.bin"
         for relationship in relationships
     )
     workbook_override = next(

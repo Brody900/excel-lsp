@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from itertools import combinations
 
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from openpyxl.formula.translate import Translator
@@ -21,7 +22,7 @@ from excel_lsp.core.formulas.blocks import (
     normalize_formula_cells,
 )
 from excel_lsp.core.formulas.r1c1 import to_r1c1
-from excel_lsp.core.formulas.translation import translate_a1_formula
+from excel_lsp.core.formulas.translation import A1TranslationPlan, translate_a1_formula
 from excel_lsp.core.models import Rect
 from excel_lsp.core.parse.coordinates import column_label, make_cell_ref
 
@@ -176,6 +177,26 @@ def test_mixed_name_a1_translation_preserves_name_spelling_and_i10(
     assert translate_a1_formula(formula, origin=origin, target=target) == expected
     if not a1_spill:
         assert to_r1c1(formula, origin) == to_r1c1(expected, target)
+
+
+@pytest.mark.parametrize(
+    ("formula", "origin", "targets"),
+    (
+        ("=SUM(B2:I2)", CellRef(2, 10), (CellRef(3, 10), CellRef(50_001, 10))),
+        ("=@A2+Table1[@Qty]", CellRef(2, 3), (CellRef(3, 3), CellRef(9, 4))),
+        ("=A1#:B5", CellRef(2, 2), (CellRef(3, 2), CellRef(7, 5))),
+    ),
+)
+def test_compiled_translation_plan_matches_one_shot_translation(
+    formula: str,
+    origin: CellRef,
+    targets: tuple[CellRef, ...],
+) -> None:
+    plan = A1TranslationPlan.compile(formula, origin=origin)
+
+    assert [plan.translate(target=target) for target in targets] == [
+        translate_a1_formula(formula, origin=origin, target=target) for target in targets
+    ]
 
 
 _GRID_ATOMS = st.sampled_from((None, "self", "left", "absolute", "constant"))

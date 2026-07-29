@@ -1,0 +1,30 @@
+{
+  "environment_id": "windows-amd64-py31211-20260729T070238Z",
+  "captured_at_utc": "2026-07-29T07:02:38Z",
+  "git_revision": "6b770459ccd19a01c33430ebf906d2d618ce341f",
+  "git_worktree_dirty": true,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+  "python": "3.12.11",
+  "codex_cli": "codex-cli 0.144.5",
+  "codex_model": "gpt-5.6-sol",
+  "codex_reasoning_effort": "high",
+  "scripted_tokenizer": "tiktoken o200k_base",
+  "dependencies": {
+    "lxml": "6.1.1",
+    "matplotlib": "3.11.0",
+    "mcp": "1.28.1",
+    "openpyxl": "3.1.5",
+    "pydantic": "2.13.4",
+    "regex": "2026.7.10",
+    "tiktoken": "0.13.0",
+    "typer": "0.27.0"
+  },
+  "notes": [
+    "Each cold sample uses a new workbook path and empty index directory.",
+    "Incremental timing begins after a one-part OOXML mutation and excludes mutation time.",
+    "Filesystem cache state is uncontrolled and disclosed rather than cleared destructively.",
+    "All committed timing rows in index-timing.csv share this singleton environment record.",
+    "Measurements were captured from the P8 worktree based on the recorded P7 revision; the exact reviewed P8 candidate fingerprint is recorded at the formal phase freeze."
+  ]
+}

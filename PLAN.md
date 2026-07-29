@@ -78,13 +78,13 @@ Authoritative specification: `HANDOFF.md` (v1.1). Work phases execute in order; 
 
 ### P8 — Live evidence and benchmarks
 
-- [ ] Author and index L1–L3 in desktop Excel.
-- [ ] Complete every live protocol step, including VBA run, write refusal, chart preservation, screenshots, and GIF.
-- [ ] Implement naive baseline, six task checkers, scripted replays, and headless LLM eval harness.
-- [ ] Run both repetitions, enforce the cost guard, preserve raw results, and grade exact answers.
-- [ ] Generate five charts, accuracy table, and audit-cost callout.
-- [ ] Verify S1–S6 with linked evidence.
-- [ ] Pass R-test gate.
+- [x] Author and index L1–L3 in desktop Excel.
+- [x] Complete every live protocol step, including VBA run, write refusal, chart preservation, screenshots, and GIF.
+- [x] Implement naive baseline, six task checkers, scripted replays, and headless LLM eval harness.
+- [x] Run both repetitions, enforce the cost guard, preserve raw results, and grade exact answers.
+- [x] Generate five charts, accuracy table, and audit-cost callout.
+- [x] Verify S1–S6 with linked evidence.
+- [x] Pass the combined R-mech and R-test gate on one frozen fingerprint.
 
 ### P9 — Documentation and release
 
@@ -113,7 +113,20 @@ release aims for a clean APPROVE in every domain.
 | R-test | 31 | 0 nominal; unbounded retries authorized | APPROVE | P1 used one REVISE and one APPROVE-with-minor. P2 used one REVISE and one clean APPROVE. P3 #5 and #6 approved superseded trees; #7 approved. P4 #8/#9 found incomplete edge oracles; #10/#12/#13/#15 approved candidates later rejected by mechanics; #11 found incomplete F09b traversal proof; #14 reproduced the native-subclass store-close lock leak; #16 cleanly approved a candidate later rejected by mechanics; #17 found missing permanent kill-proof for exact rank-catalog DDL, content, trigger validation, and current-sidecar reconstruction; #18 found a selectively omissible fixture round-trip oracle, missing graph-write authorizer-denial proof, and WAL-only constructor acquisition-failure coverage; #19 cleanly approved a candidate rejected by R-mech #24; #20 found no both-backend `SQLITE_IGNORE` mutation/invalidation regression; #21 cleanly approved the remediated frozen candidate. P5 #22 found missing regressions for unchanged-workbook link health, no-I/O network targets, numeric same-basename ownership, post-cap corruption, and non-finite JSON rejection; #23 found no excessive-nesting corruption regression beyond the materialized page; #24 cleanly approved the fully remediated frozen candidate. P6 #25 found no regressions for cell-level `extLst` ordering or missing-`calcPr` insertion before valid later workbook children; #26 found no coverage for the delayed replacement retry's conflict, lockfile, success, and repeated-failure branches; #27 found no regression for a valid second-writer save during touched-sheet collection; #28 cleanly approved the fully remediated frozen candidate. P7 #29 found no regressions for oversized canonical errors, late cell-symbol matches, stale cached-value search results, or sparse profile count semantics; #30 found no permanent direct and real-stdio regression for serialized expansion of one complete cell; #31 cleanly approved the fully remediated frozen candidate. |
 | R-repo | 3 | 7 | APPROVE | The first two P2 invocations remain charged as `REVISE`. Fresh review #3 returned `APPROVE` with one architecture-status minor: it still implied that R-test and all three P2 approvals were pending. This current-state update corrects that wording. Reserve at least 3 R-repo invocations for P9. |
 
-Total formal verdicts recorded: 70. Against the historical
+The domain table above records P0–P7. P8 combined-review verdict adjustments
+are appended here so historical rows remain intact while both verdicts from
+each single reviewer invocation are charged:
+
+| P8 combined round | Frozen staged tree | R-mech | R-test |
+|---:|---|---|---|
+| 1 | `39ad2519592e890eae1eae4549ce6cbe01d4dbf9` | APPROVE (#37) | REVISE (#32) |
+| 2 | `c2554b5ec0d5844f2135600c48eac24e9d0d276b` | APPROVE (#38) | REVISE (#33) |
+| 3 | `e299db5fed3d26db9b85b838f4476e1a86692efd` | APPROVE (#39) | APPROVE (#34) |
+
+Effective counts after P8 round 3: R-mech 39 (latest `APPROVE`), R-test 34
+(latest `APPROVE`), R-repo 3 (latest `APPROVE`).
+
+Total formal verdicts recorded: 76. Against the historical
 allocation, 0 nominal slots remain. At least 3 future R-repo invocations remain
 reserved for P9 under the later unbounded-review authorization. Additional fresh
 invocations are likewise authorized whenever a `REVISE` or changed candidate

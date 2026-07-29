@@ -1,0 +1,59 @@
+{
+  "F16": {
+    "set_column_formula": {
+      "cellsWritten": 1,
+      "formulaBlock": "fblock:MacroModel:0",
+      "generation": 9,
+      "reindexed": false,
+      "staleBlocks": 1
+    },
+    "write_cells": {
+      "generation": 8,
+      "reindexed": true,
+      "results": [
+        {
+          "ok": true,
+          "ref": "MacroModel!A2"
+        }
+      ],
+      "resultsTotal": 1,
+      "staleBlocks": 1
+    }
+  },
+  "F21": {
+    "write_cells": {
+      "generation": 6,
+      "reindexed": true,
+      "results": [
+        {
+          "ok": true,
+          "ref": "Dashboard!B2"
+        }
+      ],
+      "resultsTotal": 1,
+      "staleBlocks": 0
+    }
+  },
+  "L1": {
+    "set_column_formula": {
+      "cellsWritten": 3,
+      "formulaBlock": "fblock:Model:2",
+      "generation": 7,
+      "reindexed": false,
+      "staleBlocks": 2
+    },
+    "write_cells": {
+      "generation": 6,
+      "reindexed": false,
+      "results": [
+        {
+          "ok": true,
+          "ref": "Inputs!B2"
+        }
+      ],
+      "resultsTotal": 1,
+      "staleBlocks": 3
+    }
+  },
+  "artifactVersion": 1
+}

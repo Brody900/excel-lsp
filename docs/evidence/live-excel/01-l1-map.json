@@ -1,0 +1,81 @@
+{
+  "diagCounts": {
+    "error": 0,
+    "warn": 0
+  },
+  "externalLinks": [],
+  "externalLinksMore": 0,
+  "hasVBA": false,
+  "hints": [
+    "Use get_region_schema for columns+samples",
+    "trace_dependents for impact analysis"
+  ],
+  "indexed_at": "2026-07-29T07:57:23.646975+00:00",
+  "names": [
+    {
+      "id": "name:PrimaryInput",
+      "ref": "Inputs!$B$2"
+    }
+  ],
+  "namesMore": 0,
+  "reindexed": false,
+  "sheetList": [
+    {
+      "dims": "A1:B4",
+      "regions": [
+        {
+          "cols": [
+            {
+              "h": "Item",
+              "t": "str"
+            },
+            {
+              "h": "Amount",
+              "t": "int"
+            }
+          ],
+          "conf": 0.68,
+          "fblocks": 0,
+          "headerRows": 1,
+          "id": "region:Inputs:0",
+          "kind": "region",
+          "range": "A1:B4",
+          "rows": 3
+        }
+      ],
+      "sheet": "Inputs"
+    },
+    {
+      "dims": "A1:C4",
+      "regions": [
+        {
+          "cols": [
+            {
+              "h": "Amount",
+              "t": "int"
+            },
+            {
+              "h": "Double",
+              "t": "int"
+            },
+            {
+              "h": "Triple",
+              "t": "int"
+            }
+          ],
+          "conf": 0.8,
+          "fblocks": 4,
+          "headerRows": 1,
+          "id": "region:Model:0",
+          "kind": "region",
+          "range": "A1:C4",
+          "rows": 3
+        }
+      ],
+      "sheet": "Model"
+    }
+  ],
+  "sheets": 2,
+  "stale": false,
+  "workbook": "L1-model.xlsx"
+}

@@ -364,6 +364,18 @@ def test_streams_all_cell_types_formulas_and_actual_bounds(tmp_path: Path) -> No
     ) == (None, 7, 2)
 
 
+@pytest.mark.parametrize(
+    "value",
+    ("3.5", "1.0", "1e2", "9007199254740993.0", "1e309", "1e-9999"),
+)
+def test_plain_numeric_fast_parser_preserves_canonical_number_semantics(value: str) -> None:
+    fast = parser_module._parse_plain_number(value)
+    canonical = parser_module._parse_number(value)
+
+    assert fast == canonical
+    assert type(fast) is type(canonical)
+
+
 def test_collects_array_merges_multirange_validation_and_listobject(tmp_path: Path) -> None:
     path, _ = _contract_package(tmp_path)
 

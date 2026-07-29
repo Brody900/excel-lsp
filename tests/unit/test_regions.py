@@ -115,6 +115,47 @@ def _value_cell(row: int, col: int, value: object, *, style_idx: int = 0) -> Reg
     return RegionCell(row, col, value, value_type, style_idx=style_idx)  # type: ignore[arg-type]
 
 
+def test_dense_origin_certificate_skips_coordinate_redetection() -> None:
+    cells = tuple(
+        _value_cell(row, col, f"{row}:{col}") for row in range(1, 4) for col in range(1, 3)
+    )
+
+    def unexpected_coordinate_scan() -> Iterable[RegionCell]:
+        raise AssertionError("dense actual bounds must not be rescanned")
+
+    analysis = analyze_sheet_regions(
+        _summary(cells),
+        _styles(),
+        lambda: iter(cells),
+        coordinate_stream_factory=unexpected_coordinate_scan,
+    )
+
+    assert tuple(region.rect for region in analysis.regions) == (Rect(1, 3, 1, 2),)
+
+
+def test_sparse_sheet_still_uses_coordinate_detector() -> None:
+    cells = (
+        _value_cell(1, 1, "A"),
+        _value_cell(1, 2, "B"),
+        _value_cell(2, 1, 1),
+    )
+    scans = 0
+
+    def coordinate_scan() -> Iterable[RegionCell]:
+        nonlocal scans
+        scans += 1
+        return iter(cells)
+
+    analyze_sheet_regions(
+        _summary(cells),
+        _styles(),
+        lambda: iter(cells),
+        coordinate_stream_factory=coordinate_scan,
+    )
+
+    assert scans == 1
+
+
 def test_gap_tolerance_merges_one_blank_row_and_column_but_not_two() -> None:
     cells = [
         _value_cell(1, 1, 1),

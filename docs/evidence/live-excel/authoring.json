@@ -1,0 +1,40 @@
+{
+  "L1": {
+    "fillDown": {
+      "A2": "=Inputs!B2",
+      "B2": "=A2*2",
+      "C2": "=A2+B2"
+    },
+    "name": {
+      "PrimaryInput": "=Inputs!$B$2"
+    },
+    "sheets": [
+      "Inputs",
+      "Model"
+    ]
+  },
+  "L2": {
+    "range": "$A$1:$D$4",
+    "table": "Table1",
+    "total": 31,
+    "totalsRow": true
+  },
+  "L3": {
+    "brokenRefs": [
+      "Sheet1!B2",
+      "Sheet1!B3",
+      "Sheet1!B4",
+      "Sheet1!B5",
+      "Sheet1!B6"
+    ],
+    "brokenValue": "#REF!",
+    "tamperedCell": "Sheet1!C4",
+    "tamperedFormula": "=A4*99",
+    "tamperedValue": 297
+  },
+  "artifactVersion": 1,
+  "excel": {
+    "build": "19530.0",
+    "version": "16.0"
+  }
+}

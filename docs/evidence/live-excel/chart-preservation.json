@@ -1,0 +1,35 @@
+{
+  "artifactVersion": 1,
+  "chartObjects": 1,
+  "chartVisible": true,
+  "editedCell": {
+    "ref": "Dashboard!B2",
+    "value": 99
+  },
+  "imageVisible": true,
+  "normalOpen": true,
+  "repairDialog": false,
+  "selectedShape": "Image 2",
+  "shapeGeometry": {
+    "Chart 1": {
+      "height": 212.598,
+      "left": 144.0,
+      "top": 14.25,
+      "type": 3,
+      "visible": true,
+      "width": 340.157
+    },
+    "Image 2": {
+      "height": 24.0,
+      "left": 144.0,
+      "top": 228.0,
+      "type": 13,
+      "visible": true,
+      "width": 24.0
+    }
+  },
+  "shapes": [
+    "Chart 1",
+    "Image 2"
+  ]
+}

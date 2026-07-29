@@ -1,0 +1,24 @@
+Sanitized syntax capture for the P8 headless benchmark runner
+Captured: 2026-07-29
+
+$ codex --version
+codex-cli 0.144.5
+
+$ codex exec --help  # selected relevant lines
+Usage: codex exec [OPTIONS] [PROMPT]
+  -c, --config <key=value>
+      --enable <FEATURE>
+      --disable <FEATURE>
+  -m, --model <MODEL>
+  -s, --sandbox <SANDBOX_MODE>
+  -C, --cd <DIR>
+      --skip-git-repo-check
+      --ephemeral
+      --ignore-user-config
+      --ignore-rules
+      --json
+
+$ codex --help  # selected relevant line
+  -a, --ask-for-approval <APPROVAL_POLICY>
+
+No environment values, account identifiers, tokens, or auth headers are included.

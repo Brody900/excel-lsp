@@ -73,10 +73,14 @@ from excel_lsp.core.models import (
 from excel_lsp.core.parse.coordinates import make_cell_ref, parse_rect
 from excel_lsp.core.parse.styles import DEFAULT_STYLE_CATALOG, StyleCatalog
 from excel_lsp.core.regions import (
+    HEADER_BODY_PREVIEW,
+    ColumnProfile,
+    ColumnProfileRequest,
     RegionAnalysis,
     RegionCell,
     RegionOptions,
     analyze_sheet_regions,
+    column_dtype_from_atoms,
 )
 from excel_lsp.core.symbols import cell_symbol_id, formula_block_symbol_id
 from excel_lsp.core.values import JsonScalar, normalize_value
@@ -1668,6 +1672,11 @@ class IndexStore:
                 styles,
                 lambda: self._iter_region_cells(sheet_id),
                 region_options,
+                coordinate_stream_factory=lambda: self._iter_region_coordinates(sheet_id),
+                header_cell_provider=lambda rects: self._header_region_cells(sheet_id, rects),
+                column_profile_provider=lambda requests, count, options: (
+                    self._profile_region_columns_sql(sheet_id, requests, count, options)
+                ),
             )
             self._insert_region_analysis(sheet_id, region_analysis)
             self._insert_list_objects(sheet_id, summary)
@@ -1742,10 +1751,15 @@ class IndexStore:
                         row=int(row["row"]),
                         col=int(row["col"]),
                         formula=str(row["formula"]),
+                        shared_group=(
+                            int(row["shared_index"])
+                            if row["formula_kind"] == "shared" and row["shared_index"] is not None
+                            else None
+                        ),
                     )
                     for row in self._connection.execute(
                         """
-                        SELECT row, col, formula
+                        SELECT row, col, formula, formula_kind, shared_index
                         FROM cells
                         WHERE sheet_id = ? AND formula IS NOT NULL
                         ORDER BY col, row
@@ -2514,6 +2528,159 @@ class IndexStore:
                 style_idx=int(row["style_idx"]),
                 formula=None if row["formula"] is None else str(row["formula"]),
             )
+
+    def _iter_region_coordinates(self, sheet_id: int) -> Iterator[RegionCell]:
+        rows = self._connection.execute(
+            "SELECT row, col FROM cells WHERE sheet_id = ? ORDER BY row, col",
+            (sheet_id,),
+        )
+        for row in rows:
+            yield RegionCell(
+                row=int(row["row"]),
+                col=int(row["col"]),
+                value=None,
+                value_type="blank",
+            )
+
+    def _header_region_cells(
+        self,
+        sheet_id: int,
+        rects: Sequence[Rect],
+    ) -> tuple[RegionCell, ...]:
+        cells: list[RegionCell] = []
+        for rect in rects:
+            rows = self._connection.execute(
+                """
+                WITH ranked AS (
+                    SELECT row, col, value, value_type, style_idx, formula,
+                           ROW_NUMBER() OVER (PARTITION BY col ORDER BY row) AS sample_number
+                    FROM cells
+                    WHERE sheet_id = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?
+                )
+                SELECT row, col, value, value_type, style_idx, formula
+                FROM ranked WHERE sample_number <= ? ORDER BY row, col
+                """,
+                (
+                    sheet_id,
+                    rect.row_min,
+                    rect.row_max,
+                    rect.col_min,
+                    rect.col_max,
+                    HEADER_BODY_PREVIEW,
+                ),
+            )
+            for row in rows:
+                value_type = cast(CellValueType, str(row["value_type"]))
+                cells.append(
+                    RegionCell(
+                        row=int(row["row"]),
+                        col=int(row["col"]),
+                        value=_region_cell_value(row["value"], value_type=value_type),
+                        value_type=value_type,
+                        style_idx=int(row["style_idx"]),
+                        formula=None if row["formula"] is None else str(row["formula"]),
+                    )
+                )
+        cells.sort(key=lambda cell: (cell.row, cell.col))
+        return tuple(cells)
+
+    def _profile_region_columns_sql(
+        self,
+        sheet_id: int,
+        requests: Sequence[ColumnProfileRequest],
+        cell_count: int,
+        options: RegionOptions,
+    ) -> tuple[tuple[ColumnProfile, ...], ...]:
+        is_large = cell_count > options.large_sheet_threshold
+        sample_limit = options.large_dtype_sample_limit if is_large else options.dtype_sample_limit
+        sample_stride = (
+            max(2, math.ceil(cell_count / options.large_sheet_threshold)) if is_large else 1
+        )
+        maximum_sample_number = sample_stride * (sample_limit - 1) + 1
+        profiles: list[tuple[ColumnProfile, ...]] = []
+        for request in requests:
+            body_min = request.rect.row_min + request.header_rows
+            body_max = request.rect.row_max - request.totals_rows
+            aggregates: dict[int, tuple[int, int]] = {}
+            atoms: dict[int, set[str]] = {}
+            if body_min <= body_max:
+                aggregate_rows = self._connection.execute(
+                    """
+                    SELECT col,
+                           COUNT(*) AS nonnull,
+                           COUNT(DISTINCT value_type || char(31) || typeof(value) ||
+                                              char(31) || quote(value)) AS distinct_count
+                    FROM cells
+                    WHERE sheet_id = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?
+                      AND value IS NOT NULL AND value_type != 'blank'
+                    GROUP BY col ORDER BY col
+                    """,
+                    (
+                        sheet_id,
+                        body_min,
+                        body_max,
+                        request.rect.col_min,
+                        request.rect.col_max,
+                    ),
+                )
+                aggregates = {
+                    int(row["col"]): (
+                        int(row["nonnull"]),
+                        min(options.distinct_cap, int(row["distinct_count"])),
+                    )
+                    for row in aggregate_rows
+                }
+                sample_rows = self._connection.execute(
+                    """
+                    WITH eligible AS (
+                        SELECT col, value_type, typeof(value) AS storage_type,
+                               ROW_NUMBER() OVER (PARTITION BY col ORDER BY row) AS sample_number
+                        FROM cells
+                        WHERE sheet_id = ? AND row BETWEEN ? AND ? AND col BETWEEN ? AND ?
+                          AND value IS NOT NULL AND value_type != 'blank'
+                    )
+                    SELECT col,
+                           CASE
+                             WHEN value_type = 'date' THEN 'date'
+                             WHEN value_type = 'error' THEN 'other'
+                             WHEN value_type = 'bool' THEN 'bool'
+                             WHEN storage_type = 'integer' THEN 'int'
+                             WHEN storage_type = 'real' THEN 'float'
+                             WHEN storage_type = 'text' THEN 'str'
+                             ELSE 'other'
+                           END AS atom
+                    FROM eligible
+                    WHERE sample_number <= ? AND (sample_number - 1) % ? = 0
+                    ORDER BY col, sample_number
+                    """,
+                    (
+                        sheet_id,
+                        body_min,
+                        body_max,
+                        request.rect.col_min,
+                        request.rect.col_max,
+                        maximum_sample_number,
+                        sample_stride,
+                    ),
+                )
+                for row in sample_rows:
+                    atoms.setdefault(int(row["col"]), set()).add(str(row["atom"]))
+            profiles.append(
+                tuple(
+                    ColumnProfile(
+                        idx=offset,
+                        header=request.headers[offset],
+                        norm_header=request.normalized_headers[offset],
+                        dtype=column_dtype_from_atoms(atoms.get(column, set())),
+                        nonnull=aggregates.get(column, (0, 0))[0],
+                        distinct_est=aggregates.get(column, (0, 0))[1],
+                    )
+                    for offset, column in enumerate(
+                        range(request.rect.col_min, request.rect.col_max + 1)
+                    )
+                )
+            )
+        return tuple(profiles)
 
     def _insert_region_analysis(self, sheet_id: int, analysis: RegionAnalysis) -> None:
         for region in analysis.regions:

@@ -25,6 +25,11 @@ surgical writer can prove that it preserves VBA content byte-for-byte.
 - Macro source was independently inspected with `olevba 0.60.2` before the
   asset was accepted. The live Excel release gate also executes `Stamp` and
   asserts that cell `Z1` becomes `42` after Excel LSP edits F16.
+- Deterministic injection freezes the VBA host code names `ThisWorkbook` and
+  `Sheet1` plus Excel's exact relationship type
+  `http://schemas.microsoft.com/office/2006/relationships/vbaProject`. The P8
+  desktop pass discovered and regression-tested these host requirements after
+  a suffix-only metadata assertion allowed Excel to ignore the project.
 
 The local source workbook is intentionally ignored by Git. It is not needed to
 regenerate F16; the committed project blob is the deterministic input.
@@ -46,6 +51,10 @@ regenerate F16; the committed project blob is the deterministic input.
 - F05 `structured_table.xlsx`: native `Table1`, four `[@Qty]*[@Price]`
   current-row formulas, explicit `Table1[Col]` consumers, and a totals row
   whose table metadata and formula caches are locked by exact assertions.
+- F06 `perf_50k.xlsx` plus `perf_1k.xlsx` and `perf_10k.xlsx`: a ten-column
+  streaming-index timing family with one copied/shared formula column and
+  generator-computed caches. `generate_all` returns the 50k S1 target under
+  F06 and authors all three siblings for the P8 timing series.
 - F07 `formula_blocks.xlsx`: two genuine shared-formula groups around a single
   explicit formula tamper, plus caches, a native table, and the harmless
   `E1:F1` merge used by the openpyxl read-only probe.

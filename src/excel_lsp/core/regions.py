@@ -29,9 +29,14 @@ from excel_lsp.core.symbols import (
 RegionKind: TypeAlias = Literal["table", "region"]
 ColumnDType: TypeAlias = Literal["int", "float", "date", "str", "bool", "mixed", "empty"]
 CellStreamFactory: TypeAlias = Callable[[], Iterable["RegionCell"]]
+HeaderCellProvider: TypeAlias = Callable[[Sequence[Rect]], Iterable["RegionCell"]]
+ColumnProfileProvider: TypeAlias = Callable[
+    [Sequence["ColumnProfileRequest"], int, "RegionOptions"],
+    tuple[tuple["ColumnProfile", ...], ...],
+]
 
 _HEADER_WEIGHTS = (0.30, 0.25, 0.20, 0.20, 0.05)
-_HEADER_BODY_PREVIEW = 24
+HEADER_BODY_PREVIEW = 24
 _OVERLAP_BUCKET_WIDTH = 64
 _OVERLAP_WIDE_BUCKETS = 4
 _RECT_GRID_BUCKET_SIZE = 8
@@ -117,6 +122,26 @@ class ColumnProfile:
     dtype: ColumnDType
     nonnull: int
     distinct_est: int
+
+
+@dataclass(frozen=True, slots=True)
+class ColumnProfileRequest:
+    """One detected-region body whose column statistics must be profiled."""
+
+    rect: Rect
+    header_rows: int
+    headers: tuple[str, ...]
+    normalized_headers: tuple[str, ...]
+    totals_rows: int = 0
+
+    def __post_init__(self) -> None:
+        width = _width(self.rect)
+        if len(self.headers) != width or len(self.normalized_headers) != width:
+            raise ValueError("column profile request headers must match region width")
+        if not 0 <= self.header_rows <= _height(self.rect):
+            raise ValueError("column profile request header rows exceed region height")
+        if not 0 <= self.totals_rows <= _height(self.rect) - self.header_rows:
+            raise ValueError("column profile request totals rows exceed region body")
 
 
 @dataclass(frozen=True, slots=True)
@@ -424,19 +449,25 @@ class _ColumnAccumulator:
         self.atoms.add(_dtype_atom(cell))
 
     def dtype(self) -> ColumnDType:
-        if not self.atoms:
-            return "empty"
-        if self.atoms == {"int"}:
-            return "int"
-        if self.atoms <= {"int", "float"}:
-            return "float"
-        if self.atoms == {"date"}:
-            return "date"
-        if self.atoms == {"str"}:
-            return "str"
-        if self.atoms == {"bool"}:
-            return "bool"
-        return "mixed"
+        return column_dtype_from_atoms(self.atoms)
+
+
+def column_dtype_from_atoms(atoms: Iterable[str]) -> ColumnDType:
+    """Classify the frozen dtype atom set used by stream and SQL profilers."""
+    values = set(atoms)
+    if not values:
+        return "empty"
+    if values == {"int"}:
+        return "int"
+    if values <= {"int", "float"}:
+        return "float"
+    if values == {"date"}:
+        return "date"
+    if values == {"str"}:
+        return "str"
+    if values == {"bool"}:
+        return "bool"
+    return "mixed"
 
 
 class _DisjointSet:
@@ -911,7 +942,7 @@ class _RegionLocator:
 
     def locate(self, row: int, col: int) -> int | None:
         if row < self._row:
-            raise ValueError("cell stream must be ordered by row and column")
+            raise ValueError("cell stream must be strictly ordered without duplicates")
         if row != self._row:
             self._row = row
             self._active = [item for item in self._active if item[1].rect.row_max >= row]
@@ -936,6 +967,10 @@ def analyze_sheet_regions(
     styles: StyleCatalog,
     cell_stream_factory: CellStreamFactory,
     options: RegionOptions | None = None,
+    *,
+    coordinate_stream_factory: CellStreamFactory | None = None,
+    header_cell_provider: HeaderCellProvider | None = None,
+    column_profile_provider: ColumnProfileProvider | None = None,
 ) -> RegionAnalysis:
     """Detect and profile all regions in one parsed worksheet.
 
@@ -946,31 +981,59 @@ def analyze_sheet_regions(
     active_options = options or RegionOptions()
     tables = _validated_tables(summary.tables)
     _validate_merges(summary.merges, tables)
-    heuristic_rects = _detect_heuristic_rects(
-        cell_stream_factory(),
-        tables=tables,
-        merges=summary.merges,
-        gap_tol=active_options.gap_tol,
+    dense_rect = _dense_origin_rect(summary, tables)
+    heuristic_rects = (
+        (dense_rect,)
+        if dense_rect is not None
+        else _detect_heuristic_rects(
+            (coordinate_stream_factory or cell_stream_factory)(),
+            tables=tables,
+            merges=summary.merges,
+            gap_tol=active_options.gap_tol,
+        )
     )
     seeds = [*(_Seed(_table_rect(table), "table", table) for table in tables)]
     seeds.extend(_Seed(rect, "region") for rect in heuristic_rects)
     seeds.sort(key=_seed_sort_key)
     _require_disjoint(seeds)
 
+    header_cells = (
+        cell_stream_factory()
+        if header_cell_provider is None
+        else header_cell_provider(tuple(seed.rect for seed in seeds if seed.kind != "table"))
+    )
     decisions = _infer_headers(
         seeds,
         summary.merges,
         styles,
-        cell_stream_factory(),
+        header_cells,
         threshold=active_options.header_threshold,
     )
-    profiles = _profile_columns(
-        seeds,
-        decisions,
-        cell_stream_factory(),
-        cell_count=summary.cell_count,
-        options=active_options,
-    )
+    if column_profile_provider is None:
+        profiles = _profile_columns(
+            seeds,
+            decisions,
+            cell_stream_factory(),
+            cell_count=summary.cell_count,
+            options=active_options,
+        )
+    else:
+        requests = tuple(
+            ColumnProfileRequest(
+                seed.rect,
+                decisions[index].rows,
+                decisions[index].headers,
+                decisions[index].normalized_headers,
+                0 if seed.table is None else seed.table.totals_rows,
+            )
+            for index, seed in enumerate(seeds)
+        )
+        profiles = column_profile_provider(requests, summary.cell_count, active_options)
+        if len(profiles) != len(requests) or any(
+            len(profile) != _width(request.rect)
+            for request, profile in zip(requests, profiles, strict=True)
+        ):
+            raise ValueError("column profile provider returned an invalid result shape")
     regions = tuple(
         DetectedRegion(
             n=index,
@@ -999,6 +1062,18 @@ def analyze_sheet_regions(
             ),
         )
     return RegionAnalysis(regions=regions, warnings=warnings)
+
+
+def _dense_origin_rect(
+    summary: SheetParseSummary,
+    tables: Sequence[TableInfo],
+) -> Rect | None:
+    """Return the exact A1-origin rectangle certified by the parsed cell count."""
+    if tables or summary.merges or summary.max_row < 1 or summary.max_col < 1:
+        return None
+    if summary.cell_count != summary.max_row * summary.max_col:
+        return None
+    return Rect(1, summary.max_row, 1, summary.max_col)
 
 
 def _validated_tables(tables: Sequence[TableInfo]) -> tuple[TableInfo, ...]:
@@ -2215,7 +2290,7 @@ def _infer_headers(
         if cell.row <= max_candidate_row:
             evidence[seed_index].cells[(cell.row, cell.col)] = cell
         preview = evidence[seed_index].preview[cell.col]
-        if len(preview) < _HEADER_BODY_PREVIEW:
+        if len(preview) < HEADER_BODY_PREVIEW:
             preview.append(cell)
 
     decisions: list[_HeaderDecision] = []

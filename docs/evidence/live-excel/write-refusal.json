@@ -1,0 +1,19 @@
+{
+  "artifactVersion": 1,
+  "result": {
+    "reindexed": false,
+    "results": [
+      {
+        "error": {
+          "code": "E_OPEN_IN_EXCEL",
+          "hint": "Close it in Excel first; remove a stale lockfile only after confirming Excel is closed.",
+          "message": "Workbook appears to be open in Excel: L1-model.xlsx."
+        },
+        "ok": false,
+        "ref": "Inputs!B3"
+      }
+    ],
+    "resultsTotal": 1,
+    "staleBlocks": 0
+  }
+}

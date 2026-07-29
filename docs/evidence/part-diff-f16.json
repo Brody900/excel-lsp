@@ -6,7 +6,7 @@
     "sheet": "MacroModel",
     "value": 99
   },
-  "editedSha256": "b14c88d06d028016a4c085447f10bf64d7eabbad6cdc6f07cafb68cf7a43cd7b",
+  "editedSha256": "9237f726c33f843d06c3877f36487ddf47efc8cd8bf530c236995d572976b34d",
   "fixture": "macro_book.xlsm",
   "fixtureId": "F16",
   "modifiedParts": [
@@ -40,8 +40,8 @@
       "status": "preserved"
     },
     {
-      "afterSha256": "1dbb7611a16bc48506cf3b62fc04b5a8356744f608d8bed3accba0e90f9ee930",
-      "beforeSha256": "1dbb7611a16bc48506cf3b62fc04b5a8356744f608d8bed3accba0e90f9ee930",
+      "afterSha256": "4efad4a889c255c19ca6f4f938df4315e6840e30e46b73bfc0b112609f49537e",
+      "beforeSha256": "4efad4a889c255c19ca6f4f938df4315e6840e30e46b73bfc0b112609f49537e",
       "name": "xl/_rels/workbook.xml.rels",
       "status": "preserved"
     },
@@ -64,14 +64,14 @@
       "status": "preserved"
     },
     {
-      "afterSha256": "da69b21ab19bbd86b6878b31578162711bdb5602dde201bffc3f1d5c5db767e3",
-      "beforeSha256": "da69b21ab19bbd86b6878b31578162711bdb5602dde201bffc3f1d5c5db767e3",
+      "afterSha256": "911950e4b2ea6ed5b2330793a35dc2ff5a03a6aedbd95274057781906b730453",
+      "beforeSha256": "911950e4b2ea6ed5b2330793a35dc2ff5a03a6aedbd95274057781906b730453",
       "name": "xl/workbook.xml",
       "status": "preserved"
     },
     {
-      "afterSha256": "d32cd219305bcc603a4ebe46098fe7c6cc8ac1e85d760a9b228cfaac7ca635f7",
-      "beforeSha256": "36a8275a2f3f9451b8541e47f3ceefd4f709cdde6ba2a1aed3f55728062c8a0e",
+      "afterSha256": "601c4b4a1f5f5a27d4f96e1e41f73be7308d0deb1d3321112aaa8c67537c005e",
+      "beforeSha256": "9b4820128bdfd3ae89444e0e859fac48bb9fe743f4c1a234351c022eb35154bd",
       "name": "xl/worksheets/sheet1.xml",
       "status": "modified"
     }
@@ -80,6 +80,6 @@
     "xl/vbaProject.bin"
   ],
   "protectedPartsByteIdentical": true,
-  "sourceSha256": "9f392ed6227358c5ff79a667433e79290e5acd2b6415e2ea6e80006b09cb6ae6",
+  "sourceSha256": "f1f8bd18f42527ae1f6d26fc5e4f27b210f822032255cf95ca101bc3f5474577",
   "untouchedPartsByteIdentical": true
 }

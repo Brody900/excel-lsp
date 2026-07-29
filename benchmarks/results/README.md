@@ -1,49 +1,51 @@
 # Benchmark results
 
-Commit raw benchmark measurements here together with enough environment metadata
-to reproduce them.
+These are committed measurements, not hand-entered marketing numbers. The
+generation scripts live one directory above; charts are generated from the
+CSV/JSON artifacts and committed under `docs/assets/` as PNG and SVG.
 
-## Current artifact
+| Artifact | Purpose |
+|---|---|
+| `environment.json` | OS, CPU, Python, Codex CLI/model/reasoning, tokenizer, timestamp, and timing caveats |
+| `scripted.csv` | Twelve deterministic task/arm replays with payload tokens, calls, time, exact answer, and checker result |
+| `llm-eval.jsonl` | Consolidated, exact 6 × 2 × 2 headless-Codex matrix with raw events and transcripts |
+| `accuracy.csv` | Flat per-repetition usage, status, correctness, agreement, call count, and reported cost |
+| `accuracy.md` | Human-readable exact-answer accuracy table |
+| `audit-cost.json` | B2 Excel-LSP mean token/time callout and explicit unavailable-dollar note |
+| `index-timing.csv` | Three cold and incremental repetitions for 1k, 10k, and 50k rows |
+| `index-timing-pre-optimization.csv` | Retained before/after engineering evidence, including the disclosed desktop-suspension outlier |
+| `llm-eval-preflight-mixed.jsonl` | Original mixed run; only its Excel-LSP rows enter the consolidated matrix |
+| `llm-eval-baseline-rerun.jsonl` | Correctly annotated naive-baseline reruns used in the consolidated matrix |
+| `map-budgets.json` | Earlier deterministic F03/F20 workbook-map character and token budgets |
 
-- `map-budgets.json` — P2's deterministic normalized workbook-map character and
-  `o200k_base` token counts for F03 and F20. The exact golden-map test must
-  reproduce every recorded value.
+`benchmarks/analyze_results.py` rejects missing/duplicate matrix cells and
+auditably preserves any source grade changed by the corrected checker.
+`benchmarks/check.py` enforces the final-line `ANSWER:` contract plus each
+task's exact or duplicate-free set semantics. Raw transcripts and usage remain
+unchanged; local checkout paths are replaced with `<WORKSPACE>` before public
+storage. Run `excel-lsp bench` to execute the documented reproducible harness.
+The frozen S5 criterion begins “Benchmarks show ≥ 10× token reduction vs. the
+naive-dump baseline”; the measured candidate does not satisfy that token gate.
 
-## Required P8 artifacts
+## Timing interpretation
 
-- `environment.json` — git revision, OS, Python, dependency versions, CPU,
-  Codex CLI/model details, verified command-line flags, token encoding, and run
-  timestamps.
-- `scripted.csv` — one checked row per deterministic task and benchmark arm,
-  including payload tokens, tool-call count, wall time, and the final exact
-  `ANSWER:` result.
-- `llm-eval.jsonl` — both isolated headless-Codex repetitions for every attempted
-  task/arm cell, retaining raw usage and cost fields, exact-answer output,
-  status, and any explicit DNF reason.
-- `accuracy.csv` — checker result for every scripted and LLM-eval run plus the
-  two-repetition agreement field; prose or fuzzy grading is not accepted.
-- `index-timing.csv` — cold and one-sheet incremental index timings for the
-  1,000-, 10,000-, and 50,000-row fixtures with environment identifiers.
-- `audit-cost.json` — the computed cost-of-one-audit value and the exact
-  `llm-eval.jsonl` rows from which it was derived.
+F06 has a 10-column `Perf` sheet plus a small `Control` sheet. Cold timing
+indexes both sheets. Incremental timing surgically changes only
+`xl/worksheets/sheet2.xml` (`Control!A2`) and requires exactly one reindexed
+sheet. Mutation time is excluded. Filesystem cache state was not destructively
+cleared and is disclosed in `environment.json`.
 
-## Acceptance gates
+At 50,000 rows, the cold samples are 9.213166, 9.439544, and 9.445920 seconds;
+the incremental samples are 0.065652, 0.065912, and 0.069194 seconds. Their
+medians satisfy S1's strict 10-second and 1-second thresholds.
 
-P8 may treat these files as benchmark evidence only when:
+## Acceptance status
 
-1. `benchmarks/check.py` accepts every completed transcript's final `ANSWER:`
-   line and the committed accuracy rows agree with the checker output.
-2. `excel-lsp bench` runs the documented reproducible harness, proven by
-   `tests/unit/test_cli.py::test_bench_command_runs_reproducible_harness` and
-   `docs/evidence/p8-benchmarks.md#excel-lsp-bench`.
-3. Both headless-Codex repetitions are reported individually, disagreements and
-   DNFs remain visible, and the cost guard is documented.
-4. `benchmarks/plot.py` regenerates every PNG/SVG chart from these committed raw
-   files without hand-entered values.
-5. `docs/evidence/success-criteria.md` records the S1 and S5 calculations using
-   the frozen criterion: “Benchmarks show ≥ 10× token reduction vs. the
-   naive-dump baseline on the defined task suite, with equal-or-better task
-   accuracy in LLM evals.”
-
-Until those gates pass, the P8 filenames above are a release contract, not
-measurements or performance claims.
+- Exact graders accept every scripted answer and were rerun over every
+  consolidated LLM transcript.
+- Both LLM repetitions and disagreements are visible.
+- The run guard records 36 observed headless runs, below its 80-run ceiling.
+- Five PNG/SVG chart pairs regenerate from committed artifacts.
+- S1 passes.
+- S5 accuracy passes, but its ≥10× token-reduction requirement fails. This
+  failure is preserved in evidence and public copy must not claim otherwise.

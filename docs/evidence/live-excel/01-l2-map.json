@@ -1,0 +1,55 @@
+{
+  "diagCounts": {
+    "error": 0,
+    "warn": 0
+  },
+  "externalLinks": [],
+  "externalLinksMore": 0,
+  "hasVBA": false,
+  "hints": [
+    "Use get_region_schema for columns+samples",
+    "trace_dependents for impact analysis"
+  ],
+  "indexed_at": "2026-07-29T07:37:46.588460+00:00",
+  "names": [],
+  "namesMore": 0,
+  "reindexed": false,
+  "sheetList": [
+    {
+      "dims": "A1:D4",
+      "regions": [
+        {
+          "cols": [
+            {
+              "h": "Item",
+              "t": "str"
+            },
+            {
+              "h": "Qty",
+              "t": "int"
+            },
+            {
+              "h": "Price",
+              "t": "int"
+            },
+            {
+              "h": "Total",
+              "t": "int"
+            }
+          ],
+          "conf": 1.0,
+          "fblocks": 1,
+          "headerRows": 1,
+          "id": "region:Sheet1:0",
+          "kind": "table",
+          "range": "A1:D4",
+          "rows": 3
+        }
+      ],
+      "sheet": "Sheet1"
+    }
+  ],
+  "sheets": 1,
+  "stale": false,
+  "workbook": "L2-table.xlsx"
+}

@@ -31,11 +31,16 @@ class FormulaCell:
     row: int
     col: int
     formula: str
+    shared_group: int | None = None
 
     def __post_init__(self) -> None:
         _validate_coordinate(self.row, self.col)
         if not self.formula:
             raise ValueError("formula must be a non-empty string")
+        if self.shared_group is not None and (
+            type(self.shared_group) is not int or self.shared_group < 0
+        ):
+            raise ValueError("shared_group must be a nonnegative integer or None")
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,13 +141,16 @@ def normalize_formula_cells(cells: Iterable[FormulaCell]) -> tuple[FormulaPatter
     """Normalize formulas without allowing malformed input to drop a cell."""
     patterns: list[FormulaPattern] = []
     seen: set[tuple[int, int]] = set()
+    shared_patterns: dict[int, str] = {}
     for cell in cells:
         coordinate = (cell.row, cell.col)
         if coordinate in seen:
             raise ValueError("formula cell coordinates must be unique")
         seen.add(coordinate)
+        normalized = None if cell.shared_group is None else shared_patterns.get(cell.shared_group)
         try:
-            normalized = to_r1c1(cell.formula, CellRef(cell.row, cell.col))
+            if normalized is None:
+                normalized = to_r1c1(cell.formula, CellRef(cell.row, cell.col))
         except (IndexError, TokenizerError, ValueError):
             pattern = FormulaPattern(
                 cell.row,
@@ -153,6 +161,8 @@ def normalize_formula_cells(cells: Iterable[FormulaCell]) -> tuple[FormulaPatter
             )
         else:
             pattern = FormulaPattern(cell.row, cell.col, cell.formula, normalized)
+            if cell.shared_group is not None:
+                shared_patterns[cell.shared_group] = normalized
         patterns.append(pattern)
     return tuple(patterns)
 

@@ -4,24 +4,28 @@ An LSP for Excel: semantic index + MCP server so AI agents navigate workbooks by
 
 *(LSP-style: the ideas — symbols, references, diagnostics, incremental index — not the LSP wire protocol.)*
 
-> **Benchmark hero chart — planned for P8.** Comparative measurements are not
-> available yet. This visible placeholder will be replaced by the verified
-> grouped token chart only after its raw rows and exact-answer checks are
-> committed.
+![Grouped logarithmic bars compare mean headless Codex input-plus-output tokens for Excel LSP and naive dump across benchmark tasks B1 through B6.](docs/assets/benchmark-token-hero.svg)
 
-<!-- P8 HERO SLOT: replace the visible placeholder above with docs/assets/benchmark-token-hero.svg. Its alt text must describe the tasks, arms, and log scale. Derive every number in the surrounding copy from committed raw results; do not promise a reduction before the checker output proves it. -->
+*Measured P8 milestone: Excel LSP answered 12/12 runs exactly versus 9/12 for
+naive dump, but used 1.881× the baseline's mean full CLI tokens. The frozen S5
+token-reduction criterion fails; the chart and [raw rows](benchmarks/results/README.md)
+keep that unfavorable result visible.*
 
 > **Development status:** Excel LSP is under active development toward v0.1.0.
 > The parser, index, regions, formula navigation, graph, diagnostics, surgical
-> editor, and 14-tool MCP/CLI surface are verified through P7. Live-Excel
-> evidence, measured benchmarks, and release-install evidence remain later
-> gated work.
+> editor, 14-tool MCP/CLI surface, live-Excel protocol, and benchmark evidence
+> are verified through P8. Clean-install and release evidence remains gated to
+> P9.
 
 ## 60-second lineage demo
 
-> **Planned for P8.** The verified live-Excel pass will produce
-> `docs/assets/lineage-demo.gif` and a numbered evidence record. No demo has been
-> recorded yet.
+![Three-frame live Excel lineage demo tracing Model A2, B2, and C2 to their direct precedents.](docs/assets/lineage-demo.gif)
+
+The demo is assembled only from the numbered desktop-Excel captures. Its
+[evidence manifest](docs/evidence/live-excel/demo-capture.json) records every
+source hash, the output hash, dimensions, and frame duration; the complete
+[live protocol index](docs/evidence/live-excel/index.md) records the matching
+machine-readable assertions.
 
 ## Quickstart
 
@@ -129,33 +133,48 @@ phase status.
 
 ## Benchmarks
 
-> **Planned for P8.** Excel LSP currently makes no measured performance,
-> accuracy, cost, or token-reduction claim. P8 will commit raw rows, exact-answer
-> checker output, both headless-Codex repetitions, environment metadata, and the
-> scripts that render every chart.
-
-The planned raw-result files and their release requirements are indexed in the
-[raw results index](benchmarks/results/README.md). That index is a placeholder
-until P8 commits measured rows; it is not benchmark evidence today.
+The verified P8 milestone commits the raw rows, exact/set-semantic answer checks, both
+headless-Codex repetitions, environment metadata, and scripts that regenerate
+every chart. The [raw results index](benchmarks/results/README.md) explains each
+artifact and the [methodology](benchmarks/README.md) documents isolation,
+grading, cost guards, and the optional-arm exclusion.
 
 ### Results
 
-The final section will contain the verified hero chart, scripted-versus-agent
-token chart, tool-call chart, markdown accuracy table, index-time chart with
-both cold and incremental series, and a computed cost-of-one-audit callout.
+| Arm | Exact answers | Accuracy | Mean full CLI tokens |
+|---|---:|---:|---:|
+| Excel LSP | 12/12 | 100.0% | 77,927.8 |
+| Naive dump | 9/12 | 75.0% | 41,432.8 |
+
+Excel LSP is more accurate on this small suite, but it does not reduce tokens:
+scripted payload totals are 3,375 versus 2,127 and mean full Codex usage is
+77,927.8 versus 41,432.8. Therefore S5 fails even though its accuracy clause
+passes. See the [criterion calculation](docs/evidence/success-criteria.md#s5)
+and [per-repetition table](benchmarks/results/accuracy.md).
+
+![Scripted payload tokens and full headless Codex tokens compare Excel LSP with naive dump.](docs/assets/benchmark-token-modes.svg)
+
+![Mean tool-call counts compare Excel LSP with naive dump across B1 through B6.](docs/assets/benchmark-tool-calls.svg)
+
+![Cold and one-sheet incremental index times across 1,000, 10,000, and 50,000 rows.](docs/assets/benchmark-index-time.svg)
+
+![Formula-audit benchmark callout reports tokens and elapsed time while marking dollar cost unavailable.](docs/assets/benchmark-audit-cost.svg)
+
+The 50,000-row median is 9.440 seconds cold and 0.066 seconds after a
+one-sheet change, satisfying S1's strict 10-second and 1-second limits.
 
 ### Reproduce
 
-The intended release command is:
+Run the deterministic twelve-row replay with:
 
 ```console
 excel-lsp bench
 ```
 
-It is not implemented yet. See the
-[benchmark methodology placeholder](benchmarks/README.md) and the
-[claims-to-artifacts plan](docs/evidence/readme-claims-to-artifacts.md) for the
-exact evidence required before this section can make numerical claims.
+For a fresh headless run and regenerated timing/charts, follow the commands in
+the [benchmark methodology](benchmarks/README.md#reproduction). Headless runs
+consume account capacity; use a new JSONL path instead of overwriting the
+committed evidence.
 
 ## Comparison
 
@@ -171,7 +190,7 @@ exact evidence required before this section can make numerical claims.
 | Incremental reindex | [P1 evidence available](docs/evidence/p1-foundation.md#invariant-evidence) | Source review pending | Source review pending | P8 baseline pending |
 | Formula diagnostics | [P5 evidence available](docs/evidence/p5-diagnostics.md#formal-phase-gate) | Source review pending | Source review pending | P8 baseline pending |
 | Edit support and untouched-part fidelity | [P6 verified evidence available](docs/evidence/p6-editor.md#part-preservation) | Source review pending | Source review pending | P8 baseline pending |
-| Token discipline | P7/P8 evidence pending | Source review pending | Source review pending | P8 baseline pending |
+| Token discipline | [P8 measured: no reduction; S5 fails](docs/evidence/success-criteria.md#s5) | Source review pending | Source review pending | [Measured reference arm](benchmarks/results/README.md) |
 
 ## How it works
 
@@ -214,7 +233,7 @@ and implementation status.
 Header-confidence behavior is implemented in P2. Formula-analysis limitations
 are verified P3 behavior; later-phase bullets remain planned release behavior.
 
-- **P6 core verified; P8 live protocol pending:** Excel LSP does not recalculate
+- **P6 core verified; P8 live evidence captured:** Excel LSP does not recalculate
   formulas; it reads cached values and delegates recalculation to Excel.
 - **Verified P3/P5:** `INDIRECT` and other
   dynamic references are flaggable but opaque to static dependency analysis.

@@ -1,0 +1,15 @@
+{
+  "task": "B2 formula audit",
+  "model": "gpt-5.6-sol",
+  "reasoning_effort": "high",
+  "repetitions": 2,
+  "average_input_tokens": 89614,
+  "average_output_tokens": 735,
+  "average_wall_seconds": 32.476,
+  "cost_usd_reported": null,
+  "cost_note": "Codex CLI 0.144.5 with ChatGPT authentication emitted token usage but no cost field; no unsupported dollar conversion is claimed.",
+  "run_guard": {
+    "observed_headless_runs": 36,
+    "maximum": 80
+  }
+}

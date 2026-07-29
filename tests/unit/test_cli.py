@@ -59,3 +59,26 @@ def test_graph_mermaid_and_direction_validation() -> None:
     invalid = runner.invoke(app, ["trace", str(FIXTURE), "Inputs!B2"])
     assert invalid.exit_code == 2
     assert json.loads(invalid.stdout)["error"]["code"] == "E_INVALID_VALUE"
+
+
+def test_bench_command_runs_reproducible_harness(tmp_path: Path, monkeypatch) -> None:
+    from benchmarks import run_scripted
+
+    output = tmp_path / "scripted.csv"
+    monkeypatch.setattr(run_scripted, "DEFAULT_OUTPUT", output)
+    from benchmarks import runner as benchmark_runner
+
+    monkeypatch.setattr(benchmark_runner, "DEFAULT_OUTPUT", output)
+
+    result = runner.invoke(app, ["bench"])
+
+    assert result.exit_code == 0, result.stdout
+    payload = json.loads(result.stdout)
+    assert payload == {
+        "mode": "scripted",
+        "rows": 12,
+        "failed": 0,
+        "output": str(output),
+        "next": "Run benchmarks/run_llm_eval.py for the cost-guarded headless mode.",
+    }
+    assert output.exists()

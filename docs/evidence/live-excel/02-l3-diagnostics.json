@@ -1,0 +1,91 @@
+{
+  "counts": {
+    "code": {
+      "E_ERRVAL": 5,
+      "W_INCONSISTENT_FORMULA": 1
+    },
+    "severity": {
+      "error": 5,
+      "info": 0,
+      "warn": 1
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "E_ERRVAL",
+      "col": 2,
+      "message": "Cell contains #REF!: invalid cell or range reference.",
+      "ref": "cell:Sheet1!B2",
+      "related": {
+        "errorValue": "#REF!"
+      },
+      "row": 2,
+      "severity": "error",
+      "sheet": "Sheet1"
+    },
+    {
+      "code": "E_ERRVAL",
+      "col": 2,
+      "message": "Cell contains #REF!: invalid cell or range reference.",
+      "ref": "cell:Sheet1!B3",
+      "related": {
+        "errorValue": "#REF!"
+      },
+      "row": 3,
+      "severity": "error",
+      "sheet": "Sheet1"
+    },
+    {
+      "code": "E_ERRVAL",
+      "col": 2,
+      "message": "Cell contains #REF!: invalid cell or range reference.",
+      "ref": "cell:Sheet1!B4",
+      "related": {
+        "errorValue": "#REF!"
+      },
+      "row": 4,
+      "severity": "error",
+      "sheet": "Sheet1"
+    },
+    {
+      "code": "E_ERRVAL",
+      "col": 2,
+      "message": "Cell contains #REF!: invalid cell or range reference.",
+      "ref": "cell:Sheet1!B5",
+      "related": {
+        "errorValue": "#REF!"
+      },
+      "row": 5,
+      "severity": "error",
+      "sheet": "Sheet1"
+    },
+    {
+      "code": "E_ERRVAL",
+      "col": 2,
+      "message": "Cell contains #REF!: invalid cell or range reference.",
+      "ref": "cell:Sheet1!B6",
+      "related": {
+        "errorValue": "#REF!"
+      },
+      "row": 6,
+      "severity": "error",
+      "sheet": "Sheet1"
+    },
+    {
+      "code": "W_INCONSISTENT_FORMULA",
+      "col": 3,
+      "message": "Formula differs from the dominant pattern in its contiguous run.",
+      "ref": "cell:Sheet1!C4",
+      "related": {
+        "dominantBlock": "fblock:Sheet1:1",
+        "expectedR1C1": "=RC[-2]*3"
+      },
+      "row": 4,
+      "severity": "warn",
+      "sheet": "Sheet1"
+    }
+  ],
+  "reindexed": false,
+  "total": 6,
+  "truncated": false
+}

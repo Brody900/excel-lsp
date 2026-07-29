@@ -16,6 +16,7 @@ EXPECTED_FIXTURE_IDS = {
     "F03",
     "F04",
     "F05",
+    "F06",
     "F07",
     "F08",
     "F09a",

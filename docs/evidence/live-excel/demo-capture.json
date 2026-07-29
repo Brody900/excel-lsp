@@ -1,0 +1,25 @@
+{
+  "artifactVersion": 1,
+  "dimensions": [
+    960,
+    508
+  ],
+  "frameDurationMs": 1400,
+  "frames": [
+    {
+      "file": "docs/evidence/live-excel/07-trace-a2.png",
+      "sha256": "1d3e3d10316a2dab1c0ebd651c7c3514ba2e35703ce7cdfc365639a6e31ac56e"
+    },
+    {
+      "file": "docs/evidence/live-excel/08-trace-b2.png",
+      "sha256": "df823f19c00b8c5600c86912bc90c923a9984593635c8a0d574c9314e6173f49"
+    },
+    {
+      "file": "docs/evidence/live-excel/09-trace-c2.png",
+      "sha256": "5b00dfa65177cde4e9d96af8154aead75f6b3eab63a0b164ae82bcdbe9e61bd5"
+    }
+  ],
+  "output": "docs/assets/lineage-demo.gif",
+  "outputSha256": "db94370473949e3e9b35d8f4453a32c5a0e48db0ad56c101b26697d29d37fc29",
+  "provenance": "Assembled only from numbered live desktop-Excel screenshots."
+}

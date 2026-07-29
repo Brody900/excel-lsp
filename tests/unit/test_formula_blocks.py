@@ -406,6 +406,31 @@ def test_normalization_keeps_malformed_formula_in_an_opaque_block() -> None:
     assert blocks[0].rect == Rect(1, 1, 1, 1)
 
 
+def test_shared_group_normalizes_r1c1_once_without_losing_cell_formulas(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from excel_lsp.core.formulas import blocks as blocks_module
+
+    original = blocks_module.to_r1c1
+    calls = 0
+
+    def counted(formula: str, anchor: CellRef) -> str:
+        nonlocal calls
+        calls += 1
+        return original(formula, anchor)
+
+    monkeypatch.setattr(blocks_module, "to_r1c1", counted)
+    cells = tuple(FormulaCell(row, 3, f"=A{row}*B{row}", shared_group=7) for row in range(2, 5_002))
+
+    patterns = normalize_formula_cells(cells)
+
+    assert calls == 1
+    assert len(patterns) == 5_000
+    assert {pattern.r1c1 for pattern in patterns} == {"=RC[-2]*RC[-1]"}
+    assert patterns[0].formula == "=A2*B2"
+    assert patterns[-1].formula == "=A5001*B5001"
+
+
 def test_duplicate_formula_coordinates_are_rejected() -> None:
     duplicate = FormulaPattern(1, 1, "=A1", "=RC")
     with pytest.raises(ValueError, match="unique"):

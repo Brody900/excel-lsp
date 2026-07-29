@@ -2587,3 +2587,195 @@ with `valueTruncated=true`, `truncated=false`, and `cursor=null`. Entry and exit
 fingerprints matched; there were no unstaged or untracked changes. Both formal
 verdicts therefore approve the same frozen implementation, test, and evidence
 candidate.
+
+## 2026-07-29 P8 — Reproducible benchmark arms and exact grading
+
+Decision: freeze six exact-answer tasks across Excel LSP and a two-tool naive
+CSV-dump baseline; measure deterministic payloads with pinned `o200k_base` and
+two isolated headless Codex repetitions per cell; retain all raw events and
+invalid preflight rows; and make `analyze_results.py` regrade the exact 24-row
+selected matrix before producing accuracy evidence.
+
+Alternatives considered: fuzzy-grade prose; average away repetition
+disagreement; discard the failed baseline preflight; infer dollar cost from
+token usage; or allow shell/library access during model runs.
+
+Rationale: the final-line JSON contract makes grading mechanical. The first
+baseline server omitted read-only MCP annotations, so approval policy `never`
+canceled its calls; this was an evaluation-server defect, not a workbook or
+cybersecurity finding. The corrected server declares `readOnlyHint=true` and
+`openWorldHint=false`, and the original rows remain auditable. Codex CLI 0.144.5
+reported token usage but no dollar field, so no unsupported conversion is
+claimed. Thirty-six runs remain below the frozen 80-run guard.
+
+## 2026-07-29 P8 — Optional comparison arm skipped on clean-run gate
+
+Decision: exclude the optional `haris-musa/excel-mcp-server` arm after a bounded
+probe installed it and listed 25 tools but its stdio entry point raised
+`ValueError: I/O operation on closed file` during normal MCP client shutdown.
+
+Alternatives considered: count the package as clean because tool discovery
+completed; patch a third-party package locally; run 12 additional evaluations
+despite the shutdown traceback; or omit the probe from evidence.
+
+Rationale: HANDOFF §9.1 includes arm C only if it installs **and runs cleanly**
+within 15 minutes. The reproducible package-owned traceback fails that exact
+condition. Excluding it is more accurate than attributing a DNF or patched
+behavior to the upstream project.
+
+## 2026-07-29 P8 — S1 optimization and honest S5 failure
+
+Decision: compile shared-formula A1 translation once, avoid repeated parser
+child scans, add a conservative canonical numeric fast path, and derive dense
+region bounds and column profiles from indexed SQL only where exact certificates
+or differential tests prove parity. Time incremental indexing by changing only
+the small F06 `Control` sheet. Preserve the pre-optimization timing series.
+
+Alternatives considered: relax the 10-second gate; retain a faster custom
+formula lexer without general equivalence; time an in-memory mutation; clear
+filesystem caches destructively; or tune the benchmark task/baseline after
+seeing the token result.
+
+Rationale: the final 50,000 × 10 medians are 9.439544 seconds cold and 0.065912
+seconds incremental, so S1 passes without weakening correctness. Exact
+differentials protect shared-formula translation, parser normalization, sparse
+regions, and SQL-derived profiles. S5 does not pass: Excel LSP scored 10/12
+versus 9/12, but used 3,375 versus 2,127 scripted payload tokens and 77,927.8
+versus 41,432.8 mean full Codex tokens. The frozen criterion requires both
+equal-or-better accuracy and ≥10× reduction, so evidence and charts explicitly
+record failure rather than manufacturing a favorable comparison.
+
+## 2026-07-29 P8 — Desktop Excel exposed incomplete F16 host metadata
+
+Decision: repair the deterministic F16 generator to emit the VBA host code
+names `ThisWorkbook` and `Sheet1` and Excel's exact Microsoft Office 2006 VBA
+relationship URI; strengthen the fixture test from a suffix match to exact
+host-metadata assertions and refresh only F16's deterministic hash.
+
+Alternatives considered: change Trust Center settings; treat a preserved
+`vbaProject.bin` as sufficient; run the local source workbook instead of F16;
+or copy the entire source package and abandon deterministic generation.
+
+Rationale: the first generated F16 retained the exact project blob but Excel
+showed no security banner and an empty Macro dialog. The local source workbook
+showed the expected banner and listed `Stamp`. OOXML comparison isolated the
+missing code names and a relationship type mismatch: the generator used the
+OpenXML relationship base, while Excel emitted
+`http://schemas.microsoft.com/office/2006/relationships/vbaProject`. After the
+fix and the same surgical product edits, Excel recognized and ran `Stamp`, and
+COM read `MacroModel!Z1 = 42`. No machine security setting or source workbook
+was changed.
+
+## 2026-07-29 P8 — Required live protocol completed with numbered evidence
+
+Decision: commit three native Excel-authored workbooks, exact COM/product JSON
+responses, nine numbered screenshots, and a three-frame lineage GIF assembled
+only from the trace screenshots with a hash manifest.
+
+Alternatives considered: use generated fixtures as substitutes for L1–L3;
+infer no-repair behavior from OOXML tests; omit the open-workbook refusal;
+claim chart preservation from byte diffs alone; or synthesize a marketing GIF.
+
+Rationale: the final visible session covered all HANDOFF §8.6 steps. L2 mapped
+as native table `A1:D4` at confidence 1.0. L3 produced five `E_ERRVAL` findings
+and one `W_INCONSISTENT_FORMULA` at C4. L1 recalculated to B2:B4 = 60, 80, 120
+and C2:C4 = 75, 100, 150. F16's macro ran and wrote 42. An open L1 rejected a
+write with `E_OPEN_IN_EXCEL`. F21 retained `Chart 1` and `Image 2`. Excel's
+three visible precedent-arrow checks matched the product's corresponding
+fill-down block ranges, and the exact returned trees are stored in
+`roundtrip.json`.
+
+## 2026-07-29 P8 — Final engineering audit and broad verification
+
+Decision: independently audit the performance changes before phase freeze,
+restore exact numeric normalization for large integral decimal lexemes, refresh
+F16's complete P6 part-diff evidence after the live-discovered host-metadata
+repair, and require one fresh coverage-instrumented full-suite pass plus a
+separate three-repetition S1 confirmation.
+
+Alternatives considered: rely only on the original benchmark run; accept
+binary-float rounding because ordinary F06 cells are integers; update only the
+fixture hash without the complete part manifest; or freeze after targeted
+tests.
+
+Rationale: `_parse_plain_number` could turn `9007199254740993.0` into the wrong
+integer even though the shared normalization contract requires the canonical
+value. The uncommon integral-decimal branch now uses the canonical `Decimal`
+parser and has a permanent regression. The full remediated tree passed 2,097
+tests with 3 desktop-live tests excluded by marker and reached 89.63% core
+branch coverage; the two static live-evidence tests separately passed under
+`-m live`. Ruff, format, Pyright, deterministic generation, and part-manifest
+reproduction are green. Fresh current-code S1 medians were 9.431842 seconds
+cold and 0.075041 seconds incremental at 50,000 rows.
+
+## 2026-07-29 P8 — Combined formal round 1 and main-owned remediation
+
+Decision: charge the single combined reviewer invocation against both formal
+domains for frozen staged tree
+`39ad2519592e890eae1eae4549ce6cbe01d4dbf9`: `R-mech: APPROVE` and
+`R-test: REVISE`. Keep implementation ownership in the main agent and return a
+new frozen candidate to the same reviewer only after all findings are remediated
+and broadly verified.
+
+Alternatives considered: treat the mechanics approval as sufficient to advance;
+spawn separate benchmark, live-Excel, README, or mutation reviewers; rerun the
+model after changing only grading semantics; or alter the historical P8 result
+entry in place.
+
+Rationale: the reviewer found no mechanics issue, but identified three major
+evidence/test defects and one minor DNF defect. The evaluated benchmark prompt
+did not specify array order while the checker imposed it; the two B5 Excel-LSP
+runs had returned the exact correct set. Set-valued tasks now use explicit
+duplicate-free, order-insensitive grading from the shared task definition,
+with unchanged transcripts regraded transparently through retained
+`source_grade` records. Excel evidence now asserts actual COM shape visibility,
+type, position, and positive dimensions, and screenshot 06 visibly contains
+both the chart and selected image. The README now embeds the measured hero and
+lineage GIF, reports 12/12 versus 9/12 accuracy, and preserves S5's token failure.
+DNF rows without a valid final answer produce non-agreement instead of crashing.
+Public raw events additionally redact the local checkout path without changing
+model answers or usage.
+
+Fresh remediation verification passed 2,102 tests with 3 desktop-live tests
+deselected and retained 89.63% core branch coverage. The two static live
+artifact tests passed separately under `-m live`; Ruff, format, Pyright,
+deterministic fixture generation, benchmark regeneration, cached whitespace,
+and private-path scans are clean before the next freeze.
+
+## 2026-07-29 P8 — Combined formal round 2 and deterministic chart repair
+
+Decision: charge the second combined review against the same two domains for
+staged tree `c2554b5ec0d5844f2135600c48eac24e9d0d276b`: `R-mech: APPROVE`
+and `R-test: REVISE`. Set a stable Matplotlib `svg.hashsalt`, render the entire
+five-chart PNG/SVG set twice in the regression suite, and require byte identity
+for every corresponding asset before freezing another candidate.
+
+Alternatives considered: accept visually equivalent SVGs; normalize random IDs
+after rendering; test only the four SVGs that reproduced the failure; or remove
+SVG from the public artifact set.
+
+Rationale: the reviewer independently rendered the same inputs twice. All PNGs
+matched, but four SVGs differed only in random element and clip-path IDs. That
+could dirty a clean checkout and violated the reproducibility claim. Matplotlib
+provides a native stable-hash-salt control, which removes the nondeterministic
+source without post-processing XML. Comparing all ten artifacts protects the
+complete public contract and is justified by the reproduced failure.
+
+## 2026-07-29 P8 — Combined formal round 3 approves the phase
+
+Decision: charge the third combined review as `R-mech: APPROVE` (#39) and
+`R-test: APPROVE` (#34), both on staged tree
+`e299db5fed3d26db9b85b838f4476e1a86692efd`, and close the P8 phase gate.
+
+Alternatives considered: request another review after a finding-free result;
+advance without recording both verdicts; or treat the approved tree as covering
+later P9 release work.
+
+Rationale: the same reviewer found no critical, major, or minor issue. It
+independently reproduced byte-identical dual renders for all five PNG/SVG pairs,
+matched a separate render to every committed chart, reran the 44-test benchmark,
+checker, runner, analysis, and README slice plus both static live-evidence tests,
+and verified that entry and exit fingerprints were identical with no unstaged
+or untracked files. All prior grading, DNF, redaction, README, live chart/image,
+evidence, ledger, and deterministic-render findings remain remediated. Both
+formal verdicts therefore approve the same exact P8 candidate.

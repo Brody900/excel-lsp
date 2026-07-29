@@ -121,7 +121,7 @@ bounded map projection over indexed rows. See
 | P5 | Formula and workbook diagnostics | Verified |
 | P6 | Surgical OOXML editing and transitive staleness | Verified |
 | P7 | Fourteen-tool MCP server and full CLI | Verified |
-| P8 | Live Excel protocol, benchmarks, headless-Codex evaluations, charts | Planned |
+| P8 | Live Excel protocol, benchmarks, headless-Codex evaluations, charts | Verified |
 | P9 | Documentation, clean installs, CI matrix, public release and registries | Planned |
 
 This phase boundary is intentional. A schema table or README contract can exist

@@ -1,0 +1,292 @@
+{
+  "artifactVersion": 1,
+  "excel": {
+    "build": "19530.0",
+    "version": "16.0"
+  },
+  "macro": {
+    "MacroModelZ1": 42,
+    "name": "Stamp",
+    "ran": true
+  },
+  "normalOpen": {
+    "F16": true,
+    "L1": true
+  },
+  "recalculation": {
+    "F16": {
+      "MacroModelA2": 21,
+      "MacroModelB2": 42
+    },
+    "L1": {
+      "ModelB2_B4": [
+        60,
+        80,
+        120
+      ],
+      "ModelC2_C4": [
+        75,
+        100,
+        150
+      ]
+    }
+  },
+  "refresh": {
+    "F16": {
+      "diagCounts": {
+        "error": 0,
+        "warn": 0
+      },
+      "externalLinks": [],
+      "externalLinksMore": 0,
+      "hasVBA": true,
+      "hints": [
+        "Use get_region_schema for columns+samples",
+        "trace_dependents for impact analysis"
+      ],
+      "indexed_at": "2026-07-29T07:57:23.678690+00:00",
+      "names": [],
+      "namesMore": 0,
+      "reindexed": true,
+      "reindexedSheets": [
+        "MacroModel"
+      ],
+      "sheetList": [
+        {
+          "dims": "A1:Z2",
+          "regions": [
+            {
+              "cols": [
+                {
+                  "h": "Input",
+                  "t": "int"
+                },
+                {
+                  "h": "Doubled",
+                  "t": "int"
+                }
+              ],
+              "conf": 0.8,
+              "fblocks": 1,
+              "headerRows": 1,
+              "id": "region:MacroModel:0",
+              "kind": "region",
+              "range": "A1:B2",
+              "rows": 1
+            },
+            {
+              "cols": [
+                {
+                  "h": "Column Y",
+                  "t": "str"
+                },
+                {
+                  "h": "Column Z",
+                  "t": "int"
+                }
+              ],
+              "conf": 1.0,
+              "fblocks": 0,
+              "headerRows": 0,
+              "id": "region:MacroModel:1",
+              "kind": "region",
+              "range": "Y1:Z1",
+              "rows": 1
+            }
+          ],
+          "sheet": "MacroModel"
+        }
+      ],
+      "sheets": 1,
+      "stale": false,
+      "workbook": "F16-roundtrip.xlsm"
+    },
+    "L1": {
+      "diagCounts": {
+        "error": 0,
+        "warn": 0
+      },
+      "externalLinks": [],
+      "externalLinksMore": 0,
+      "hasVBA": false,
+      "hints": [
+        "Use get_region_schema for columns+samples",
+        "trace_dependents for impact analysis"
+      ],
+      "indexed_at": "2026-07-29T07:57:23.646975+00:00",
+      "names": [
+        {
+          "id": "name:PrimaryInput",
+          "ref": "Inputs!$B$2"
+        }
+      ],
+      "namesMore": 0,
+      "reindexed": true,
+      "reindexedSheets": [
+        "Inputs",
+        "Model"
+      ],
+      "sheetList": [
+        {
+          "dims": "A1:B4",
+          "regions": [
+            {
+              "cols": [
+                {
+                  "h": "Item",
+                  "t": "str"
+                },
+                {
+                  "h": "Amount",
+                  "t": "int"
+                }
+              ],
+              "conf": 0.68,
+              "fblocks": 0,
+              "headerRows": 1,
+              "id": "region:Inputs:0",
+              "kind": "region",
+              "range": "A1:B4",
+              "rows": 3
+            }
+          ],
+          "sheet": "Inputs"
+        },
+        {
+          "dims": "A1:C4",
+          "regions": [
+            {
+              "cols": [
+                {
+                  "h": "Amount",
+                  "t": "int"
+                },
+                {
+                  "h": "Double",
+                  "t": "int"
+                },
+                {
+                  "h": "Triple",
+                  "t": "int"
+                }
+              ],
+              "conf": 0.8,
+              "fblocks": 4,
+              "headerRows": 1,
+              "id": "region:Model:0",
+              "kind": "region",
+              "range": "A1:C4",
+              "rows": 3
+            }
+          ],
+          "sheet": "Model"
+        }
+      ],
+      "sheets": 2,
+      "stale": false,
+      "workbook": "L1-model.xlsx"
+    }
+  },
+  "repairDialog": {
+    "F16": false,
+    "L1": false
+  },
+  "traces": {
+    "Model!A2": {
+      "direction": "precedents",
+      "edgeCount": 1,
+      "nodeCount": 2,
+      "reindexed": false,
+      "tree": {
+        "childCount": 1,
+        "children": [
+          {
+            "childCount": 0,
+            "children": [],
+            "kind": "range",
+            "ref": "Inputs!B2:B4",
+            "symbol": null,
+            "via": "ref"
+          }
+        ],
+        "kind": "cell",
+        "ref": "Model!A2",
+        "symbol": "cell:Model!A2",
+        "via": null
+      },
+      "truncated": false
+    },
+    "Model!B2": {
+      "direction": "precedents",
+      "edgeCount": 1,
+      "nodeCount": 2,
+      "reindexed": false,
+      "tree": {
+        "childCount": 1,
+        "children": [
+          {
+            "childCount": 0,
+            "children": [],
+            "kind": "range",
+            "ref": "Model!A2:A4",
+            "symbol": null,
+            "via": "ref"
+          }
+        ],
+        "kind": "cell",
+        "ref": "Model!B2",
+        "symbol": "cell:Model!B2",
+        "via": null
+      },
+      "truncated": false
+    },
+    "Model!C2": {
+      "direction": "precedents",
+      "edgeCount": 2,
+      "nodeCount": 3,
+      "reindexed": false,
+      "tree": {
+        "childCount": 2,
+        "children": [
+          {
+            "childCount": 0,
+            "children": [],
+            "kind": "range",
+            "ref": "Model!A2:A4",
+            "symbol": null,
+            "via": "ref"
+          },
+          {
+            "childCount": 0,
+            "children": [],
+            "kind": "range",
+            "ref": "Model!B2:B4",
+            "symbol": null,
+            "via": "ref"
+          }
+        ],
+        "kind": "cell",
+        "ref": "Model!C2",
+        "symbol": "cell:Model!C2",
+        "via": null
+      },
+      "truncated": false
+    }
+  },
+  "writeRefusal": {
+    "reindexed": false,
+    "results": [
+      {
+        "error": {
+          "code": "E_OPEN_IN_EXCEL",
+          "hint": "Close it in Excel first; remove a stale lockfile only after confirming Excel is closed.",
+          "message": "Workbook appears to be open in Excel: L1-model.xlsx."
+        },
+        "ok": false,
+        "ref": "Inputs!B3"
+      }
+    ],
+    "resultsTotal": 1,
+    "staleBlocks": 0
+  }
+}
