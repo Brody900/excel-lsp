@@ -6,17 +6,14 @@ and include focused verification.
 
 ## Before starting
 
-1. Read `AGENTS.md`, `HANDOFF.md`, and the current checklist in `PLAN.md`.
+1. Read the public contracts in `README.md`, `docs/architecture.md`,
+   `docs/tool-reference.md`, and `SECURITY.md`.
 2. Search for an existing implementation, test, fixture, or decision before
    adding a new abstraction.
 3. Keep a change scoped to one behavior. Avoid opportunistic refactors and
    unrelated formatting.
 4. For security-sensitive reports, follow `SECURITY.md` instead of opening a
    public issue containing exploit details or private workbook data.
-
-`CLAUDE.md` is retained only because the frozen delivery contract names that
-compatibility file. Codex and `AGENTS.md` are the active orchestration and
-repository instructions.
 
 ## Development setup
 

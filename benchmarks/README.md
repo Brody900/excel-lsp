@@ -18,9 +18,9 @@ Summary XML. Both arms receive the exact same workbook.
 The optional `haris-musa/excel-mcp-server` arm was probed with
 `uvx excel-mcp-server stdio`. It installed and listed 25 tools in 2.6 seconds,
 but its own stdio entry point raised `ValueError: I/O operation on closed file`
-on normal client shutdown. HANDOFF §9.1 permits this arm only when it installs
-and runs cleanly within 15 minutes, so it is excluded rather than represented
-as a DNF or silently treated as successful.
+on normal client shutdown. The benchmark protocol permits this arm only when
+it installs and runs cleanly within 15 minutes, so it is excluded rather than
+represented as a DNF or silently treated as successful.
 
 ## Task and grading contract
 

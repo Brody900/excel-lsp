@@ -1,8 +1,8 @@
 # P9 documentation and release evidence
 
 Date: 2026-07-29. Source base: P8 milestone
-`4e8e0852a69e3786020356ef66cb90bcff0916a8`; the exact P9 staged-tree
-fingerprint and review verdicts are recorded in `PLAN.md` when the candidate is
+`4e8e0852a69e3786020356ef66cb90bcff0916a8`; the release evidence records the
+exact P9 staged-tree fingerprint and review verdicts when the candidate is
 frozen.
 
 ## Release candidate scope

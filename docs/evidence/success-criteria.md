@@ -1,7 +1,8 @@
 # Success criteria
 
-This ledger preserves the frozen HANDOFF §1 criteria. Historical failures and
-secondary measurements remain visible rather than being renamed or hidden.
+This ledger preserves the release criteria used to verify v0.1.0. Historical
+failures and secondary measurements remain visible rather than being renamed
+or hidden.
 
 | Criterion | Current status | Evidence |
 |---|---|---|

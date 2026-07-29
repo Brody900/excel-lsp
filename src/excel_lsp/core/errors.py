@@ -7,7 +7,7 @@ from typing import Any
 
 
 class ErrorCode(StrEnum):
-    """Stable agent-facing error codes from the handoff."""
+    """Stable agent-facing error codes from the public tool contract."""
 
     NOT_FOUND = "E_NOT_FOUND"
     UNSUPPORTED_FORMAT = "E_UNSUPPORTED_FORMAT"

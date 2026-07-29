@@ -30,9 +30,9 @@ runtime deadline that do not exist yet. No placeholder row is persisted.
 F08's label column contains ordinary strings such as `Expected #REF!`; its ten
 formula-result cells carry OOXML `t="e"`. The result is exactly ten
 `E_ERRVAL` findings, all on column B. The committed golden includes the nine
-message-prettification values from HANDOFF section 5.6 and `#FIELD!`, which is
-not in that list. The latter still produces `E_ERRVAL`, proving that the cell
-type—not a text whitelist—controls detection.
+specified message-prettification values and `#FIELD!`, which is not in that
+list. The latter still produces `E_ERRVAL`, proving that the cell type—not a
+text whitelist—controls detection.
 
 Artifacts:
 
@@ -119,7 +119,7 @@ historical corpus, preserving every earlier frozen hash. Their own SHA-256
 values are locked, two complete generations are byte-identical, and all four
 match the independent openpyxl dual-load oracle with no skip-list entry.
 
-The current corpus contains 18 of the handoff's 21 generated fixture IDs. F06
+The current corpus contains 18 of the 21 planned generated fixture IDs. F06
 belongs to P8 performance work; F16 and F21 belong to P6 editor-preservation
 work. The fixture README and oracle skip list state that boundary explicitly.
 

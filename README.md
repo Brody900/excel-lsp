@@ -24,6 +24,21 @@ source hash, the output hash, dimensions, and frame duration; the complete
 [live protocol index](docs/evidence/live-excel/index.md) records the matching
 machine-readable assertions.
 
+## Install with your AI agent
+
+Copy this prompt into Codex or another coding agent:
+
+```text
+Download and install Excel LSP from https://github.com/Brody900/excel-lsp,
+configure it as a local MCP server for this environment, and verify that the
+server starts and exposes its tools. Follow the repository's Quickstart,
+prefer the git-based uvx command until the PyPI package is available, preserve
+unrelated project files, and report exactly what you changed and verified.
+```
+
+The agent can use the commands below directly. Excel LSP runs locally over
+stdio; installing it does not upload workbook data or start a network daemon.
+
 ## Quickstart
 
 Excel LSP requires Python 3.11 or newer and runs as a local stdio process. It

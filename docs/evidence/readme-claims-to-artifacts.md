@@ -88,29 +88,3 @@ following all listed references.
 | ROAD-02 | Real LSP, multi-workbook graph, diff, watch, binary Excel, Sheets, datetime writes, and stable aliases remain roadmap work. | P9 | Scope declaration | `README.md#roadmap`<br>`CHANGELOG.md#planned-after-v010` |
 | EVID-01 | The evidence section links every completed phase and S1 through S7. | P9 | Candidate P9 | `docs/evidence/README.md`<br>`docs/evidence/success-criteria.md`<br>`tests/unit/test_documentation_links.py::test_all_repository_markdown_links_and_anchors_resolve` |
 | LEGAL-01 | Microsoft non-affiliation and trademark footer uses the frozen wording. | P2 | Verified P2 | `README.md`<br>`tests/unit/test_readme_contract.py::test_readme_has_frozen_positioning_and_section_order` |
-
-## P2 repository-review rule
-
-The first required early P2 R-repo invocation is charged as `REVISE`. Under the
-user-authorized pooled-review amendment, a fresh stateless R-repo re-review
-follows each `REVISE` until the P2 repository gate approves or the overall
-review pool reaches its documented exhaustion policy. Before every invocation,
-the orchestrator must run the README contract test, local-link and anchor
-audit, junk-file audit, Markdown review, map-budget integration test, and
-ordinary repository checks. The reviewer packet must quote the P2-specific
-scope from the handoff: this early gate approves the README skeleton and
-exhaustive claims-to-artifacts plan, not the deliberately future P7-P9 release
-evidence.
-
-The reviewer should reject misleading present-tense copy, a missing P2 proof,
-or an unmapped claim. Later-phase rows plainly marked `Planned` are not
-assertions that those features or measurements exist today. The eventual P9
-audit must replace every release-relevant `Planned` status with a
-verified status or remove the unsupported public claim. It must not silently
-weaken a success criterion to fit observed results.
-
-Current accounting: the first two P2 R-repo invocations remain charged as
-`REVISE`; fresh invocation #3 returned `APPROVE` with one current-status
-documentation minor corrected in this candidate. The early P2 repository gate
-is approved. The separate minimum reserve of three R-repo invocations for P9
-remains unchanged.

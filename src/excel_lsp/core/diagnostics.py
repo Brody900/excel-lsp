@@ -24,7 +24,7 @@ DIAGNOSTIC_SEVERITIES: Mapping[str, frozenset[DiagnosticSeverity]] = MappingProx
         "E_ERRVAL": frozenset({"error"}),
         "E_CIRCULAR": frozenset({"error"}),
         # A missing local target is an error. Remote or otherwise unverifiable
-        # targets retain the same semantic code but are warnings, per HANDOFF 5.6.
+        # Targets retain the same semantic code but are warnings by contract.
         "E_BROKEN_XLINK": frozenset({"error", "warn"}),
         "W_POSSIBLE_CIRCULAR": frozenset({"warn"}),
         "W_INCONSISTENT_FORMULA": frozenset({"warn"}),

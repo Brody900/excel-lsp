@@ -129,9 +129,9 @@ in:
 ValueError: I/O operation on closed file.
 ```
 
-HANDOFF §9.1 says to include arm C only if it installs **and runs cleanly** in at
-most 15 minutes. Because this reproducible shutdown failure violates that gate,
-the arm is skipped. It is not charged against task accuracy.
+The benchmark protocol includes arm C only if it installs **and runs cleanly**
+in at most 15 minutes. Because this reproducible shutdown failure violates that
+gate, the arm is skipped. It is not charged against task accuracy.
 
 ## Generated assets
 

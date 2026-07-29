@@ -120,13 +120,13 @@ blocks. Exact verification is restricted to candidate SCCs:
    `E_CIRCULAR`; exhausted or incomplete coverage emits
    `W_POSSIBLE_CIRCULAR` with the instruction to verify in Excel.
 
-The handoff calls Stage 2b “multi-block,” but a literal singleton stop is
-unsound. `A2 = A1+A3` and `A3 = A2+A4` share one R1C1 block, have no direct
-self-inclusion, and still contain `A2 -> A3 -> A2`. P4 therefore applies the
-bounded fallback to an ambiguous singleton only after the streaming monotonic
-proof fails. This conservative correction preserves F09b while detecting the
-real homogeneous cycle; it is frozen by an executable regression and an
-independent brute-force differential.
+The original Stage 2b design was described as “multi-block,” but a literal
+singleton stop is unsound. `A2 = A1+A3` and `A3 = A2+A4` share one R1C1 block,
+have no direct self-inclusion, and still contain `A2 -> A3 -> A2`. P4 therefore
+applies the bounded fallback to an ambiguous singleton only after the streaming
+monotonic proof fails. This conservative correction preserves F09b while
+detecting the real homogeneous cycle; it is frozen by an executable regression
+and an independent brute-force differential.
 
 Balanced per-sheet rectangle indexes serve both coarse block intersections and
 SCC-local exact expansion. The store adapter uses a separate balanced owner
@@ -340,5 +340,6 @@ that fingerprint unchanged at entry and exit and returned clean verdicts:
 - global verdict #49 / R-mech #26: `APPROVE`
 - global verdict #50 / R-test #21: `APPROVE`
 
-The prior combined candidate's global #47/#48 `REVISE` verdicts remain charged
-in `PLAN.md`. Non-formal preflights never substituted for a formal verdict.
+The prior combined candidate's global #47/#48 `REVISE` verdicts remain part of
+the historical review record. Non-formal preflights never substituted for a
+formal verdict.

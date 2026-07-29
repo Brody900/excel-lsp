@@ -12,8 +12,6 @@ README = ROOT / "README.md"
 CLAIMS = ROOT / "docs" / "evidence" / "readme-claims-to-artifacts.md"
 TOOL_REFERENCE = ROOT / "docs" / "tool-reference.md"
 RAW_RESULTS_INDEX = ROOT / "benchmarks" / "results" / "README.md"
-PLAN = ROOT / "PLAN.md"
-ARCHITECTURE = ROOT / "docs" / "architecture.md"
 
 ONE_LINER = (
     "An LSP for Excel: semantic index + MCP server so AI agents navigate workbooks by "
@@ -27,6 +25,7 @@ TRADEMARK_FOOTER = "Not affiliated with Microsoft. Excel is a trademark of Micro
 
 README_SECTIONS = (
     "## 60-second lineage demo",
+    "## Install with your AI agent",
     "## Quickstart",
     "## Tools",
     "## Architecture",
@@ -120,6 +119,8 @@ def test_readme_is_codex_first_and_labels_release_fallback() -> None:
     readme = _read(README)
     lowered = readme.casefold()
 
+    assert "## Install with your AI agent" in readme
+    assert "Download and install Excel LSP from https://github.com/Brody900/excel-lsp" in readme
     assert "codex mcp add excel-lsp -- uvx excel-lsp serve" in readme
     assert "[mcp_servers.excel-lsp]" in readme
     assert not re.search(r"\bclaude\s+(?:mcp|exec|-p)\b", lowered)
@@ -369,43 +370,3 @@ def test_release_documents_are_substantive_and_current() -> None:
     assert "| 0.1.x | Yes |" in security
     assert "## [0.1.0] - 2026-07-29" in changelog
     assert "No changes yet." in changelog
-
-
-def test_review_governance_current_state_is_consistent() -> None:
-    plan = _read(PLAN)
-    claims = _read(CLAIMS)
-    architecture = _read(ARCHITECTURE)
-    current_state_paths = (
-        PLAN,
-        CLAIMS,
-        ARCHITECTURE,
-        ROOT / "docs" / "evidence" / "README.md",
-        ROOT / "docs" / "evidence" / "p2-regions-map.md",
-        ROOT / "docs" / "index-internals.md",
-        ROOT / "CHANGELOG.md",
-    )
-
-    assert "Total formal verdicts recorded: 85." in plan
-    assert "0 nominal slots remain" in plan
-    assert "The minimum completion path is now 30 total invocations" in plan
-    assert "leaving no pooled\ncontingency slots" in plan
-    assert "fresh re-review after any subsequent `REVISE`" in plan
-    assert "2026-07-27 unbounded-review amendment" in plan
-    assert "supersedes the first amendment's 30-invocation hard stop" in plan
-    assert "2026-07-28 single-reviewer amendment" in plan
-    assert "exactly one independent reviewer evaluates\nboth domains" in plan
-    assert "The first required early P2 R-repo invocation is charged as `REVISE`." in claims
-    assert "a fresh stateless R-repo re-review\nfollows each `REVISE`" in claims
-    assert "The early P2 repository gate\nis approved." in claims
-    assert "Its R-mech, R-test, and early R-repo gates have approved" in architecture
-    assert (
-        "| P2 | Regions, headers, stable symbols, compact workbook map | Verified |" in architecture
-    )
-    assert "Until its R-mech and R-test gates approve" not in architecture
-    assert "all three required review\napprovals" not in architecture
-
-    for path in current_state_paths:
-        content = _read(path)
-        assert "exactly one R-repo" not in content, path
-        assert "one-shot" not in content, path
-        assert "governance decision for any required" not in content, path
