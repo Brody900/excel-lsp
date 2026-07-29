@@ -3019,3 +3019,40 @@ slice, confirmed 2,109 tests and 89.59–89.65% coverage across CI, audited the
 73/80 headless-run accounting including the interrupted invocation, and found
 no critical, major, or minor mechanics, test, evidence, packaging, security,
 privacy, documentation, or repository-readiness defect.
+
+## 2026-07-29 P9 — Public v0.1.0 release completes the project
+
+Decision: commit the reviewed P9 candidate and final verdict bookkeeping as
+milestone `709a9779e428578245a514b682be9bd988361ec6`, require that exact final
+commit to clear CI, create and push annotated tag `v0.1.0`, publish a non-draft
+GitHub release with four verified assets, and retain the public Git-tag install
+path because PyPI trusted publishing is not configured.
+
+Alternatives considered: tag before the final commit's CI completed; treat an
+unrelated hosted-runner storage collapse as a product pass; enable PyPI
+publishing without credentials or repository-environment configuration; omit
+binary release assets; or claim publication complete without a fresh public-tag
+MCP probe.
+
+Rationale: final-commit CI run 30466457991 passed eight cells on its first
+attempt. The first macOS/Python 3.12 runner passed 1,046 tests and then produced
+`sqlite3.OperationalError: disk I/O error` across 1,041 unrelated tests and 22
+setups, while the other platforms remained green. A failed-cell-only rerun on a
+fresh runner passed, making the final 3 OS × 3 Python result green without any
+repository change. Release workflow 30469971447 built the wheel and source
+distribution, passed Twine, and skipped its explicitly gated PyPI job. The
+published release at
+`https://github.com/Brody900/excel-lsp/releases/tag/v0.1.0` attaches the wheel
+(`16400354213378e339170a2e0f5c7da214d2c3c5caae0afc9fdb512c0a30665d`), source
+distribution (`fcd106f44337f87ecd461b99f211b39fa94f050036696b6e2a77252eab54b913`),
+and benchmark hero PNG/SVG.
+
+A first public-tag fetch transiently failed at Git transport, then a verbose
+retry resolved `v0.1.0` to the exact milestone commit and installed version
+0.1.0. Two subsequent smoke-command mistakes—an unsupported local `--format`
+flag and a nonexistent local fixture filename—were corrected without changing
+the product. The final fresh-cache tag checks reported 0.1.0, mapped all three
+F03 sheets, initialized through real MCP stdio, listed exactly 14 tools, and
+opened F03. The release is complete; remaining registry submissions and PyPI
+trusted-publishing setup require account or registry-owner actions already
+documented in `docs/registry-submissions.md`.

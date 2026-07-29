@@ -93,7 +93,7 @@ Authoritative specification: `HANDOFF.md` (v1.1). Work phases execute in order; 
 - [x] Run clean-environment install, CLI, MCP, `uvx`, lint, type, test, coverage, and build checks.
 - [x] Verify the GitHub Actions 3 OS x 3 Python matrix.
 - [x] Create the public GitHub repository and push `main`.
-- [ ] Tag/release `v0.1.0`, attach release assets, and publish to PyPI or document the git+ fallback.
+- [x] Tag/release `v0.1.0`, attach release assets, and publish to PyPI or document the git+ fallback.
 - [x] Prepare official MCP Registry, Smithery, mcp.so, and PulseMCP submissions.
 - [x] Spend final R-repo reviews and close the release gate.
 
@@ -196,5 +196,5 @@ and requirement that both verdicts approve one unchanged tree remain intact.
 - [x] README complete per §10.2 (**14 tools, LSP-style qualifier, Security & scope note**); fresh-env install verified
 - [x] **SECURITY.md, CLAUDE.md, uv.lock committed; `tests/fixtures/README.md` documents vbaProject.bin provenance**
 - [x] Review ledger: budget accounting complete (incl. the P2 R-repo spend); every domain ended on clean APPROVE (or exhaustion policy executed)
-- [ ] `v0.1.0` tagged; PyPI published or fallback documented; registry submissions prepared
-- [ ] agent-log.md tells the whole story; final summary written for the user listing follow-ups (tokens, registry accounts)
+- [x] `v0.1.0` tagged; PyPI published or fallback documented; registry submissions prepared
+- [x] agent-log.md tells the whole story; final summary written for the user listing follow-ups (tokens, registry accounts)

@@ -96,5 +96,22 @@ Local candidate construction, broad verification, and the required 3×3 CI
 matrix are complete. The single combined formal reviewer returned
 `R-mech: APPROVE`, `R-test: APPROVE`, and `R-repo: APPROVE` with no findings on
 the same frozen tree `8e823d81d335c518d61cddf63a69c15adaae62ba` and rechecked the fingerprint at
-exit. The review gate is closed; the milestone commit, tag, and GitHub release
-remain to be created.
+exit. The review gate is closed.
+
+Milestone commit `709a9779e428578245a514b682be9bd988361ec6` has tree
+`f4c5c8a52c87e6f6079741d592bc8b8e78866552` and contains only the approved
+candidate plus final-verdict bookkeeping. Its [final CI run](https://github.com/Brody900/excel-lsp/actions/runs/30466457991)
+ended green across all nine cells after a failed-cell-only retry: the first
+macOS/Python 3.12 runner passed 1,046 tests before a runner-wide SQLite `disk I/O
+error` cascade; all eight other cells passed, and the fresh replacement runner
+passed the same macOS/Python cell without a code change.
+
+The annotated [`v0.1.0` tag](https://github.com/Brody900/excel-lsp/releases/tag/v0.1.0)
+points to the milestone commit. [Release workflow 30469971447](https://github.com/Brody900/excel-lsp/actions/runs/30469971447)
+built and checked both distributions; its PyPI job skipped because trusted
+publishing was not configured. The public GitHub release attaches the wheel,
+source distribution, and benchmark hero in PNG and SVG form. A fresh-cache
+public-tag probe resolved the tag to the milestone commit, reported version
+`0.1.0`, mapped all three F03 sheets, initialized through real MCP stdio, listed
+14 tools, and opened F03 successfully. The documented Git-tag fallback is
+therefore the completed distribution path for this release.
