@@ -33,7 +33,6 @@ README_SECTIONS = (
     "## Comparison",
     "## How it works",
     "## Security & scope",
-    "## Limitations and roadmap",
     "## Evidence",
 )
 
@@ -137,7 +136,7 @@ def test_readme_is_codex_first_and_labels_release_fallback() -> None:
         assert label in readme
 
 
-def test_readme_preserves_security_scope_and_limitations() -> None:
+def test_readme_preserves_security_scope() -> None:
     readme = _read(README)
     normalized_readme = " ".join(readme.split())
 
@@ -146,21 +145,6 @@ def test_readme_preserves_security_scope_and_limitations() -> None:
         "supports realpath-resolved workbook confinement",
         "default is unrestricted local-path access",
         "every OOXML part not deliberately modified stays byte-identical",
-        "P6 core verified; P8 live evidence captured",
-        "does not recalculate formulas",
-        "Verified P3/P5",
-        "are flaggable but opaque to static dependency analysis",
-        "every inferred region exposes a confidence score",
-        "P6 verified",
-        "Written strings use OOXML inline strings",
-        "P6/P7 verified",
-        "Datetime cell writes are rejected in v0.1.0",
-        "Writes inside multi-cell array formulas are refused",
-        "Verified P3",
-        "Dynamic-array spill extents are not statically tracked",
-        "Flagship v1.x item",
-        "powered by the dependency graph",
-        "A real LSP wire-protocol server",
         TRADEMARK_FOOTER,
     )
     for text in required_text:

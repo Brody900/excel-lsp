@@ -250,50 +250,6 @@ Its default is unrestricted
 local-path access. See [SECURITY.md](SECURITY.md) for the current threat model
 and implementation status.
 
-## Limitations and roadmap
-
-### Limitations
-
-Header-confidence behavior is implemented in P2. Formula-analysis limitations
-are verified P3 behavior; later-phase bullets remain planned release behavior.
-
-- **P6 core verified; P8 live evidence captured:** Excel LSP does not recalculate
-  formulas; it reads cached values and delegates recalculation to Excel.
-- **Verified P3/P5:** `INDIRECT` and other
-  dynamic references are flaggable but opaque to static dependency analysis.
-- Header inference is heuristic and can be wrong; every inferred region exposes
-  a confidence score.
-- **P6 verified:** Written strings use OOXML inline strings, which Excel and
-  LibreOffice support but some third-party tools handle poorly.
-- **P6/P7 verified:** Datetime cell writes are
-  rejected in v0.1.0.
-- **P6/P7 verified:** Writes inside multi-cell array
-  formulas are refused.
-- **Verified P3:** Dynamic-array spill extents are not statically
-  tracked.
-
-### Non-goals for v0.1.0
-
-- No chart or pivot-table creation.
-- No rename refactoring.
-- No Google Sheets adapter.
-- No `.xls` or `.xlsb` support.
-- No collaborative or live editing.
-- No runtime network access.
-- No telemetry.
-
-### Roadmap
-
-- **Flagship v1.x item:** rename refactoring for sheets, columns, and defined
-  names with workbook-wide formula rewrites, powered by the dependency graph.
-- A real LSP wire-protocol server for formula editing in editors.
-- Multi-workbook workspaces that connect external-link graph edges.
-- Value-level workbook diff.
-- Watch mode.
-- `.xlsb` support.
-- A Google Sheets adapter.
-- Datetime writes and content-addressed region aliases.
-
 ## Evidence
 
 Start with the [evidence index](docs/evidence/README.md). It distinguishes
